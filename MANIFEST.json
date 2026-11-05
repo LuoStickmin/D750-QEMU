@@ -1,14 +1,21 @@
 {
   "product": "D750-QEMU",
-  "description": "Nikon D750 validation prototype: QEMU 11.1.0 source overlay, host tools, Linux binary and run evidence",
-  "generated": "2026-11-05T12:35:00+08:00",
+  "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
+  "generated": "2026-11-06T07:30:00+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
     "size": 100591008,
-    "sha256": "7b84c339a1f6cfe7381d27b9c91c45816ecb0e2ca727329bc2e6acb55353b4c5"
+    "sha256": "7b84c339a1f6cfe7381d27b9c91c45816ecb0e2ca727329bc2e6acb55353b4c5",
+    "external": true,
+    "url": "https://github.com/LuoStickmin/D750-QEMU/releases/latest/download/qemu-system-arm",
+    "note": "Not committed to Git; published as a GitHub Release asset."
   },
-  "tests": "20 passed (python tests/run_tests.py)",
+  "tests": {
+    "qemu": "20 passed",
+    "bitrate": "4 passed"
+  },
+  "release": "https://github.com/LuoStickmin/D750-QEMU/releases/latest",
   "evidence": {
     "m0": {
       "exit": 0,
@@ -73,48 +80,13 @@
   "files": [
     {
       "path": ".gitignore",
-      "size": 158,
-      "sha256": "ddd24536758abdc5d00ae905812dddda71cdb0663d2a70b39ea9a8576d26262e"
+      "size": 284,
+      "sha256": "703d0a3845bab11284a5abeae8a5ebfb305ec0d18d1f4ab8b5ffc98e89816263"
     },
     {
       "path": "analysis/d750-0115.json",
-      "size": 10170,
-      "sha256": "e294bdf67487027d38c8fb4561eb0c11a0b2ba0b512b55d4d6934ac628e5dbab"
-    },
-    {
-      "path": "analysis/disasm_before_table.py",
-      "size": 687,
-      "sha256": "8a4106d18f54ffb334e96137e3be92b516f0371407af9bddc1f12bed5c528318"
-    },
-    {
-      "path": "analysis/disasm_before_table.txt",
-      "size": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    {
-      "path": "analysis/dump_bitrate_regions.py",
-      "size": 601,
-      "sha256": "2be58accf14c4272d8144741a9022625b250c89bb719086a121750c7a7ff20ca"
-    },
-    {
-      "path": "analysis/dump_d750_table.py",
-      "size": 330,
-      "sha256": "90763d256991288ba5bc6b8791d111b2e7dd6dbddc636a901f2a94bf3c3e359d"
-    },
-    {
-      "path": "analysis/dump_d810_table.py",
-      "size": 328,
-      "sha256": "e47a0c47724c97af17f003ec4953b0b26c2a753c37fccc6436f867aee1b6a966"
-    },
-    {
-      "path": "analysis/dump_movie_services.py",
-      "size": 475,
-      "sha256": "242ab4505437afb6e33bff02ed217941b874b30e1eb08ff9c8f3301d901c8cf2"
-    },
-    {
-      "path": "analysis/find_table_refs.py",
-      "size": 496,
-      "sha256": "525bfda911f7b656b779585687f5ce385048f9412209df7f6b141d720353423b"
+      "size": 10054,
+      "sha256": "9722a694fe6eea16221813d4812ecbbbd5be10685de9813c5cd8a5737cee273e"
     },
     {
       "path": "analysis/lcd-testcard.png",
@@ -122,74 +94,24 @@
       "sha256": "a67fff777eed6a9124f210a5309bb457461cf8cf2912bd08eb9a9a13d323d6ad"
     },
     {
-      "path": "analysis/list_gh_tree.py",
-      "size": 444,
-      "sha256": "3e45446b44b39eab65fb5fa7b2443bb7548b3f0fb51174b1ac6fa2a32cd8b612"
+      "path": "analysis/README.en.md",
+      "size": 1740,
+      "sha256": "a93af079b7240a5c0ff7c1b94885f61bd1cb06e30c6ade7b1ef8b78676ea0a62"
     },
     {
-      "path": "analysis/nikon_patch_main.c",
-      "size": 8233,
-      "sha256": "09448e0968bff35fd46c4cbc342af7443f2bcb4f6af8f9437ae206ba2423cd59"
+      "path": "analysis/README.md",
+      "size": 1668,
+      "sha256": "63be209893db26cc03752116ef09e6fff27e60009c2d812de0630f6f5920a3db"
     },
     {
-      "path": "analysis/nikon_patches.c",
-      "size": 470326,
-      "sha256": "198b2bb38d9336f72aca73502efbe4ee40f82a57c537ddd6f21fc697098cfc39"
-    },
-    {
-      "path": "analysis/nikon_patches.h",
-      "size": 1147,
-      "sha256": "4ba317d46039979bac3908644b57621f8ee6e6208443d510446b39a1383a2962"
-    },
-    {
-      "path": "analysis/parse_d750_table.py",
-      "size": 420,
-      "sha256": "0eb21712d16769588652a4e3d945971e908300380a77596fcc46f7c5fdca4ac0"
-    },
-    {
-      "path": "analysis/parse_d810_patches.py",
-      "size": 549,
-      "sha256": "bf155ca191bfdf6e14897f81ac1d854a582316971b539a49a87440da55564be4"
-    },
-    {
-      "path": "analysis/scan_bitrate_endian.py",
-      "size": 745,
-      "sha256": "fc041900feeeda8f629b910adb75853c702d982db4567bbb8d526513a740eeab"
-    },
-    {
-      "path": "analysis/scan_bitrate_small.py",
-      "size": 597,
-      "sha256": "5ff18fe140c6865ad1835ad2e8b72257dbf308f5e204e7f56207e04a16018fd6"
-    },
-    {
-      "path": "analysis/scan_bitrate_values.py",
-      "size": 784,
-      "sha256": "755ac1b841910088972d99bacc11cd0b74ae982271f6633988d3f2129f828178"
-    },
-    {
-      "path": "analysis/scan_movw_table.py",
-      "size": 836,
-      "sha256": "a58fcaf74f7f9441173d197393f2f8f0481496b5d366ddb07d9473f972cab892"
-    },
-    {
-      "path": "analysis/search_bitrate.py",
-      "size": 563,
-      "sha256": "0906e67c7c0c645902199055a737cb8da89a05d9b5f4464ac3eef4ec78a3ee2a"
-    },
-    {
-      "path": "analysis/strings_movie.py",
-      "size": 553,
-      "sha256": "61b11efe988b5161e7998c71839822a387f212862f6b066a73854ef339a4c287"
-    },
-    {
-      "path": "analysis/strings_movie.txt",
-      "size": 114356,
-      "sha256": "80e4dcbdb12c1f6b20a8597e3c8cff91b212e28aaf18e986bd6759d85f9fea8e"
+      "path": "analysis/tiff-feasibility.en.md",
+      "size": 7784,
+      "sha256": "f5bfc2d651c07d5feee5bb1da7439ac2b8ac1c4b462671167231d898d2bf09dc"
     },
     {
       "path": "analysis/tiff-feasibility.md",
-      "size": 6772,
-      "sha256": "48cbf0c4a0ee04f137e2729b18ac62e4dd2d375b12f87331c205d8d77ceda349"
+      "size": 6818,
+      "sha256": "fa942d8c7a465a2fc357b94856061ab0f5a6e788aaddffc73b183f08af61428a"
     },
     {
       "path": "analysis/tiff_scan.py",
@@ -202,39 +124,99 @@
       "sha256": "dd3ce02338c3a48abb6ba59b48809f7108a8bd242cb0cc8be90daafa30707c28"
     },
     {
-      "path": "binary/qemu-system-arm",
-      "size": 100591008,
-      "sha256": "7b84c339a1f6cfe7381d27b9c91c45816ecb0e2ca727329bc2e6acb55353b4c5"
+      "path": "binary/qemu-system-arm.sha256",
+      "size": 83,
+      "sha256": "54714c57d8c8cd6692b756f512a89468d206b569c340749f03bf8684eaf75172"
+    },
+    {
+      "path": "binary/README.en.md",
+      "size": 1629,
+      "sha256": "42055be1a21d341a1da9c591efbfc9d73d2d4f42b93eaacda2c2a3d15e920339"
     },
     {
       "path": "binary/README.md",
-      "size": 1228,
-      "sha256": "c8d72ad6d38f11e2a5d510c36d61ad0d7610bf072248df82ae799790493ad803"
+      "size": 1561,
+      "sha256": "11ef7a487b2786a4692b561e004357a8307040568e1ef38a5607ef42a1da03fc"
+    },
+    {
+      "path": "bitrate/d750_bitrate_patch.py",
+      "size": 9095,
+      "sha256": "87aa9950dd1c2eb3e3644ac3ee8eda0bde9df6e3b92c8bef17ee092840929539"
+    },
+    {
+      "path": "bitrate/README.en.md",
+      "size": 5986,
+      "sha256": "5d95efd184d24a39334aec20e7b0d4972d8ac5cfc44180f390b5ef8c998cfa2d"
+    },
+    {
+      "path": "bitrate/README.md",
+      "size": 6758,
+      "sha256": "e9813be95b3f18606bdfa2ee22e1fbf8a3c00af5efb7615eda05150fbe3acc8d"
+    },
+    {
+      "path": "bitrate/test_d750_bitrate_patch.py",
+      "size": 1921,
+      "sha256": "4afe34557a571e424fe001f462257ae526117639b0839565526090933ee5945d"
+    },
+    {
+      "path": "CONTRIBUTING.en.md",
+      "size": 5609,
+      "sha256": "9f853000f986675389ae2c9318829f3f17873c43d53f17ce4ad9355eb807dc9f"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "size": 4987,
+      "sha256": "10d5f98f0594e7741011eaeebf797ed63e396184782a619cba880ab3eb575783"
+    },
+    {
+      "path": "docs/architecture.en.md",
+      "size": 8717,
+      "sha256": "639f9392837ee938d935236e4d6220ae60cafeebe7bfdd86bb08fbe14bfe6c6c"
     },
     {
       "path": "docs/architecture.md",
-      "size": 7750,
-      "sha256": "8e597f6528fcd44250ec862696ad860de8dd4205af455cdb737fcc5b3113f17b"
+      "size": 7792,
+      "sha256": "82d0b5c2b807dd8002a1a6a2d91fd8b5d4ee1bde65bc483d734a219d438328c2"
+    },
+    {
+      "path": "docs/build.en.md",
+      "size": 6278,
+      "sha256": "dbe8e69f816471f3e51a26bca9f635822cac4a8b389fea4facf598a12816e467"
     },
     {
       "path": "docs/build.md",
-      "size": 5794,
-      "sha256": "22d35fc13b1ecabb595c65a9a0e0ae564c56c8191b982dfa3c38bd9b146a7fb1"
+      "size": 5829,
+      "sha256": "53ac1bb972993f1e000604fc3a16c3d7b75f2d85f66d161071e3731e343270c0"
+    },
+    {
+      "path": "docs/findings.en.md",
+      "size": 13680,
+      "sha256": "e7d89b31527361510973a2952de2e1baa9144ef2d9aad92da1c1d4eb53ae2ca7"
     },
     {
       "path": "docs/findings.md",
-      "size": 11994,
-      "sha256": "6617a7133197289d15a6155a893a43d7eb22105e8a838498e68414cf5f38b026"
+      "size": 12032,
+      "sha256": "4b0926ff22633fb479c8affc8e50187a8b069354272069dfe326d595610b8abd"
+    },
+    {
+      "path": "docs/gui-cmos.en.md",
+      "size": 9844,
+      "sha256": "ce5b730285b60b0ae3354a0acf6b2d7280cc781fb621d2298696db84fa726ab3"
     },
     {
       "path": "docs/gui-cmos.md",
-      "size": 8691,
-      "sha256": "95621b9d7b01ed6cdadf2e03f21aca4cbd4352fd3b1b82703ef53eccc096e9bc"
+      "size": 8704,
+      "sha256": "ff5c5249b647f54b3b8ae8a0ebcfddaed833df1287c7224c354127980616cfdb"
+    },
+    {
+      "path": "docs/validation.en.md",
+      "size": 8208,
+      "sha256": "bd5aa5a5d885587fb3cd01577bab42719cefbdba610618388c1bfc8df08c3357"
     },
     {
       "path": "docs/validation.md",
-      "size": 7170,
-      "sha256": "76922391e0e82a5751d2d0d3f27adfdaab288a97f231b63ad3f07a658317d2a6"
+      "size": 7210,
+      "sha256": "a65a83e01c52703d7e9a8f99633c9bdb4f2949a8cbeb4bc57f2d858a9dfb6d95"
     },
     {
       "path": "evidence/boot-scan.txt",
@@ -243,8 +225,8 @@
     },
     {
       "path": "evidence/lcd/command.json",
-      "size": 678,
-      "sha256": "7824f11e33376c61a50627b7140135635872f121abfd06cf3d8f94dfac8f86c6"
+      "size": 618,
+      "sha256": "2170b144f7c245a9eb89098f29e9c2029d5436051b4cc0d93052e3d89b4ac8bf"
     },
     {
       "path": "evidence/lcd/lcd.ppm",
@@ -258,8 +240,8 @@
     },
     {
       "path": "evidence/lcd/session.json",
-      "size": 1610,
-      "sha256": "acd7d7d27aea4f5fb8b3965581f3586264b1a21875de79966a5918ab2efb6dcc"
+      "size": 1399,
+      "sha256": "3d0db10e1d836dce85dd7cb626644fbb16447081d7e3d5139b3f9f8fec527542"
     },
     {
       "path": "evidence/lcd/uart.log",
@@ -268,8 +250,8 @@
     },
     {
       "path": "evidence/m0/command.json",
-      "size": 569,
-      "sha256": "3b8eb9dd0599c8ac577374a66bbb731be13dfaf366af6c1d1944188a77ad7311"
+      "size": 509,
+      "sha256": "d1fbadf1827cf091795426ca93045c733186a22c30d15c38921be60f721f4f7b"
     },
     {
       "path": "evidence/m0/qemu.log",
@@ -278,8 +260,8 @@
     },
     {
       "path": "evidence/m0/session.json",
-      "size": 1363,
-      "sha256": "817274220352683bb3afa2ca0822aa98aedaadcc9d29f5668c1b7f4c32d21508"
+      "size": 1145,
+      "sha256": "3b65b3c4e108dc4ee64be3e07bb6c0a32e3b64858e800e20544f5ef2d858cbfb"
     },
     {
       "path": "evidence/m0/uart.log",
@@ -288,8 +270,8 @@
     },
     {
       "path": "evidence/m0-gdb/command.json",
-      "size": 625,
-      "sha256": "e49b5041dbdcf388f82ec70e489469fafefea3524d07a31e6440c9c77e0f4156"
+      "size": 568,
+      "sha256": "961996e227f51e579a20ef4396ea0d51cf13cc877057abf7fab347d7cb295f9d"
     },
     {
       "path": "evidence/m0-gdb/qemu.log",
@@ -298,8 +280,8 @@
     },
     {
       "path": "evidence/m0-gdb/session.json",
-      "size": 1638,
-      "sha256": "4a5e77e4c0166c11cf074e54cc3e4cdf80a3459e17ce26a4f46a03bd596ac8cc"
+      "size": 1433,
+      "sha256": "dc51a637105683b9d47d6e321e84903a28a8315e6e4550f5c4945ca8a7b4ca9b"
     },
     {
       "path": "evidence/m0-gdb/uart.log",
@@ -307,19 +289,34 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
+      "path": "evidence/README.en.md",
+      "size": 1728,
+      "sha256": "309ae512ba2a099aba5025f9caa24e4ff78384976e5d25ae43424eb61d55809e"
+    },
+    {
       "path": "evidence/README.md",
-      "size": 1476,
-      "sha256": "9f1b2719707078fc3011d625ba10bc32e2169723042ce69702acbce1f9b29833"
+      "size": 1545,
+      "sha256": "10de3f5e07e59582447718abb1c433a75acbc430d2da34e17b0c9488969b033e"
+    },
+    {
+      "path": "NOTICE.en.md",
+      "size": 2876,
+      "sha256": "949bfef78964bbdea1222b49574b3e32ed7b74f9f16f60a413a5412addec8047"
     },
     {
       "path": "NOTICE.md",
-      "size": 1470,
-      "sha256": "9e110221c378ffc461ed425b745b50391078f2d907153c1346ea2c2a13e05964"
+      "size": 2461,
+      "sha256": "6c8b2ccdc75c8b64e7182120eafdd81cd6e95cf1b47636b184e655772b798d98"
+    },
+    {
+      "path": "PRODUCT.en.md",
+      "size": 6153,
+      "sha256": "496c25dc119925e80233ac184479cdf043a78550d5571aba5031398d1737d385"
     },
     {
       "path": "PRODUCT.md",
-      "size": 5079,
-      "sha256": "8461cf96f5394c4c360821c6ea4d977fe860d7021bd64f39b32316db49b5175e"
+      "size": 5822,
+      "sha256": "7144b21cd211f97be735a28b5d24067ce3a9feeb943f75cd2e4015e95dc4529a"
     },
     {
       "path": "qemu/nikon-d750-lab.c",
@@ -337,9 +334,14 @@
       "sha256": "0a0a23dac4484c797fbc46e7f7f645790b6ee2dadf41e21d2da7d1c8273cd2bc"
     },
     {
+      "path": "README.en.md",
+      "size": 16470,
+      "sha256": "0c0b5cd6a5d775922812f437620169f451de6516f739801400f4db48328916b9"
+    },
+    {
       "path": "README.md",
-      "size": 13217,
-      "sha256": "ae1a65989552d2fb4dbb264ee92b34de789e03e81de657924bd5e479e5bdf9aa"
+      "size": 14241,
+      "sha256": "c51aae18cb10afbc303afdca77ce24700ed001507d3b7cc9e32d7641e4a17caa"
     },
     {
       "path": "Run-D750.ps1",
@@ -350,6 +352,16 @@
       "path": "Setup-D750.ps1",
       "size": 1712,
       "sha256": "c061980e8de1aa3334811d664288e06fb7b2184ee62867de80b47cfe9cf09069"
+    },
+    {
+      "path": "SUMMARY.en.md",
+      "size": 4033,
+      "sha256": "2b0995f10cedc2c16f73ae010ecbe25581239dd010d34a8f534bfe591e78d0f7"
+    },
+    {
+      "path": "SUMMARY.md",
+      "size": 3670,
+      "sha256": "997cd388bcf06258d5cd95cc66379cb86ec332bc54009326afd3c70d7ed60276"
     },
     {
       "path": "tests/run_tests.py",

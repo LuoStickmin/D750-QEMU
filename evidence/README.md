@@ -1,5 +1,7 @@
 # evidence/
 
+> [English](README.en.md) | 中文
+
 本目录是**实际运行**留下的证据，不是手工编写的说明。
 
 | 目录/文件 | 内容 | 关键结论 |
@@ -15,8 +17,8 @@
   dump 的尺寸/格式/路径；`mmio.by_address` 是未建模访问的聚合。
 - `qemu.log` 是 `-d guest_errors` 的原始日志；`d750-halt:` / `d750-lcd:` /
   `d750-probe:` 是机器自己写的前缀。
-- `command.json` 里的路径是生成时的绝对路径（`/mnt/c/...`）；换机器/换目录后
-  需要按新路径重跑，证据本身不依赖路径。
+- `command.json` / `session.json` 里的路径已替换为 `<repo>`、`<firmware>`、
+  `<build>` 占位符（公开仓库的隐私处理）；换机器/换目录后按新路径重跑即可。
 
 ## 边界
 

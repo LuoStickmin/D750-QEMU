@@ -1,5 +1,7 @@
 # D750-QEMU 产品快照
 
+> [English](PRODUCT.en.md) | 中文
+
 仓库根目录就是 `nikon-d750` 验证原型的**可交付产品目录**：源码、工具、文档、
 已构建的 Linux 二进制、以及实际运行的证据。
 
@@ -13,8 +15,8 @@
 | 主机 | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | 编译器 | gcc 15.2.0 |
 | QEMU | 11.1.0（overlay 构建） |
-| 二进制 | `binary/qemu-system-arm`（Linux x86-64，约 96 MiB） |
-| 主机侧测试 | 20 passed |
+| 二进制 | GitHub Release 附件（Linux x86-64，约 96 MiB） |
+| 主机侧测试 | 20 passed（QEMU）+ 4 passed（bitrate） |
 
 ## 2. 已验证的事实
 
@@ -33,35 +35,51 @@
 
 ```text
 D750-QEMU/
-├── README.md             产品主说明（状态、快速开始、机器模型）
-├── PRODUCT.md            本快照说明
-├── NOTICE.md             独立研究/无固件/许可声明
-├── MANIFEST.json         文件清单、SHA-256、证据摘要
-├── SHA256SUMS            sha256sum -c 兼容的校验清单
-├── qemu/                 QEMU overlay：nikon-d750-lab.c/.h + prepare_source.py
-├── tools/                fwscan / run / probe / build
-├── tests/                20 个主机侧测试（无需 QEMU 构建）
-├── docs/                 findings / architecture / validation / build / gui-cmos
+├── README.md / README.en.md   产品主说明（状态、快速开始、机器模型）
+├── PRODUCT.md / .en.md        本快照说明
+├── NOTICE.md / .en.md         独立研究/无固件/许可声明
+├── SUMMARY.md / .en.md        两条工作线总览
+├── CONTRIBUTING.md / .en.md   法律与贡献边界
+├── MANIFEST.json             文件清单、SHA-256、证据摘要
+├── SHA256SUMS                sha256sum -c 兼容的校验清单
+├── qemu/                     QEMU overlay：nikon-d750-lab.c/.h + prepare_source.py
+├── tools/                    fwscan / run / probe / build
+├── tests/                    20 个主机侧测试（无需 QEMU 构建）
+├── bitrate/                  1080p 64/60 Mbps 改表工具、测试、说明
+├── docs/                     findings / architecture / validation / build / gui-cmos（含 .en.md）
 ├── analysis/
-│   ├── d750-0115.json    真实镜像的 profile 核对结果
-│   ├── lcd-testcard.png  LCD 管线测试卡（主机写入）
-│   └── ...               工作区已有的分析文件（见 §6）
+│   ├── d750-0115.json        真实镜像的 profile 核对结果
+│   ├── lcd-testcard.png      LCD 管线测试卡（主机写入）
+│   └── ...                   仓库已有的分析文件（见 §6）
 ├── binary/
-│   ├── qemu-system-arm   已构建的 Linux 二进制（WSL 运行）
-│   ├── COPYING           QEMU 的 GPLv2 许可
-│   └── README.md         二进制来源、运行方式、校验
+│   ├── COPYING               QEMU 的 GPLv2 许可
+│   └── README.md             二进制来源、Release 下载、校验
 └── evidence/
-    ├── m0/               非 GDB 的 M0 证据（session/command/logs）
-    ├── m0-gdb/           GDB 入口检查 + 运行记录
-    ├── lcd/              8×8 LCD dump 证据
-    ├── boot-scan.txt     候选入口扫描结果（负结果）
-    └── README.md         证据说明
+    ├── m0/                   非 GDB 的 M0 证据（session/command/logs）
+    ├── m0-gdb/               GDB 入口检查 + 运行记录
+    ├── lcd/                  8×8 LCD dump 证据
+    ├── boot-scan.txt         候选入口扫描结果（负结果）
+    └── README.md             证据说明
 ```
+
+`binary/qemu-system-arm` 约 96 MiB，**不提交进 Git**；它作为 GitHub Release
+附件发布（见 §4/§5）。
 
 ## 4. 快速运行（WSL）
 
+先从 [Releases](https://github.com/LuoStickmin/D750-QEMU/releases/latest) 下载
+Linux 二进制到 `binary/`（该文件不进 Git）：
+
 ```bash
 cd /path/to/D750-QEMU
+curl -L -o binary/qemu-system-arm \
+  https://github.com/LuoStickmin/D750-QEMU/releases/latest/download/qemu-system-arm
+chmod +x binary/qemu-system-arm
+```
+
+然后运行：
+
+```bash
 FW=/path/to/D750_0115.dec.modules
 python3 tools/run.py \
   --qemu binary/qemu-system-arm \
@@ -95,14 +113,16 @@ Windows 侧 `C:\Program Files\qemu` 的 stock 11.1.0 没有 `nikon-d750` 机器�
 - 构建参数：`--target-list=arm-softmmu --disable-werror --disable-docs --disable-tools`；
 - 校验值见 `MANIFEST.json` 的 `binary.sha256`，或 `sha256sum binary/qemu-system-arm`。
 
-## 6. 关于 `analysis/` 里的其他文件
+## 6. 关于 `analysis/`
 
-`analysis/d750-0115.json` 与 `analysis/lcd-testcard.png` 由本 QEMU 产品生成。
+公共仓库里的 `analysis/` 只保留可公开的事实性产物：
+`d750-0115.json`、`lcd-testcard.png`、`tiff-feasibility.md/.en.md`、
+`tiff_scan.py`。
 
-其余文件（`nikon_patches.c`、`tiff-feasibility.md`、`strings_movie.txt`、
-`scan_bitrate_*.py`、`dump_*_table.py` 等）是同一项目里**已有的固件分析产物**，
-随产品保留，不是本次 QEMU 工作生成的，也不在本产品的验收范围内。保留它们是
-为了不丢失已有工作；如需拆分，把它们移到独立目录即可。
+Nikon Hacker 补丁数据库、固件 ASCII 字符串 dump、硬编码本机路径的一次性脚本
+**不进入公共仓库**，保留在本地 `.local/private-analysis/`；原因（第三方 GPL、
+固件文本版权、隐私/可复现性）见 `analysis/README.md`。仓库不含固件、密钥、
+解密镜像或改后镜像。
 
 ## 7. 未完成 / 下一步
 

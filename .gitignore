@@ -1,0 +1,14 @@
+.build/
+.local/
+runs/
+.test-tmp/
+__pycache__/
+*.pyc
+
+# The 96 MiB Linux QEMU build is published as a GitHub Release asset,
+# not committed to Git history.
+binary/qemu-system-arm
+
+# 运行日志默认忽略，但 evidence/ 是提交用的证据，必须保留
+*.log
+!evidence/**/*.log

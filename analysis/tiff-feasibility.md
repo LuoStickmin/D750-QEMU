@@ -1,5 +1,7 @@
 # D750 拍摄菜单加入 TIF 存储选项：可行性分析
 
+> [English](tiff-feasibility.en.md) | 中文
+
 日期：2026-11-05  
 对象：Nikon D750，固件 `D750_0115`，主模块 `b1010_115a.bin`（20,324,448 B，SHA-256
 `faada7fe…f82937fd`）  

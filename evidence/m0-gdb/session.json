@@ -21,16 +21,16 @@
     "-nic",
     "none",
     "-kernel",
-    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin",
+    "<firmware>/b1010_115a.bin",
     "-bios",
-    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin",
+    "<firmware>/a1010_011100.bin",
     "-S",
     "-gdb",
     "tcp:127.0.0.1:32859"
   ],
   "entry": "0x9027d52c",
-  "payload": "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin",
-  "flash": "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin",
+  "payload": "<firmware>/b1010_115a.bin",
+  "flash": "<firmware>/a1010_011100.bin",
   "started": "2026-11-05T11:30:06",
   "snapshot": {
     "stop": {
@@ -45,7 +45,7 @@
   "exit": 0,
   "timed_out": false,
   "wall_seconds": 0.635,
-  "qemu_output_tail": "qemu-system-arm: info: nikon-d750: payload=/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin @ 0x90000000, flash=/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin @ 0x10000000, entry=0x9027d52c, ram=128 MiB, cpus=1\n",
+  "qemu_output_tail": "qemu-system-arm: info: nikon-d750: payload=<firmware>/b1010_115a.bin @ 0x90000000, flash=<firmware>/a1010_011100.bin @ 0x10000000, entry=0x9027d52c, ram=128 MiB, cpus=1\n",
   "uart": {
     "bytes": 0,
     "tail": ""

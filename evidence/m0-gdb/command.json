@@ -21,9 +21,9 @@
     "-nic",
     "none",
     "-kernel",
-    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin",
+    "<firmware>/b1010_115a.bin",
     "-bios",
-    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin",
+    "<firmware>/a1010_011100.bin",
     "-S",
     "-gdb",
     "tcp:127.0.0.1:32859"
