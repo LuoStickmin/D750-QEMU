@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "binary/qemu-system-arm",
+    "-M",
+    "nikon-d750",
+    "-cpu",
+    "cortex-a9",
+    "-m",
+    "128M",
+    "-display",
+    "none",
+    "-monitor",
+    "none",
+    "-serial",
+    "file:evidence/m0/uart.log",
+    "-D",
+    "evidence/m0/qemu.log",
+    "-d",
+    "guest_errors",
+    "-no-reboot",
+    "-nic",
+    "none",
+    "-kernel",
+    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin",
+    "-bios",
+    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin"
+  ],
+  "entry": "0x9027d52c",
+  "gdb": false
+}

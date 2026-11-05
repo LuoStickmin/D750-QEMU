@@ -1,0 +1,16 @@
+﻿D750-QEMU boot candidate scan
+generated: 2026-11-05 11:31 (Asia/Shanghai)
+QEMU: 11.1.0 overlay, Linux x86-64
+method: 2 s per entry, halt window exits early, no GDB
+
+0x9025d0d4 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d1c4 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d360 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d400 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d434 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d464 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d474 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d720 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9025d700 exit=124 probe=0     uart_ev=0    halt=0  uart_bytes=0
+0x90000000 exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0
+0x9027d52c exit=0   probe=0     uart_ev=0    halt=1  uart_bytes=0

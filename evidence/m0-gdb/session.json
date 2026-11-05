@@ -1,0 +1,65 @@
+{
+  "argv": [
+    "binary/qemu-system-arm",
+    "-M",
+    "nikon-d750",
+    "-cpu",
+    "cortex-a9",
+    "-m",
+    "128M",
+    "-display",
+    "none",
+    "-monitor",
+    "none",
+    "-serial",
+    "file:evidence/m0-gdb/uart.log",
+    "-D",
+    "evidence/m0-gdb/qemu.log",
+    "-d",
+    "guest_errors",
+    "-no-reboot",
+    "-nic",
+    "none",
+    "-kernel",
+    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin",
+    "-bios",
+    "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin",
+    "-S",
+    "-gdb",
+    "tcp:127.0.0.1:32859"
+  ],
+  "entry": "0x9027d52c",
+  "payload": "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin",
+  "flash": "/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin",
+  "started": "2026-11-05T11:30:06",
+  "snapshot": {
+    "stop": {
+      "kind": "connection-closed",
+      "raw": "[Errno 32] Broken pipe"
+    },
+    "entry_pc": "0x9027d52c",
+    "entry_ok": true,
+    "cpsr": "0x400001d3",
+    "guest_exited": true
+  },
+  "exit": 0,
+  "timed_out": false,
+  "wall_seconds": 0.635,
+  "qemu_output_tail": "qemu-system-arm: info: nikon-d750: payload=/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/b1010_115a.bin @ 0x90000000, flash=/mnt/c/Users/23795/Downloads/DSLR/D750_0115.dec.modules/a1010_011100.bin @ 0x10000000, entry=0x9027d52c, ram=128 MiB, cpus=1\n",
+  "uart": {
+    "bytes": 0,
+    "tail": ""
+  },
+  "mmio": {
+    "events": 0,
+    "by_address": []
+  },
+  "halt": {
+    "pc": "0x00000ff0",
+    "r0": "0x80002000",
+    "r1": "0x00000000",
+    "sp": "0x97ffff00",
+    "lr": "0x00000ff0"
+  },
+  "lcd": null
+}

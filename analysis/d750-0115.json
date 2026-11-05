@@ -1,0 +1,382 @@
+{
+  "tool": "d750-fwscan",
+  "version": "1.0",
+  "profile": {
+    "name": "nikon-d750-0115",
+    "cpu": "cortex-a9",
+    "ram_base": 2415919104,
+    "flash_base": 268435456,
+    "entry": 2418529580,
+    "vector_reset": 2418529572,
+    "page_table": 2416050176,
+    "uart_base": 2147504144
+  },
+  "main": {
+    "path": "C:\\Users\\23795\\Downloads\\DSLR\\D750_0115.dec.modules\\b1010_115a.bin",
+    "size": 20324448,
+    "sha256": "faada7fe2bcc90fef8877fae37965ee836f867b08f5736c67c5266b1f82937fd",
+    "entropy_bits": 6.3,
+    "zero_pct": 26.82,
+    "ff_pct": 3.89,
+    "vector_table": {
+      "present": true,
+      "ldr_pc_entries": 6,
+      "vectors": [
+        {
+          "index": 0,
+          "insn": "0xE59FF018",
+          "is_ldr_pc": true,
+          "literal": "0x9027D524",
+          "literal_addr": 2418529572,
+          "target_in_image": true,
+          "target_file_offset": 2610468
+        },
+        {
+          "index": 1,
+          "insn": "0xE59FF018",
+          "is_ldr_pc": true,
+          "literal": "0x90291C80",
+          "literal_addr": 2418613376,
+          "target_in_image": true,
+          "target_file_offset": 2694272
+        },
+        {
+          "index": 2,
+          "insn": "0xE59FF018",
+          "is_ldr_pc": true,
+          "literal": "0x90291D30",
+          "literal_addr": 2418613552,
+          "target_in_image": true,
+          "target_file_offset": 2694448
+        },
+        {
+          "index": 3,
+          "insn": "0xE59FF018",
+          "is_ldr_pc": true,
+          "literal": "0x90291DA8",
+          "literal_addr": 2418613672,
+          "target_in_image": true,
+          "target_file_offset": 2694568
+        },
+        {
+          "index": 4,
+          "insn": "0xE59FF018",
+          "is_ldr_pc": true,
+          "literal": "0x90291DB8",
+          "literal_addr": 2418613688,
+          "target_in_image": true,
+          "target_file_offset": 2694584
+        },
+        {
+          "index": 5,
+          "insn": "0xE320F000",
+          "is_ldr_pc": false,
+          "literal": null,
+          "literal_addr": null,
+          "target_in_image": false,
+          "target_file_offset": null
+        },
+        {
+          "index": 6,
+          "insn": "0xEA00000D",
+          "is_ldr_pc": false,
+          "literal": null,
+          "literal_addr": null,
+          "target_in_image": false,
+          "target_file_offset": null
+        },
+        {
+          "index": 7,
+          "insn": "0xE59FF018",
+          "is_ldr_pc": true,
+          "literal": "0x90291DEC",
+          "literal_addr": 2418613740,
+          "target_in_image": true,
+          "target_file_offset": 2694636
+        }
+      ]
+    },
+    "vector_reset_target": {
+      "addr": "0x9027D524",
+      "mapped": true,
+      "file_offset": "0x27D524",
+      "word0": "0x1041D9A8",
+      "word1": "0x1041DBA8",
+      "arm_cond_word0": 1,
+      "looks_like_arm_code": false,
+      "prologue_score": 0
+    },
+    "entry_hypothesis": {
+      "addr": "0x9027D52C",
+      "mapped": true,
+      "file_offset": "0x27D52C",
+      "word0": "0xE3500002",
+      "word1": "0xE3A03000",
+      "arm_cond_word0": 14,
+      "looks_like_arm_code": true,
+      "prologue_score": 1
+    },
+    "page_table_literal_count": 6,
+    "entry_literal_count": 1,
+    "pointer_census": {
+      "flash_0x10000000": 23660,
+      "periph_0x80000000": 119084,
+      "ram_0x90000000": 90016,
+      "ram_high_0x91000000": 13635,
+      "external_0x40000000": 303660,
+      "external_0xA0000000": 79797
+    },
+    "flash_pointer_count": 23660,
+    "flash_pointer_min": "0x10000000",
+    "flash_pointer_max": "0x107FFF24",
+    "mmu_sctlr_sites": [
+      "0x25D728",
+      "0x25D938",
+      "0x25D99C",
+      "0x25D9AC",
+      "0x25DA28",
+      "0x25DA80",
+      "0x129DA50"
+    ],
+    "code_blocks": [
+      {
+        "offset": "0x1280000",
+        "arm_al": 13336,
+        "thumb_push_pop": 147,
+        "thumb32_prefix": 2985,
+        "score": 16468
+      },
+      {
+        "offset": "0x1270000",
+        "arm_al": 12810,
+        "thumb_push_pop": 53,
+        "thumb32_prefix": 3059,
+        "score": 15922
+      },
+      {
+        "offset": "0x1290000",
+        "arm_al": 12285,
+        "thumb_push_pop": 340,
+        "thumb32_prefix": 2930,
+        "score": 15555
+      },
+      {
+        "offset": "0x270000",
+        "arm_al": 13291,
+        "thumb_push_pop": 24,
+        "thumb32_prefix": 1812,
+        "score": 15127
+      },
+      {
+        "offset": "0x260000",
+        "arm_al": 10006,
+        "thumb_push_pop": 48,
+        "thumb32_prefix": 2453,
+        "score": 12507
+      },
+      {
+        "offset": "0x12E0000",
+        "arm_al": 3012,
+        "thumb_push_pop": 525,
+        "thumb32_prefix": 4837,
+        "score": 8374
+      },
+      {
+        "offset": "0x12D0000",
+        "arm_al": 2360,
+        "thumb_push_pop": 528,
+        "thumb32_prefix": 3435,
+        "score": 6323
+      },
+      {
+        "offset": "0x12C0000",
+        "arm_al": 2159,
+        "thumb_push_pop": 605,
+        "thumb32_prefix": 3056,
+        "score": 5820
+      }
+    ],
+    "checks": [
+      {
+        "name": "vector_table_shape",
+        "ok": true,
+        "detail": "6/8 ldr-pc entries"
+      },
+      {
+        "name": "vector_reset_points_at_code",
+        "ok": false,
+        "detail": "0x9027D524 -> 0x1041D9A8 (ARM cond 0x1); not AL-condition ARM code"
+      },
+      {
+        "name": "entry_hypothesis_is_arm",
+        "ok": true,
+        "detail": "0x9027D52C -> 0xE3500002"
+      },
+      {
+        "name": "page_table_literal_present",
+        "ok": true,
+        "detail": "6 occurrence(s) of 0x90020000"
+      },
+      {
+        "name": "entry_literal_present",
+        "ok": true,
+        "detail": "1 occurrence(s) of 0x9027D52C"
+      }
+    ]
+  },
+  "flash": {
+    "path": "C:\\Users\\23795\\Downloads\\DSLR\\D750_0115.dec.modules\\a1010_011100.bin",
+    "size": 786432,
+    "sha256": "690b7d1c7683cda36c72b5911cdd474ad5bc78f9467b369f3f86dc7316600213",
+    "entropy_bits": 6.47,
+    "executable_shapes": [
+      {
+        "offset": "0x070000",
+        "arm_al": 1454,
+        "thumb_push_pop": 416,
+        "thumb32_prefix": 1820,
+        "score": 3690
+      },
+      {
+        "offset": "0x080000",
+        "arm_al": 1351,
+        "thumb_push_pop": 424,
+        "thumb32_prefix": 1491,
+        "score": 3266
+      },
+      {
+        "offset": "0x020000",
+        "arm_al": 1479,
+        "thumb_push_pop": 440,
+        "thumb32_prefix": 1301,
+        "score": 3220
+      },
+      {
+        "offset": "0x030000",
+        "arm_al": 1328,
+        "thumb_push_pop": 715,
+        "thumb32_prefix": 1123,
+        "score": 3166
+      }
+    ],
+    "pointer_census": {
+      "flash_0x10000000": 2154,
+      "periph_0x80000000": 6538,
+      "ram_0x90000000": 563,
+      "ram_high_0x91000000": 115,
+      "external_0x40000000": 25306,
+      "external_0xA0000000": 1830
+    },
+    "vector_table": {
+      "present": false,
+      "ldr_pc_entries": 0,
+      "vectors": [
+        {
+          "index": 0,
+          "insn": "0xC0F80020",
+          "is_ldr_pc": false,
+          "literal": null,
+          "literal_addr": null,
+          "target_in_image": false,
+          "target_file_offset": null
+        },
+        {
+          "index": 1,
+          "insn": "0x0DC20000",
+          "is_ldr_pc": false,
+          "literal": null,
+          "literal_addr": null,
+          "target_in_image": false,
+          "target_file_offset": null
+        },
+        {
+          "index": 2,
+          "insn": "0xFB380100",
+          "is_ldr_pc": false,
+          "literal": null,
+          "literal_addr": null,
+          "target_in_image": false,
+          "target_file_offset": null
+        },
+        {
+          "index": 3,
+          "insn": "0x21330100",
+          "is_ldr_pc": false,
+          "literal": "0xCDC20000",
+          "literal_addr": 3452043264,
+          "target_in_image": false,
+          "target_file_offset": 3183607808
+        },
+        {
+          "index": 4,
+          "insn": "0x33330100",
+          "is_ldr_pc": false,
+          "literal": "0xCFC20000",
+          "literal_addr": 3485597696,
+          "target_in_image": false,
+          "target_file_offset": 3217162240
+        },
+        {
+          "index": 5,
+          "insn": "0x45330100",
+          "is_ldr_pc": false,
+          "literal": null,
+          "literal_addr": null,
+          "target_in_image": false,
+          "target_file_offset": null
+        },
+        {
+          "index": 6,
+          "insn": "0x57330100",
+          "is_ldr_pc": false,
+          "literal": "0xE1C00000",
+          "literal_addr": 3787456512,
+          "target_in_image": false,
+          "target_file_offset": 3519021056
+        },
+        {
+          "index": 7,
+          "insn": "0x00000000",
+          "is_ldr_pc": false,
+          "literal": "0xD9C10000",
+          "literal_addr": 3653304320,
+          "target_in_image": false,
+          "target_file_offset": 3384868864
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "vector_table_shape",
+      "ok": true,
+      "detail": "6/8 ldr-pc entries"
+    },
+    {
+      "name": "vector_reset_points_at_code",
+      "ok": false,
+      "detail": "0x9027D524 -> 0x1041D9A8 (ARM cond 0x1); not AL-condition ARM code"
+    },
+    {
+      "name": "entry_hypothesis_is_arm",
+      "ok": true,
+      "detail": "0x9027D52C -> 0xE3500002"
+    },
+    {
+      "name": "page_table_literal_present",
+      "ok": true,
+      "detail": "6 occurrence(s) of 0x90020000"
+    },
+    {
+      "name": "entry_literal_present",
+      "ok": true,
+      "detail": "1 occurrence(s) of 0x9027D52C"
+    },
+    {
+      "name": "flash_refs_fit_flash_image",
+      "ok": true,
+      "detail": "11390 of 23660 0x10xxxxxx words fall inside the supplied flash image"
+    }
+  ],
+  "verdict": "profile-has-warnings"
+}

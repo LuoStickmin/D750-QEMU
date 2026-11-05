@@ -1,0 +1,2 @@
+d750-lcd: dumped 8x8 (argb8888, stride 32) from 0x92000000 to evidence/lcd/lcd.ppm
+d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0 firmware returned to the assisted trampoline

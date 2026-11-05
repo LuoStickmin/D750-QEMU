@@ -1,0 +1,374 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Run the Nikon D750 validation prototype and record evidence.
+
+The launcher never modifies the firmware.  It maps it, starts the CPU at the
+profile entry, optionally attaches the RSP client for a checkpoint snapshot,
+and always leaves a session directory with the exact command, the guest
+serial bytes, the QEMU diagnostic log and a parsed MMIO summary.
+
+Examples:
+    python tools/run.py --payload D750_0115.dec.modules/b1010_115a.bin \
+        --flash D750_0115.dec.modules/a1010_011100.bin --timeout 10
+
+    python tools/run.py --payload ... --gdb --run-seconds 3 \
+        --checkpoint 0x9025D720
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as _dt
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+PROJECT = Path(__file__).resolve().parent.parent
+DEFAULT_ENTRY = 0x9027D52C
+DEFAULT_CPU = "cortex-a9"
+
+PROBE_RE = re.compile(
+    r"d750-probe: pc=(0x[0-9a-f]+) (rd|wr) addr=(0x[0-9a-f]+) size=(\d+)"
+    r"(?: value=(0x[0-9a-f]+))?"
+)
+UART_RE = re.compile(r"d750-uart: pc=(0x[0-9a-f]+) rd \+0x([0-9a-f]+) size=(\d+) -> (0x[0-9a-f]+)")
+HALT_RE = re.compile(
+    r"d750-halt: pc=(0x[0-9a-f]+) r0=(0x[0-9a-f]+) r1=(0x[0-9a-f]+)"
+    r" sp=(0x[0-9a-f]+) lr=(0x[0-9a-f]+)"
+)
+LCD_RE = re.compile(
+    r"d750-lcd: dumped (\d+)x(\d+) \(([^,]+), stride (\d+)\)"
+    r" from (0x[0-9a-f]+) to (.+)"
+)
+
+
+def find_qemu(explicit: str | None = None) -> Path | None:
+    candidates = []
+    if explicit:
+        candidates.append(Path(explicit))
+    env = os.environ.get("D750_QEMU")
+    if env:
+        candidates.append(Path(env))
+    for pattern in (
+        ".build/build/qemu-system-arm.exe",
+        ".build/build/qemu-system-arm",
+        ".build/src/*/build/qemu-system-arm.exe",
+        ".build/src/*/build/qemu-system-arm",
+    ):
+        candidates.extend(sorted(PROJECT.glob(pattern)))
+    candidates.append(Path(r"C:\Program Files\qemu\qemu-system-arm.exe"))
+    found = shutil.which("qemu-system-arm")
+    if found:
+        candidates.append(Path(found))
+    for cand in candidates:
+        if cand and Path(cand).is_file():
+            return Path(cand)
+    return None
+
+
+def machine_supported(qemu: Path) -> tuple[bool, str]:
+    try:
+        out = subprocess.run([str(qemu), "-M", "help"], capture_output=True,
+                             text=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, str(exc)
+    return ("nikon-d750" in out.stdout), out.stdout
+
+
+def free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+def summarize_probe_log(path: Path) -> dict:
+    events = []
+    if not path.is_file():
+        return {"events": 0, "by_address": []}
+    text = path.read_text(encoding="utf-8", errors="replace")
+    for match in PROBE_RE.finditer(text):
+        events.append({
+            "pc": match.group(1),
+            "rw": match.group(2),
+            "addr": match.group(3),
+            "size": int(match.group(4)),
+            "value": match.group(5) or "0x00000000",
+        })
+    counts: dict[tuple[str, str], dict] = {}
+    for ev in events:
+        key = (ev["addr"], ev["rw"])
+        rec = counts.setdefault(key, {"addr": ev["addr"], "rw": ev["rw"],
+                                      "count": 0, "first_pc": ev["pc"],
+                                      "size": ev["size"]})
+        rec["count"] += 1
+    by_addr = sorted(counts.values(), key=lambda r: r["count"], reverse=True)
+    return {"events": len(events), "by_address": by_addr[:50]}
+
+
+def summarize_uart(path: Path, tail: int = 4096) -> dict:
+    if not path.is_file():
+        return {"bytes": 0, "tail": ""}
+    data = path.read_bytes()
+    return {
+        "bytes": len(data),
+        "tail": data[-tail:].decode("utf-8", errors="replace"),
+    }
+
+
+def summarize_halt(path: Path) -> dict | None:
+    """Parse the assisted-return record written by the halt window."""
+    if not path.is_file():
+        return None
+    match = HALT_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+    if not match:
+        return None
+    return {
+        "pc": match.group(1), "r0": match.group(2), "r1": match.group(3),
+        "sp": match.group(4), "lr": match.group(5),
+    }
+
+
+def summarize_lcd(path: Path) -> dict | None:
+    """Parse the last framebuffer dump record."""
+    if not path.is_file():
+        return None
+    matches = LCD_RE.findall(path.read_text(encoding="utf-8", errors="replace"))
+    if not matches:
+        return None
+    width, height, fmt, stride, base, out = matches[-1]
+    return {
+        "width": int(width), "height": int(height), "format": fmt.strip(),
+        "stride": int(stride), "base": base, "out": out.strip(),
+    }
+
+
+def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
+                  gdb_port: int | None) -> list[str]:
+    machine = "nikon-d750"
+    if args.entry is not None:
+        machine += f",entry=0x{args.entry:x}"
+    if args.strict:
+        machine += ",strict=on"
+    if args.lcd_base is not None:
+        machine += (f",lcd-base=0x{args.lcd_base:x}"
+                    f",lcd-width={args.lcd_width}"
+                    f",lcd-height={args.lcd_height}"
+                    f",lcd-stride={args.lcd_stride}"
+                    f",lcd-format={args.lcd_format}")
+        if args.lcd_out:
+            machine += f",lcd-out={Path(args.lcd_out).as_posix()}"
+    cmd = [
+        str(qemu), "-M", machine,
+        "-cpu", args.cpu,
+        "-m", args.ram,
+        "-display", "none",
+        "-monitor", "none",
+        "-serial", "file:" + str(run_dir / "uart.log").replace("\\", "/"),
+        "-D", str(run_dir / "qemu.log"),
+        "-d", "guest_errors",
+        "-no-reboot",
+        "-nic", "none",
+        "-kernel", str(Path(args.payload).resolve()),
+    ]
+    if args.flash:
+        cmd += ["-bios", str(Path(args.flash).resolve())]
+    if gdb_port is not None:
+        cmd += ["-S", "-gdb", f"tcp:127.0.0.1:{gdb_port}"]
+    return cmd
+
+
+def wait_for_port(port: int, timeout: float = 10.0) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                return True
+        except OSError:
+            time.sleep(0.1)
+    return False
+
+
+def gdb_snapshot(port: int, entry: int, checkpoint: int | None,
+                 run_seconds: float) -> dict:
+    sys.path.insert(0, str(PROJECT / "tools"))
+    from probe import RSPClient  # noqa: PLC0415
+
+    client = RSPClient("127.0.0.1", port)
+    result: dict = {"stop": None}
+    try:
+        regs = client.read_registers()
+        result["entry_pc"] = f"0x{regs.get('pc', 0):08x}"
+        result["entry_ok"] = regs.get("pc") == entry
+        result["cpsr"] = f"0x{regs.get('cpsr', 0):08x}"
+        try:
+            if checkpoint is not None:
+                client.set_breakpoint(checkpoint)
+            stop = client.continue_(run_seconds)
+            result["stop"] = {"kind": stop.kind, "signal": stop.signal,
+                              "thread": stop.thread, "raw": stop.raw}
+            regs = client.read_registers()
+            result["pc"] = f"0x{regs.get('pc', 0):08x}"
+            result["registers"] = {k: f"0x{v:08x}" for k, v in regs.items()}
+            if checkpoint is not None:
+                result["checkpoint_hit"] = regs.get("pc") == checkpoint
+        except Exception as exc:  # noqa: BLE001
+            # A self-shutdown (halt window) closes the RSP socket while the
+            # guest is running; record that as a normal post-run outcome.
+            result["stop"] = {"kind": "connection-closed", "raw": str(exc)}
+            result["guest_exited"] = True
+    finally:
+        client.close()
+    return result
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--payload", required=True,
+                        help="decrypted main module (b1010_*.bin)")
+    parser.add_argument("--flash", help="decrypted flash/first-stage module (a1010_*.bin)")
+    parser.add_argument("--qemu", help="qemu-system-arm binary")
+    parser.add_argument("--cpu", default=DEFAULT_CPU)
+    parser.add_argument("--ram", default="128M")
+    parser.add_argument("--entry", type=lambda s: int(s, 0),
+                        help=f"initial PC (default 0x{DEFAULT_ENTRY:x})")
+    parser.add_argument("--strict", action="store_true",
+                        help="do not map the catch-all diagnostic window")
+    parser.add_argument("--timeout", type=float, default=10.0,
+                        help="run time in seconds (non-GDB mode)")
+    parser.add_argument("--gdb", action="store_true",
+                        help="start paused and take an RSP snapshot")
+    parser.add_argument("--run-seconds", type=float, default=3.0)
+    parser.add_argument("--checkpoint", type=lambda s: int(s, 0),
+                        help="run until this PC (GDB mode)")
+    parser.add_argument("--lcd-base", type=lambda s: int(s, 0),
+                        help="optional framebuffer base for a PPM dump")
+    parser.add_argument("--lcd-width", type=int, default=640)
+    parser.add_argument("--lcd-height", type=int, default=480)
+    parser.add_argument("--lcd-stride", type=int, default=0)
+    parser.add_argument("--lcd-format", default="argb8888",
+                        choices=("argb8888", "rgb888", "rgb565"))
+    parser.add_argument("--lcd-out", help="PPM path (default <run>/lcd.ppm)")
+    parser.add_argument("--out", type=Path,
+                        help="session directory (default runs/<timestamp>)")
+    parser.add_argument("--dry-run", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    entry = args.entry if args.entry is not None else DEFAULT_ENTRY
+    qemu = find_qemu(args.qemu)
+    if qemu is None:
+        print("error: qemu-system-arm not found; pass --qemu or build the "
+              "overlay (see docs/build.md)", file=sys.stderr)
+        return 2
+    supported, machines = machine_supported(qemu)
+    if not supported:
+        print(f"error: {qemu} has no 'nikon-d750' machine.", file=sys.stderr)
+        print("This is expected for a stock QEMU build. Build the overlay "
+              "first (docs/build.md); the installed stock binary cannot load "
+              "a new machine at runtime.", file=sys.stderr)
+        return 3
+
+    stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir = args.out or (PROJECT / "runs" / stamp)
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    if args.lcd_base is not None and not args.lcd_out:
+        args.lcd_out = str(run_dir / "lcd.ppm")
+
+    port = free_port() if args.gdb else None
+    cmd = build_command(qemu, args, run_dir, port)
+    (run_dir / "command.json").write_text(json.dumps({
+        "argv": cmd, "entry": f"0x{entry:08x}", "gdb": bool(args.gdb),
+    }, indent=2) + "\n", encoding="utf-8")
+    if args.dry_run:
+        print(" ".join(cmd))
+        return 0
+
+    started = time.time()
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True)
+    session: dict = {
+        "argv": cmd,
+        "entry": f"0x{entry:08x}",
+        "payload": str(Path(args.payload).resolve()),
+        "flash": str(Path(args.flash).resolve()) if args.flash else None,
+        "started": _dt.datetime.now().isoformat(timespec="seconds"),
+    }
+
+    if args.gdb:
+        if not wait_for_port(port or 0):
+            out = proc.stdout.read() if proc.stdout else ""
+            session["error"] = "gdbstub did not open"
+            session["qemu_output"] = out[-4000:]
+            print(json.dumps(session, indent=2))
+            proc.terminate()
+            return 4
+        try:
+            session["snapshot"] = gdb_snapshot(port or 0, entry,
+                                               args.checkpoint, args.run_seconds)
+        except Exception as exc:  # noqa: BLE001 - record, do not hide
+            session["error"] = f"{type(exc).__name__}: {exc}"
+        stop_timeout = 5.0
+    else:
+        stop_timeout = args.timeout
+
+    try:
+        proc.wait(timeout=stop_timeout)
+        session["exit"] = proc.returncode
+        session["timed_out"] = False
+    except subprocess.TimeoutExpired:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        session["exit"] = proc.returncode
+        session["timed_out"] = True
+
+    session["wall_seconds"] = round(time.time() - started, 3)
+    session["qemu_output_tail"] = (proc.stdout.read()[-4000:]
+                                   if proc.stdout else "")
+    session["uart"] = summarize_uart(run_dir / "uart.log")
+    session["mmio"] = summarize_probe_log(run_dir / "qemu.log")
+    session["halt"] = summarize_halt(run_dir / "qemu.log")
+    session["lcd"] = summarize_lcd(run_dir / "qemu.log")
+    (run_dir / "session.json").write_text(json.dumps(session, indent=2) + "\n",
+                                          encoding="utf-8")
+
+    print(f"session: {run_dir}")
+    print(f"entry 0x{entry:08x}  exit={session['exit']}  "
+          f"timed_out={session['timed_out']}  uart={session['uart']['bytes']}B  "
+          f"mmio_events={session['mmio']['events']}")
+    if session["halt"]:
+        halt = session["halt"]
+        print(f"halt: pc={halt['pc']} r0={halt['r0']} r1={halt['r1']} "
+              f"sp={halt['sp']} lr={halt['lr']}")
+    if session["lcd"]:
+        lcd = session["lcd"]
+        print(f"lcd: {lcd['width']}x{lcd['height']} {lcd['format']} "
+              f"@ {lcd['base']} -> {lcd['out']}")
+    if args.gdb:
+        snap = session.get("snapshot", {})
+        print(f"pc={snap.get('pc')}  checkpoint_hit={snap.get('checkpoint_hit')}  "
+              f"stop={snap.get('stop')}")
+        if not snap.get("pc") and snap.get("guest_exited"):
+            print("gdb: guest exited before a register snapshot (halt recorded)")
+    if session["uart"]["tail"]:
+        print("uart tail:")
+        print(session["uart"]["tail"][-1200:])
+    if session["mmio"]["by_address"]:
+        print("top unmodelled MMIO:")
+        for rec in session["mmio"]["by_address"][:10]:
+            print(f"  {rec['rw']} {rec['addr']} x{rec['count']} (first pc {rec['first_pc']})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
