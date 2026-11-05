@@ -299,6 +299,11 @@
       "sha256": "10de3f5e07e59582447718abb1c433a75acbc430d2da34e17b0c9488969b033e"
     },
     {
+      "path": "LICENSE",
+      "size": 17880,
+      "sha256": "dd3ce02338c3a48abb6ba59b48809f7108a8bd242cb0cc8be90daafa30707c28"
+    },
+    {
       "path": "NOTICE.en.md",
       "size": 2876,
       "sha256": "949bfef78964bbdea1222b49574b3e32ed7b74f9f16f60a413a5412addec8047"
@@ -335,13 +340,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 16470,
-      "sha256": "0c0b5cd6a5d775922812f437620169f451de6516f739801400f4db48328916b9"
+      "size": 16539,
+      "sha256": "bf29023eb4ad78fae34732de352d3a9dcab68cdb5efe11105eda58a8f44ef945"
     },
     {
       "path": "README.md",
-      "size": 14241,
-      "sha256": "c51aae18cb10afbc303afdca77ce24700ed001507d3b7cc9e32d7641e4a17caa"
+      "size": 14314,
+      "sha256": "c4a1a16a1df5f9b30a06ebf905ac628376c95ff4fe665d5b2aebb9c45b0fc3f9"
     },
     {
       "path": "Run-D750.ps1",

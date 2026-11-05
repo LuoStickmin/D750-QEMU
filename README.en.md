@@ -248,6 +248,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original
 ├── PRODUCT.md  MANIFEST.json  SHA256SUMS
+├── LICENSE                     GPLv2 text (GPL-2.0-or-later)
 ├── Setup-D750.ps1  Run-D750.ps1
 └── .build/ .local/ runs/       Local generated artifacts (Git ignored)
 ```

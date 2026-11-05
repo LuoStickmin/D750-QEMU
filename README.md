@@ -270,6 +270,7 @@ python tools/run.py --payload ... --flash ... `
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
 ├── PRODUCT.md  MANIFEST.json  SHA256SUMS
+├── LICENSE                     GPLv2 文本（GPL-2.0-or-later）
 ├── Setup-D750.ps1  Run-D750.ps1
 └── .build/ .local/ runs/       本地生成物（Git 忽略）
 ```
