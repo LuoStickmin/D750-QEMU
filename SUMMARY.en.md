@@ -8,7 +8,7 @@ firmware research:
 | Workstream | Content | Status |
 | --- | --- | --- |
 | **A. QEMU validation prototype** | `nikon-d750` machine, M0 boot, LCD dump, boot scan | M0 passed; M1–M3 incomplete |
-| **B. 1080p high-bitrate modification** | raise 5 HQ rows from 42/35 and 24/20 to 64/60 Mbps | container-level verification passed; camera capture untested |
+| **B. 1080p high-bitrate modification** | raise 5 HQ rows from 42/35 and 24/20 to 64/60 Mbps | container-level verification passed and the image is byte-reproducible; camera capture untested |
 
 Neither workstream **contains firmware, keys, decrypted images or patched
 images**; the user supplies firmware locally and the tools only read it. See
@@ -59,15 +59,22 @@ starts at `0x2AA9AC`, 28 bytes per entry:
   CRC), with 0 B outside the fields;
 - an independent verifier (it does not import the patcher) re-decrypts,
   recomputes both CRC levels and checks every row; all checks pass;
+- the container is byte-reproducible: a no-edit repack of stock is bit-identical,
+  and stock + the patched module rebuilds `9c88f3cc…` exactly; the container
+  differs by only 36 B;
+- the D750 uses packaging A (no 20-byte header digest), so K8/`STALE` does not
+  apply;
 - the same QEMU M0 path runs stock and patched modules identically (exit 0,
   same halt, 0 MMIO);
-- **not verified**: camera encoder, SD recording, playback, updater signature;
-  64 Mbps is about 2.7× the stock 24 Mbps at 1080p30, and slow cards, heat or
-  encoder limits may cause problems;
+- **not verified**: updater acceptance (including the same-version reflash
+  policy), camera encoder, SD recording, playback; 64 Mbps is about 2.7× the
+  stock 24 Mbps at 1080p30, and slow cards, heat or encoder limits may cause
+  problems;
 - the repository ships only the table patcher and tests, not patched images,
   keys or a decryptor.
 
-Details: [bitrate/README.md](bitrate/README.md).
+Details: [bitrate/README.md](bitrate/README.md); hardware preconditions:
+[docs/hardware-test.md](docs/hardware-test.md).
 
 ## Status and boundaries
 

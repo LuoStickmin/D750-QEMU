@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — 2026-11-06
+
+### 文档
+
+- 新增 [`docs/hardware-test.md`](docs/hardware-test.md)（+ `.en.md`）：实机测试的
+  前置条件、风险、最小流程与判据。
+- 明确 D750 使用**包装 A**（`0x00` 起 32 个空格，无 20 字节带密钥摘要）；
+  K8 / `STALE` 只影响包装 B（D850/D5 那类），与 D750 无关。
+- 记录容器可逐字节复现：无修改重打包 = stock bit-identical；stock + 改表模块
+  = `9c88f3cc…`；容器仅 36 B 差异（`0x3D6575..0x3D665C`、`0x148DC29..2A`）。
+- `bitrate/README.md`、`SUMMARY.md`、`README.md`、`PRODUCT.md` 同步上述状态，
+  并把重打包/独立验证器指向同作者的
+  [Nikon-Expeed-4-and-5-firmware-tool](https://github.com/LuoStickmin/Nikon-Expeed-4-and-5-firmware-tool)
+  仓库。
+- 实机仍未验证：更新器接受度（含同版本重刷）、编码器行为、写卡/发热/回放。
+
 ## v0.1.1 — 2026-11-06
 
 修复 v0.1.0 评审中发现的证据与可用性问题；行为变化只涉及 `strict` 模式、

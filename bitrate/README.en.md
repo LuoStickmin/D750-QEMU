@@ -62,8 +62,10 @@ Before writing, `bitrate/d750_bitrate_patch.py` enforces:
 5. the four NQ rows must be byte-identical;
 6. differences must be confined to the five rows × two u32 fields.
 
-Local independent verification (`d750_bitrate_verify.py`, not shipped because it
-requires keys and a decryptor):
+Independent verification (`d750_bitrate_verify.py`, `repack_firmware.py`) lives in
+the author's other repository,
+[Nikon-Expeed-4-and-5-firmware-tool](https://github.com/LuoStickmin/Nikon-Expeed-4-and-5-firmware-tool);
+running it needs the keys/decryptor you legally hold.
 
 ```
 stock   image sha256 6c1dfadc8feb38bc783522c37f6351e1e8006f4684c8234690afb9aa08444859
@@ -81,11 +83,31 @@ HQ rows at target:
 all checks passed
 ```
 
+**Reproducibility boundary (updated 2026-11-06):** the patched image can now be
+reproduced byte for byte —
+
+- repacking the stock image with no edits: `repack_firmware.py --selftest`
+  produces a **bit-identical** image (sha256 `6c1dfadc…08444859`);
+- repacking stock + the patched `b1010` module reproduces the published
+  `9c88f3cc…e904988a` **exactly**;
+- container diff: same size (21,552,187 B); the 32-byte header is unchanged;
+  only **36 B** differ, at `0x3D6575..0x3D665C` (the five HQ rows) and
+  `0x148DC29..2A` (b1010 module CRC); the package-CRC field `0x148DC2B` stays
+  `f540` (residue); the other two modules are byte-identical.
+
+**Packaging note:** the D750 uses **packaging A** (32 spaces at `0x00`; there is
+no 20-byte keyed digest in the file), so K8/`STALE` only affects packaging B
+(D850/D5 class) and is not relevant here.
+
+This proves the container/CRC/re-encryption chain is reproducible. It does **not**
+prove the camera updater accepts the image, nor how the encoder behaves; see
+[docs/hardware-test.md](../docs/hardware-test.md) for the hardware preconditions.
+
 **Why the package CRC did not change:** CRC-16 residue makes
-`CRC16(payload || CRC16(payload)) == 0`; each module carries its own CRC, so
-the package CRC is insensitive to "payload change + module CRC recompute". The
-payload really did change; the evidence is the module CRC `0x12CA → 0x4314`
-and the 36-byte diff, not the package CRC.
+`CRC16(payload || CRC16(payload)) == 0`; each module carries its own CRC, so the
+package CRC is insensitive to "payload change + module CRC recompute". The payload
+really did change; the evidence is the module CRC `0x12CA → 0x4314` and the
+36-byte diff, not the package CRC.
 
 ## 4. Hashes
 
@@ -117,9 +139,11 @@ python bitrate/d750_bitrate_patch.py \
 D750_MODULE=/path/to/b1010_115a.bin python bitrate/test_d750_bitrate_patch.py
 ```
 
-Repacking / re-encryption / container CRCs are not in this repository: they
-need a key and decryptor you legally hold. This repository ships no keys,
-decryptor, or patched image.
+Repacking / re-encryption / container CRCs are not in this repository, but in the
+author's other repository
+[Nikon-Expeed-4-and-5-firmware-tool](https://github.com/LuoStickmin/Nikon-Expeed-4-and-5-firmware-tool)
+(`repack_firmware.py`). This repository still ships no keys, decryptor, or patched
+image.
 
 ## 6. Risks and unverified items
 
@@ -127,9 +151,12 @@ decryptor, or patched image.
    24 Mbps at 1080p30; the camera may stop early on a slow card, produce files
    that a computer can play but the camera cannot, or reduce bitrate due to
    heat/encoder limits.
-2. **Signature/updater unverified.** The tool only guarantees a self-consistent
-   container CRC; whether the D750 updater applies model/signature checks is
-   unknown, and a patched image is not guaranteed to be accepted.
+2. **Updater acceptance unverified.** The tool and the sibling repack tool only
+   guarantee a self-consistent container CRC. The D750 uses packaging A with no
+   signature header, but whether the updater applies model/version/hidden checks
+   is unknown, and the same-version (1.15 → 1.15) reflash policy is unknown too.
+   A patched image is not guaranteed to be accepted; see
+   [docs/hardware-test.md](../docs/hardware-test.md).
 3. **Do not test on your only working camera.** Keep the stock image; check
    battery, use a known-good UHS-I card, record 10–30 seconds first, then check
    bitrate and playback.

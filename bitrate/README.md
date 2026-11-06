@@ -58,8 +58,9 @@ entry 10 0x2AAAA8   <- 上限降到 47.19 Mbps，推断为 720p/480p 组，未�
 5. 4 个 NQ 行逐字节不变；
 6. 差异只能落在 5 行 × 2 个 u32 字段内（`verify_patch()` 逐字节检查）。
 
-本地独立验证（`d750_bitrate_verify.py`，不随仓库提供，因为它需要密钥与
-解密器）：
+独立验证（`d750_bitrate_verify.py`、`repack_firmware.py` 在同作者的
+[Nikon-Expeed-4-and-5-firmware-tool](https://github.com/LuoStickmin/Nikon-Expeed-4-and-5-firmware-tool)
+仓库中，运行需要你本地持有的密钥/解密器）：
 
 ```
 stock   image sha256 6c1dfadc8feb38bc783522c37f6351e1e8006f4684c8234690afb9aa08444859
@@ -77,9 +78,21 @@ HQ rows at target:
 all checks passed
 ```
 
-**可复现边界**：仓库内能复现的是“字段改写 + 字节边界检查”；模块 CRC
-`0x12CA → 0x4314`、36 B 总差异与重打包/重加密依赖未发布的本地验证器，
-仅凭本仓库无法复现。不要把这组数字当成仓库自带的验收结果。
+**可复现边界（2026-11-06 更新）**：改后镜像现在可以逐字节复现——
+
+- 无修改重打包 stock：`repack_firmware.py --selftest` 的输出与输入
+  **bit-identical**（sha256 `6c1dfadc…08444859`）；
+- stock + 改后 `b1010` 模块重打包：输出与本文的 `9c88f3cc…e904988a`
+  **逐字节一致**；
+- 容器差异：同大小 21,552,187 B；文件头 32 B 不变；仅 **36 B** 不同，位置为
+  `0x3D6575..0x3D665C`（5 个 HQ 行）与 `0x148DC29..2A`（b1010 模块 CRC）；
+  包 CRC 字段 `0x148DC2B` 保持 `f540`（residue）；另外两个模块逐字节相同。
+
+**包装说明**：D750 使用**包装 A**（`0x00` 起 32 个空格，文件里没有 20 字节
+带密钥摘要），因此 K8/`STALE` 只影响包装 B（D850/D5 那类），与 D750 无关。
+
+这证明容器/CRC/重加密链路可复现，**不**证明相机更新器接受，也不证明编码器
+行为；实机前置条件见 [docs/hardware-test.md](../docs/hardware-test.md)。
 
 **为什么包 CRC 没变：** CRC-16 的 residue 性质使
 `CRC16(payload || CRC16(payload)) == 0`；每个模块末尾带自己的 CRC，包 CRC
@@ -115,16 +128,19 @@ python bitrate/d750_bitrate_patch.py \
 D750_MODULE=/path/to/b1010_115a.bin python bitrate/test_d750_bitrate_patch.py
 ```
 
-重打包 / 重新加密 / 容器 CRC 不在本仓库工具内：它们需要你自己合法持有的
-密钥与解密器。本仓库不提供密钥、解密器或改后镜像。
+重打包 / 重新加密 / 容器 CRC 不在本仓库，但在同作者的
+[Nikon-Expeed-4-and-5-firmware-tool](https://github.com/LuoStickmin/Nikon-Expeed-4-and-5-firmware-tool)
+仓库（`repack_firmware.py`）中；本仓库仍不提供密钥、解密器或改后镜像。
 
 ## 6. 风险与未验证项
 
 1. **编码器/写卡/回放未验证。** 64 Mbps 对 1080p30 是 stock 24 Mbps 的约
    2.7 倍；相机可能在慢卡上提前停止、录出电脑能播但相机不能回放的文件，
    或因发热/编码器上限降码率。
-2. **签名/更新器未验证。** 本工具只保证容器 CRC 自洽；D750 更新器是否另有
-   型号/签名检查未知，改后镜像不保证被相机接受。
+2. **更新器接受度未验证。** 本工具与同作者的重打包工具只保证容器 CRC 自洽；
+   D750 是包装 A、文件里没有签名头，但更新器是否另有型号/版本/隐藏校验未知，
+   同版本（1.15 → 1.15）重刷策略也未知。改后镜像**不保证被相机接受**；上机
+   前置条件见 [docs/hardware-test.md](../docs/hardware-test.md)。
 3. **不要拿唯一一台工作机试。** 保留 stock 镜像；确认电量、使用已知良好的
    UHS-I 卡、先短录 10–30 秒，再检查码率与回放。
 4. 本次只改 1080p 的 5 个 HQ 行；NQ 仍是 24/20 与 12/10，720p/480p 组未动。

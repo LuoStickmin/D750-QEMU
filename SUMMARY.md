@@ -7,7 +7,7 @@
 | 工作线 | 内容 | 状态 |
 | --- | --- | --- |
 | **A. QEMU 验证原型** | `nikon-d750` 机器、M0 启动、LCD dump、boot 扫描 | M0 已通过；M1–M3 未完成 |
-| **B. 1080p 高码率修改** | 把 5 个 HQ 表项从 42/35、24/20 提到 64/60 Mbps | 容器级验证通过；相机实拍未验证 |
+| **B. 1080p 高码率修改** | 把 5 个 HQ 表项从 42/35、24/20 提到 64/60 Mbps | 容器级验证通过且可逐字节复现；相机实拍未验证 |
 
 两条线都**不包含固件、密钥、解密镜像或改后镜像**；固件由使用者本地提供，
 工具只读输入。法律与贡献边界见 [CONTRIBUTING.md](CONTRIBUTING.md)。
@@ -49,12 +49,16 @@ source overlay：
 - 模块 CRC `0x12CA → 0x4314`；包 CRC 仍为 `0x7EE4`（CRC residue，正常）；
 - 改后解密镜像与 stock 只差 36 B（34 B 字段 + 2 B CRC），字段外 0 B；
 - 独立验证器（不导入修改器）重解密、重算两级 CRC、逐项核对，全部通过；
+- 容器可逐字节复现：无修改重打包 stock 与输入 bit-identical；stock + 改表模块
+  重打包得到 `9c88f3cc…`，与发布的改后镜像完全一致；容器仅 36 B 差异；
+- D750 是包装 A（无 20B 摘要头），K8/`STALE` 不适用；
 - 同一 QEMU M0 路径跑 stock 与改后模块，结果一致（exit 0、同 halt、0 MMIO）；
-- **未验证**：相机编码器、SD 写卡、回放、更新器签名；64 Mbps 对 1080p30 是
-  stock 的约 2.7 倍，慢卡/发热/编码器上限都可能出问题；
+- **未验证**：更新器接受度（含同版本重刷策略）、相机编码器、SD 写卡、回放；
+  64 Mbps 对 1080p30 是 stock 的约 2.7 倍，慢卡/发热/编码器上限都可能出问题；
 - 仓库只提供改表工具与测试，不提供改后镜像、密钥或解密器。
 
-细节：[bitrate/README.md](bitrate/README.md)。
+细节：[bitrate/README.md](bitrate/README.md)；实机前置条件：
+[docs/hardware-test.md](docs/hardware-test.md)。
 
 ## 状态与边界
 

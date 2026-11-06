@@ -50,7 +50,7 @@ D750-QEMU/
 ├── tools/                     fwscan / run / probe / manifest / build
 ├── tests/                     23 host-side tests (no QEMU build needed)
 ├── bitrate/                   1080p 64/60 Mbps patcher, tests, report
-├── docs/                      findings / architecture / validation / build / gui-cmos (+ .en.md)
+├── docs/                      findings / architecture / validation / build / gui-cmos / hardware-test (+ .en.md)
 ├── analysis/
 │   ├── d750-0115.json         Profile verification results for the real image
 │   ├── lcd-testcard.png       LCD pipeline test card (host-written)
@@ -137,7 +137,10 @@ contains no firmware, keys, decrypted images, or patched images.
 - CMOS: need the control/data contract for Sensor/I2C/GDMA; currently there is no model.
 - Next boot stage: the candidate entry points inside the image have all been scanned, all 0 MMIO; the next step requires a flash/ROM
   dump or a loader hand-off convention.
-- See `docs/gui-cmos.md`, `docs/findings.md` §11.4/§11.5.
+- High-bitrate hardware: the container is now byte-reproducible. Next steps are a static review of the D750 updater
+  (model/version/hidden checks), confirmation of the same-version reflash policy, then a spare-body test following
+  `docs/hardware-test.md` (short clip + playback). Neither updater acceptance nor encoder behaviour has a hardware record yet.
+- See `docs/gui-cmos.md`, `docs/findings.md` §11.4/§11.5, `docs/hardware-test.md`.
 
 ## 8. Boundaries
 

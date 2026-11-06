@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-06T08:44:27+08:00",
+  "generated": "2026-11-06T10:15:26+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -156,13 +156,13 @@
     },
     {
       "path": "bitrate/README.en.md",
-      "size": 5986,
-      "sha256": "5d95efd184d24a39334aec20e7b0d4972d8ac5cfc44180f390b5ef8c998cfa2d"
+      "size": 7577,
+      "sha256": "2987657cef24ba168e903d0771761193eddfde83d7419241b949e7399c35af94"
     },
     {
       "path": "bitrate/README.md",
-      "size": 6067,
-      "sha256": "0f4d3ba9d339bc893d0115ed744ffe3a021d6e59e0020c53680f5cce98e3811f"
+      "size": 7244,
+      "sha256": "40c486235deb91bda5debd7007e47e2ef1f281fb493d413bea75bf61ca7e3594"
     },
     {
       "path": "bitrate/test_d750_bitrate_patch.py",
@@ -171,8 +171,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 2316,
-      "sha256": "65b8370c3b8b543b17eef00341f30aee6607d730ffd2836c2a5db3c836185b80"
+      "size": 3228,
+      "sha256": "4f9ce9cbe1eeaafe0fb38e46d3733f59c63058c559302391d323e3d0e5a31f09"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -223,6 +223,16 @@
       "path": "docs/gui-cmos.md",
       "size": 8754,
       "sha256": "ffd3432224b2f60db52cd3c6ee147d473d81d5974eafb6985b3353f0425c9b90"
+    },
+    {
+      "path": "docs/hardware-test.en.md",
+      "size": 4809,
+      "sha256": "f4a311e2736ef90f18b808aab95c80f88765c5edfe56aacaea8dc2fc7a05539d"
+    },
+    {
+      "path": "docs/hardware-test.md",
+      "size": 4572,
+      "sha256": "52d3ace4501caaf68d444813107b88ba6c9fdcd3ff345deb3d6024accb0f2f3a"
     },
     {
       "path": "docs/validation.en.md",
@@ -331,13 +341,13 @@
     },
     {
       "path": "PRODUCT.en.md",
-      "size": 6362,
-      "sha256": "1b78bd30c94391a83431ba46e44a90142d03fe47e32331eee2f9642510a8cf0c"
+      "size": 6761,
+      "sha256": "84248e567649e04b3e26d31c98c93e73c8b2e634406d8f89d125ba814784e02c"
     },
     {
       "path": "PRODUCT.md",
-      "size": 6029,
-      "sha256": "29f10e185d1ad022b2306c6ec987fa2e2175038bd1b418db0b80f653043c761d"
+      "size": 6389,
+      "sha256": "a746211c2e841eef97abf349e44a6b90b48470560144313c36129a7cb13fb9fb"
     },
     {
       "path": "qemu/nikon-d750-lab.c",
@@ -356,13 +366,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 17008,
-      "sha256": "e34ddefefae42aaadda625040796553ff4f00ef9e77db2913557b4b41530597c"
+      "size": 17625,
+      "sha256": "dec009f951667f3faa6c28892fad978b30ff4a40d7cc0e1ca78a3aa418f4f1bb"
     },
     {
       "path": "README.md",
-      "size": 15719,
-      "sha256": "3d59b0aba3a609e81e5df9de090b9d9f57076a1efca8b999aecdd9389f0ec9e8"
+      "size": 16269,
+      "sha256": "31be37d7b106bacc894fe29d516836b5845e81cc87bfbc874fb8fb6be4f3f074"
     },
     {
       "path": "Run-D750.ps1",
@@ -376,13 +386,13 @@
     },
     {
       "path": "SUMMARY.en.md",
-      "size": 4033,
-      "sha256": "3c76119ef07b40bd658f7eb2f6967e26071a64cbd4d49dbecc70778028e44d97"
+      "size": 4460,
+      "sha256": "cd4170be8082ff6f81cd5967c7023b5e71ebc402f51ad4207d175e3f57492e60"
     },
     {
       "path": "SUMMARY.md",
-      "size": 3670,
-      "sha256": "30cd51310fdcb63f3ffb76a4acda78535fa89450c7e9e321b11c83d21426977c"
+      "size": 4063,
+      "sha256": "701085ddf0c58804d29496570cf4e4a2d259caca748572b0c3b12da2b83144c3"
     },
     {
       "path": "tests/run_tests.py",

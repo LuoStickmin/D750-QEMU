@@ -54,16 +54,20 @@ Currently **completed and verified**:
 | Board C code compilation | ✅ Compiled on WSL Ubuntu 26.04 (gcc 15.2) + QEMU 11.1.0 |
 | `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.39s |
 | LCD scanout/dump pipeline | ✅ Configurable framebuffer → PPM; test card verified; firmware image still absent |
+| Container repack / patched-image reproduction | ✅ Byte-for-byte reproducible with the author's toolchain (no-edit round trip is bit-identical; the patched image `9c88f3cc…` can be rebuilt exactly), see [docs/hardware-test.md](docs/hardware-test.md) |
+| Real hardware | ⚠️ **Unverified**: updater acceptance, encoder behaviour, card/heat/playback have no hardware record yet |
 | M1 (MMIO) / M2 (UART) / M3 (Devices) | ⏳ Not started; current execution fragment accesses 0 MMIO |
 | Full camera UI / ISP / CMOS / Storage | ❌ Out of scope |
 
 > **Second workstream (1080p high bitrate)**: the five HQ rows of the D750
-> bitrate table were raised from `42/35` and `24/20` to `64/60` Mbps;
-> independent container-level verification passed and the QEMU M0 regression
-> matches stock, but **camera capture is unverified**. Overview:
-> [SUMMARY.md](SUMMARY.en.md); details: [bitrate/README.md](bitrate/README.md).
-> The repository ships only the table patcher, not firmware, keys, or patched
-> images.
+> bitrate table were raised from `42/35` and `24/20` to `64/60` Mbps.
+> Container-level verification passed, and the patched image is **reproducible
+> byte for byte** from stock + the patched module (`repack_firmware.py`'s no-edit
+> round trip is bit-identical). The QEMU M0 regression matches stock, but
+> **camera capture is unverified**. Overview: [SUMMARY.md](SUMMARY.en.md);
+> details: [bitrate/README.md](bitrate/README.md); hardware preconditions:
+> [docs/hardware-test.md](docs/hardware-test.md). The repository ships only the
+> table patcher, not firmware, keys, or patched images.
 
 ### ⚠️ Warning Regarding Stock QEMU
 If you have the official default QEMU installed (e.g., `C:\Program Files\qemu` on Windows), it usually only has `qemu-system-arm` / `qemu-system-aarch64` targets, and **no `nikon-*` machine** in `-M help`. QEMU machines are registered at compile-time and cannot be loaded at runtime like plugins. 
@@ -245,7 +249,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 │   └── ...                     Other firmware analysis artifacts already in repo (see below)
 ├── binary/                     COPYING + notes (binary published via GitHub Release)
 ├── evidence/                   M0 / GDB / LCD / boot-scan run evidence
-├── docs/                       findings / architecture / validation / build / gui-cmos (+ .en.md)
+├── docs/                       findings / architecture / validation / build / gui-cmos / hardware-test (+ .en.md)
 ├── SUMMARY.md / SUMMARY.en.md  Combined overview of both workstreams
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original

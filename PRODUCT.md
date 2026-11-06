@@ -48,7 +48,7 @@ D750-QEMU/
 ├── tools/                    fwscan / run / probe / manifest / build
 ├── tests/                    23 个主机侧测试（无需 QEMU 构建）
 ├── bitrate/                  1080p 64/60 Mbps 改表工具、测试、说明
-├── docs/                     findings / architecture / validation / build / gui-cmos（含 .en.md）
+├── docs/                     findings / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
 ├── analysis/
 │   ├── d750-0115.json        真实镜像的 profile 核对结果
 │   ├── lcd-testcard.png      LCD 管线测试卡（主机写入）
@@ -133,7 +133,11 @@ Nikon Hacker 补丁数据库、固件 ASCII 字符串 dump、硬编码本机路�
 - CMOS：需要 Sensor/I2C/GDMA 的控制/数据契约；当前没有模型。
 - boot 下一阶段：镜像内候选入口已扫描完，全部 0 MMIO；下一步需要 flash/ROM
   dump 或 loader 交接约定。
-- 详见 `docs/gui-cmos.md`、`docs/findings.md` §11.4/§11.5。
+- 高码率实机：容器已可逐字节复现；下一步是静态检查 D750 更新器（型号/版本/
+  隐藏校验）、确认同版本重刷策略，然后在备用机上按 `docs/hardware-test.md`
+  的流程做短录与回放验证。更新器接受度与编码器行为目前**都没有实机记录**。
+- 详见 `docs/gui-cmos.md`、`docs/findings.md` §11.4/§11.5、
+  `docs/hardware-test.md`。
 
 ## 8. 边界
 

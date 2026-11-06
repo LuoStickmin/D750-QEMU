@@ -54,14 +54,18 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.39 s 正常退出 |
 | strict 诊断 / halt 校验 | ✅ 第一条未建模访问记 `d750-strict:` 后停止（`run.py` 退出码 7）；halt 记录带 `return_ok=`，异常路径退出码 6 |
 | LCD 扫描输出/dump 管线 | ✅ 可配置帧缓冲 → PPM；测试卡验证通过；固件画面仍无 |
+| 容器重打包 / 改后镜像复现 | ✅ 同作者工具链可逐字节复现（无修改回环 bit-identical；改后镜像 `9c88f3cc…` 可精确重建），见 [docs/hardware-test.md](docs/hardware-test.md) |
+| 实机测试 | ⚠️ **未验证**：更新器接受度、编码器行为、写卡/发热/回放都还没有实机记录 |
 | M1（MMIO 序列）/ M2（串口）/ M3（补设备） | ⏳ 尚未推进；这一次执行片段没有访问任何 MMIO |
 | 完整相机 UI / ISP / CMOS / 存储 | ❌ 不在本原型范围 |
 
 > **另一条工作线（1080p 高码率）**：D750 码率表的 5 个 HQ 行已从
-> `42/35`、`24/20` 提到 `64/60` Mbps；容器级独立验证通过，QEMU M0 回归与
-> stock 一致，但**相机实拍未验证**。摘要见 [SUMMARY.md](SUMMARY.md)，细节见
-> [bitrate/README.md](bitrate/README.md)。仓库只含改表工具，不含固件/密钥/
-> 改后镜像。
+> `42/35`、`24/20` 提到 `64/60` Mbps；容器级验证通过，且改后镜像可由
+> stock + 改表模块**逐字节复现**（`repack_firmware.py` 无修改回环
+> bit-identical）；QEMU M0 回归与 stock 一致，但**相机实拍未验证**。
+> 摘要见 [SUMMARY.md](SUMMARY.md)，细节见 [bitrate/README.md](bitrate/README.md)，
+> 实机前置条件见 [docs/hardware-test.md](docs/hardware-test.md)。仓库只含改表
+> 工具，不含固件/密钥/改后镜像。
 
 **这意味着什么：** 如果你装的是 stock QEMU（例如 Windows 的
 `C:\Program Files\qemu`），它通常只有 `qemu-system-arm` / `qemu-system-aarch64`
@@ -287,7 +291,7 @@ python tools/run.py --payload ... --flash ... `
 │   └── ...                     仓库里已有的其他固件分析产物（见下）
 ├── binary/                     COPYING + 说明（二进制通过 GitHub Release 发布）
 ├── evidence/                   M0 / GDB / LCD / boot-scan 运行证据
-├── docs/                       findings / architecture / validation / build / gui-cmos（含 .en.md）
+├── docs/                       findings / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
 ├── SUMMARY.md / SUMMARY.en.md  两条工作线总览
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
