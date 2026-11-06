@@ -153,3 +153,11 @@ D750_MODULE=/path/to/b1010_115a.bin python bitrate/test_d750_bitrate_patch.py
   <https://simeonpilgrim.com/blog/2014/02/23/high-bit-rate-recording-now-solved/>
 - QEMU 回归见 [../docs/validation.md](../docs/validation.md) 与
   [../evidence/](../evidence/)。
+
+## 8. 菜单可见版
+
+真正新增第三项目前卡在菜单描述符，见
+[../analysis/menu-bitrate-feasibility.md](../analysis/menu-bitrate-feasibility.md)。
+可交付的替代是复用 Movie quality 两项：`High quality` → `64 Mbps HQ`，
+`Normal` → `Stock`；工具 `d750_menu_patch.py`，设计/验证/风险见
+[MENU64.md](MENU64.md)。这不是第三项，且相机 UI 未验证。

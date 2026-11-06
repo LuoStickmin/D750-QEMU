@@ -23,6 +23,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 
 - [项目总览（两条工作线）](SUMMARY.md)
 - [高码率修改](bitrate/README.md)
+- [菜单可见版 64 Mbps / Stock](bitrate/MENU64.md)
 - [贡献与法律边界](CONTRIBUTING.md)
 - [1. 当前状态](#1-当前状态先读这一节)
 - [2. 快速开始](#2-快速开始)
@@ -65,7 +66,10 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 > bit-identical）；QEMU M0 回归与 stock 一致，但**相机实拍未验证**。
 > 摘要见 [SUMMARY.md](SUMMARY.md)，细节见 [bitrate/README.md](bitrate/README.md)，
 > 实机前置条件见 [docs/hardware-test.md](docs/hardware-test.md)。仓库只含改表
-> 工具，不含固件/密钥/改后镜像。
+> 工具，不含固件/密钥/改后镜像。Movie quality 新增第三项的可行性以及
+> “64 Mbps / Stock”两项复用工具见
+> [analysis/menu-bitrate-feasibility.md](analysis/menu-bitrate-feasibility.md)
+> 与 [bitrate/MENU64.md](bitrate/MENU64.md)。
 
 **这意味着什么：** 如果你装的是 stock QEMU（例如 Windows 的
 `C:\Program Files\qemu`），它通常只有 `qemu-system-arm` / `qemu-system-aarch64`

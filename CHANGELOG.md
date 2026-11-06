@@ -15,6 +15,13 @@
   [Nikon-Expeed-4-and-5-firmware-tool](https://github.com/LuoStickmin/Nikon-Expeed-4-and-5-firmware-tool)
   仓库。
 - 实机仍未验证：更新器接受度（含同版本重刷）、编码器行为、写卡/发热/回放。
+- 新增 [`analysis/menu-bitrate-feasibility.md`](analysis/menu-bitrate-feasibility.md)
+  （+ `.en.md`）：真正新增第三项 Movie quality 码率的可行性分析；当前卡在
+  菜单描述符，没有生成第三项镜像。
+- 新增 [`bitrate/MENU64.md`](bitrate/MENU64.md) 与
+  `bitrate/d750_menu_patch.py` / `test_d750_menu_patch.py`：复用现有两项的
+  `64 Mbps HQ` / `Stock` 菜单可见版，英文/中文同长度改标签；**不是第三项**，
+  相机 UI 未验证。
 
 ## v0.1.1 — 2026-11-06
 

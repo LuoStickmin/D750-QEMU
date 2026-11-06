@@ -24,6 +24,7 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
 ## Table of Contents
 - [Project overview (both workstreams)](SUMMARY.en.md)
 - [High-bitrate modification](bitrate/README.en.md)
+- [Menu-visible 64 Mbps / Stock variant](bitrate/MENU64.md)
 - [Contributing & legal boundaries](CONTRIBUTING.en.md)
 - [1. Current Status & Roadmap](#1-current-status--roadmap)
 - [2. Quick Start](#2-quick-start)
@@ -67,7 +68,10 @@ Currently **completed and verified**:
 > **camera capture is unverified**. Overview: [SUMMARY.md](SUMMARY.en.md);
 > details: [bitrate/README.md](bitrate/README.md); hardware preconditions:
 > [docs/hardware-test.md](docs/hardware-test.md). The repository ships only the
-> table patcher, not firmware, keys, or patched images.
+> table patcher, not firmware, keys, or patched images. For the blocked third
+> Movie-quality item and the implemented two-slot "64 Mbps / Stock" variant,
+> see [analysis/menu-bitrate-feasibility.en.md](analysis/menu-bitrate-feasibility.en.md)
+> and [bitrate/MENU64.md](bitrate/MENU64.md).
 
 ### ⚠️ Warning Regarding Stock QEMU
 If you have the official default QEMU installed (e.g., `C:\Program Files\qemu` on Windows), it usually only has `qemu-system-arm` / `qemu-system-aarch64` targets, and **no `nikon-*` machine** in `-M help`. QEMU machines are registered at compile-time and cannot be loaded at runtime like plugins. 

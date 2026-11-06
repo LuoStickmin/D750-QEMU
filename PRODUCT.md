@@ -16,7 +16,7 @@
 | 编译器 | gcc 15.2.0 |
 | QEMU | 11.1.0（overlay 构建） |
 | 二进制 | GitHub Release v0.1.1 附件（Linux x86-64，约 96 MiB） |
-| 主机侧测试 | 23 passed（QEMU）+ 4 passed（bitrate，需本地模块；无模块时 4 skipped） |
+| 主机侧测试 | 23 passed（QEMU）+ 9 passed（bitrate/menu，需本地模块；无模块时 9 skipped） |
 
 ## 2. 已验证的事实
 
@@ -47,7 +47,7 @@ D750-QEMU/
 ├── qemu/                     QEMU overlay：nikon-d750-lab.c/.h + prepare_source.py
 ├── tools/                    fwscan / run / probe / manifest / build
 ├── tests/                    23 个主机侧测试（无需 QEMU 构建）
-├── bitrate/                  1080p 64/60 Mbps 改表工具、测试、说明
+├── bitrate/                  1080p 64/60 Mbps 改表工具、菜单可见版、测试、说明
 ├── docs/                     findings / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
 ├── analysis/
 │   ├── d750-0115.json        真实镜像的 profile 核对结果

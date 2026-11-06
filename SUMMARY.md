@@ -55,7 +55,11 @@ source overlay：
 - 同一 QEMU M0 路径跑 stock 与改后模块，结果一致（exit 0、同 halt、0 MMIO）；
 - **未验证**：更新器接受度（含同版本重刷策略）、相机编码器、SD 写卡、回放；
   64 Mbps 对 1080p30 是 stock 的约 2.7 倍，慢卡/发热/编码器上限都可能出问题；
-- 仓库只提供改表工具与测试，不提供改后镜像、密钥或解密器。
+- 仓库只提供改表工具与测试，不提供改后镜像、密钥或解密器；
+- 菜单可见替代：复用 Movie quality 两项为 `64 Mbps HQ` / `Stock`；
+  真正第三项目前卡在菜单描述符，见
+  [analysis/menu-bitrate-feasibility.md](analysis/menu-bitrate-feasibility.md)；
+  工具与验证见 [bitrate/MENU64.md](bitrate/MENU64.md)。
 
 细节：[bitrate/README.md](bitrate/README.md)；实机前置条件：
 [docs/hardware-test.md](docs/hardware-test.md)。

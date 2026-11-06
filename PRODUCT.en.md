@@ -18,7 +18,7 @@ absolute paths.
 | Compiler | gcc 15.2.0 |
 | QEMU | 11.1.0 (overlay build) |
 | Binary | GitHub Release v0.1.1 asset (Linux x86-64, about 96 MiB) |
-| Host-side tests | 23 passed (QEMU) + 4 passed (bitrate; needs a local module, 4 skipped without one) |
+| Host-side tests | 23 passed (QEMU) + 9 passed (bitrate/menu; needs a local module, 9 skipped without one) |
 
 ## 2. Verified Facts
 
@@ -49,7 +49,7 @@ D750-QEMU/
 ├── qemu/                      QEMU overlay: nikon-d750-lab.c/.h + prepare_source.py
 ├── tools/                     fwscan / run / probe / manifest / build
 ├── tests/                     23 host-side tests (no QEMU build needed)
-├── bitrate/                   1080p 64/60 Mbps patcher, tests, report
+├── bitrate/                   1080p 64/60 Mbps patcher, menu-visible variant, tests, report
 ├── docs/                      findings / architecture / validation / build / gui-cmos / hardware-test (+ .en.md)
 ├── analysis/
 │   ├── d750-0115.json         Profile verification results for the real image
