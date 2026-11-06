@@ -9,7 +9,7 @@
 | `d750-0115.json` | `fwscan` 对真实镜像的 profile 核对结果：大小、SHA-256、向量/字面量、MMU 站点、指针分布。 |
 | `lcd-testcard.png` | `nikon-d750` LCD dump 管线的合成测试卡（主机写入，不是固件 UI）。 |
 | `tiff-feasibility.md` / `.en.md` | D750 菜单加入 TIF 的可行性分析：只读静态结论与证据。 |
-| `menu-bitrate-feasibility.md` / `.en.md` | D750 Movie quality 新增第三项码率的可行性分析：当前卡点与最小替代方案。 |
+| `menu-bitrate-feasibility.md` | D750 Movie quality 新增第三项码率的可行性分析（中文正文 + 文末英文版）：当前卡点与最小替代方案。 |
 | `tiff_scan.py` | 上述分析的只读扫描器；`--module` 可指定本地模块。 |
 
 ## 未公开的探索性材料

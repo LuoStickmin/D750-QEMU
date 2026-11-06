@@ -171,12 +171,3 @@ image.
   <https://simeonpilgrim.com/blog/2014/02/23/high-bit-rate-recording-now-solved/>
 - QEMU regression: [../docs/validation.md](../docs/validation.md) and
   [../evidence/](../evidence/).
-
-## 8. Menu-visible variant
-
-A genuine third item is blocked at the menu descriptor; see
-[../analysis/menu-bitrate-feasibility.en.md](../analysis/menu-bitrate-feasibility.en.md).
-The delivered alternative reuses the two Movie quality slots: `High quality`
-→ `64 Mbps HQ`, `Normal` → `Stock`. Tool: `d750_menu_patch.py`; design,
-verification, and risks: [MENU64.md](MENU64.md). It is not a third item, and
-the camera UI is unverified.

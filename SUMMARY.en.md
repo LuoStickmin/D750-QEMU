@@ -71,12 +71,7 @@ starts at `0x2AA9AC`, 28 bytes per entry:
   stock 24 Mbps at 1080p30, and slow cards, heat or encoder limits may cause
   problems;
 - the repository ships only the table patcher and tests, not patched images,
-  keys or a decryptor;
-- menu-visible alternative: reuse the two Movie quality slots as
-  `64 Mbps HQ` / `Stock`; a genuine third item is blocked at the menu
-  descriptor, see
-  [analysis/menu-bitrate-feasibility.en.md](analysis/menu-bitrate-feasibility.en.md);
-  tool and verification: [bitrate/MENU64.md](bitrate/MENU64.md).
+  keys or a decryptor.
 
 Details: [bitrate/README.md](bitrate/README.md); hardware preconditions:
 [docs/hardware-test.md](docs/hardware-test.md).

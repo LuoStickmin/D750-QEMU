@@ -10,7 +10,6 @@ firmware, keys, decrypted images, or patched images.
 | `d750-0115.json` | `fwscan` profile of the real image: size, SHA-256, vectors/literals, MMU sites, pointer census. |
 | `lcd-testcard.png` | Synthetic test card for the `nikon-d750` LCD dump pipeline (host-written, not firmware UI). |
 | `tiff-feasibility.md` / `.en.md` | Feasibility analysis for adding TIF to the D750 menu: read-only static conclusions and evidence. |
-| `menu-bitrate-feasibility.md` / `.en.md` | Feasibility analysis for a third Movie-quality bit-rate item: blocker and smallest alternative. |
 | `tiff_scan.py` | Read-only scanner used by that analysis; `--module` accepts a local module. |
 
 ## Material not published
