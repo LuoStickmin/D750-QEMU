@@ -49,6 +49,9 @@ qemu.log: d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000
           sp=0x97ffff00 lr=0x00000ff0 firmware returned to the assisted trampoline
 ```
 
+`wall_seconds` includes QEMU process startup and varies between 0.18 and 0.40 s
+depending on cold/warm start; the number above is from `evidence/m0/session.json`.
+
 Conclusion: the entry can be loaded and finishes execution, exiting normally through the halt window; but it is a **called function**, not
 a reset. Without assistance, the first run will `push` to `0xFFFFFFF0..0xFFFFFFFC` and jump back to 0;
 this negative result is saved in `docs/findings.md` §11.

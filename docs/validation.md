@@ -50,6 +50,9 @@ qemu.log: d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000
           sp=0x97ffff00 lr=0x00000ff0 firmware returned to the assisted trampoline
 ```
 
+`wall_seconds` 含 QEMU 进程启动，随冷/热启动在 0.18–0.40 s 之间波动；上面的
+数字取自 `evidence/m0/session.json`。
+
 结论：入口能装入并执行完，经 halt 窗口正常退出；但它是**被调用函数**，不是
 reset。无辅助时第一次运行会 `push` 到 `0xFFFFFFF0..0xFFFFFFFC` 并跳回 0，
 这条负结果保存在 `docs/findings.md` §11。
