@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-06T08:41:08+08:00",
+  "generated": "2026-11-06T08:43:14+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -79,6 +79,11 @@
   },
   "firmware_included": false,
   "files": [
+    {
+      "path": ".gitattributes",
+      "size": 230,
+      "sha256": "aca850d860727faa39006d85457cddbec45307c725a5319b8397e37b679a5e52"
+    },
     {
       "path": ".github/workflows/ci.yml",
       "size": 657,

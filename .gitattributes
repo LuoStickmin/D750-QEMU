@@ -1,0 +1,4 @@
+# SHA256SUMS and MANIFEST.json hash the exact bytes stored in Git, so the
+# checkout must never rewrite line endings.  The tree intentionally contains
+# both LF and CRLF files (the evidence JSON was generated on Windows).
+* -text
