@@ -169,7 +169,7 @@ Z7/Z9 的地址、IRQ、协议不能按“同是 EXPEED”复用；这一点在�
 1. **找 boot 下一阶段**（推荐，所有 GUI/CMOS 工作的前置）：
    - 在镜像里找描述符表的消费者/ROM 交接约定；
    - 用 `-machine entry=` 逐个验证候选入口；
-   - 用 `--strict` 抓第一个未建模访问。
+   - 用 `--strict` 抓第一个未建模访问（`d750-strict:` 日志，`run.py` 退出码 7）。
 2. **LCD dump hook（已完成）**：
    - `lcd-base/width/height/stride/format/out` 可配；
    - halt 与每 2 秒 dump PPM；`lcd-base=0` 时关闭；

@@ -67,12 +67,53 @@ class SessionParsingTests(unittest.TestCase):
             log = Path(td) / "qemu.log"
             log.write_text(
                 "d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000"
-                " sp=0x97ffff00 lr=0x00000ff0 firmware returned to the"
-                " assisted trampoline\n", encoding="utf-8")
+                " sp=0x97ffff00 lr=0x00000ff0 return_ok=true mode=0x13"
+                " firmware returned to the assisted trampoline\n",
+                encoding="utf-8")
             halt = run_mod.summarize_halt(log)
         self.assertIsNotNone(halt)
         self.assertEqual(halt["r0"], "0x80002000")
         self.assertEqual(halt["sp"], "0x97ffff00")
+        self.assertTrue(halt["return_ok"])
+        self.assertFalse(halt["suspicious"])
+
+    def test_halt_summary_old_binary_has_no_verdict(self):
+        with temp_dir() as td:
+            log = Path(td) / "qemu.log"
+            log.write_text(
+                "d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000"
+                " sp=0x97ffff00 lr=0x00000ff0 firmware returned to the"
+                " assisted trampoline\n", encoding="utf-8")
+            halt = run_mod.summarize_halt(log)
+        self.assertIsNone(halt["return_ok"])
+        self.assertFalse(halt["suspicious"])
+
+    def test_halt_summary_flags_exception_path(self):
+        with temp_dir() as td:
+            log = Path(td) / "qemu.log"
+            log.write_text(
+                "d750-halt: pc=0x00000ff0 r0=0x00000000 r1=0x40000000"
+                " sp=0x00000000 lr=0x9000000c return_ok=false mode=0x17"
+                " unexpected state\n", encoding="utf-8")
+            halt = run_mod.summarize_halt(log)
+        self.assertFalse(halt["return_ok"])
+        self.assertTrue(halt["suspicious"])
+        self.assertEqual(halt["mode"], "0x17")
+
+    def test_strict_stop_summary(self):
+        with temp_dir() as td:
+            log = Path(td) / "qemu.log"
+            log.write_text(
+                "d750-strict: pc=0x90000004 rd addr=0x40000000 size=4"
+                " (first unmodelled access, stopping)\n", encoding="utf-8")
+            stop = run_mod.summarize_strict(log)
+            empty = Path(td) / "empty.log"
+            empty.write_text("nothing\n", encoding="utf-8")
+            self.assertIsNone(run_mod.summarize_strict(empty))
+        self.assertEqual(stop["addr"], "0x40000000")
+        self.assertEqual(stop["rw"], "rd")
+        self.assertEqual(stop["pc"], "0x90000004")
+        self.assertEqual(stop["size"], 4)
 
     def test_lcd_summary(self):
         with temp_dir() as td:

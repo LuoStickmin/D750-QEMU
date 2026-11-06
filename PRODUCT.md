@@ -3,7 +3,7 @@
 > [English](PRODUCT.en.md) | 中文
 
 仓库根目录就是 `nikon-d750` 验证原型的**可交付产品目录**：源码、工具、文档、
-已构建的 Linux 二进制、以及实际运行的证据。
+实际运行的证据，以及指向已构建 Linux 二进制的 Release 链接。
 
 可以整体拷走；拷贝后按新的绝对路径重跑 `tools/run.py` 即可。
 
@@ -11,17 +11,17 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 生成时间 | 2026-11-05（Asia/Shanghai） |
+| 生成时间 | 2026-11-06（Asia/Shanghai） |
 | 主机 | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | 编译器 | gcc 15.2.0 |
 | QEMU | 11.1.0（overlay 构建） |
-| 二进制 | GitHub Release 附件（Linux x86-64，约 96 MiB） |
-| 主机侧测试 | 20 passed（QEMU）+ 4 passed（bitrate） |
+| 二进制 | GitHub Release v0.1.1 附件（Linux x86-64，约 96 MiB） |
+| 主机侧测试 | 23 passed（QEMU）+ 4 passed（bitrate，需本地模块；无模块时 4 skipped） |
 
 ## 2. 已验证的事实
 
 1. **M0 通过**：`b1010_115a.bin` 装入 `0x90000000`，入口 `0x9027D52C`
-   执行完并返回 halt 窗口，0.18 s 正常退出。
+   执行完并返回 halt 窗口，0.39 s 正常退出。
    `evidence/m0/`、`evidence/m0-gdb/`。
 2. **入口检查**：RSP 读到 `entry_pc=0x9027d52c`、`entry_ok=true`、
    `cpsr=0x400001d3`（SVC，A/I/F 屏蔽）。
@@ -42,9 +42,11 @@ D750-QEMU/
 ├── CONTRIBUTING.md / .en.md   法律与贡献边界
 ├── MANIFEST.json             文件清单、SHA-256、证据摘要
 ├── SHA256SUMS                sha256sum -c 兼容的校验清单
+├── CHANGELOG.md              版本与修复记录
+├── .github/workflows/ci.yml  主机侧测试 + 清单校验
 ├── qemu/                     QEMU overlay：nikon-d750-lab.c/.h + prepare_source.py
-├── tools/                    fwscan / run / probe / build
-├── tests/                    20 个主机侧测试（无需 QEMU 构建）
+├── tools/                    fwscan / run / probe / manifest / build
+├── tests/                    23 个主机侧测试（无需 QEMU 构建）
 ├── bitrate/                  1080p 64/60 Mbps 改表工具、测试、说明
 ├── docs/                     findings / architecture / validation / build / gui-cmos（含 .en.md）
 ├── analysis/

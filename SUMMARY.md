@@ -21,7 +21,7 @@ source overlay：
 
 - 主镜像 `b1010_115a.bin` 装入 `0x90000000`，入口 `0x9027D52C`；
 - 辅助启动：低 64 KiB RAM、SP=RAM 顶、LR 指向 `0xFF0` 的 halt 窗口；
-- 结果：入口执行完正常返回，`exit=0`、0.18 s、`r0=0x80002000`、0 MMIO、0 UART；
+- 结果：入口执行完正常返回，`exit=0`、0.39 s、`r0=0x80002000`、0 MMIO、0 UART；
 - 交叉验证：`entry_pc=0x9027D52C`、`entry_ok=true`、CPSR `0x400001d3`；
 - 入口是**被调用函数**，不是 reset；没有它时 `push` 到 `0xFFFFFFF0..FC` 并跳回 0；
 - 镜像内 10 个候选入口全部 0 MMIO，`0x9025D700` 进入无 MMIO 等待循环；

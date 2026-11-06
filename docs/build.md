@@ -85,7 +85,7 @@ python tools/build.py --source D:\src\qemu-11.1.0 --overlay-only
 ## 4. 构建后自检
 
 ```powershell
-& .build\build\qemu-system-arm.exe -M help | Select-String nikon
+& .build\src\qemu-11.1.0\build\qemu-system-arm.exe -M help | Select-String nikon
 ```
 
 应看到：
@@ -97,7 +97,7 @@ nikon-d750           Nikon D750 validation prototype (EXPEED 4, experimental)
 再确认机器能起来（没有 payload 会明确报错，这是预期）：
 
 ```powershell
-& .build\build\qemu-system-arm.exe -M nikon-d750 -display none -monitor none
+& .build\src\qemu-11.1.0\build\qemu-system-arm.exe -M nikon-d750 -display none -monitor none
 # nikon-d750: a decrypted main payload is required; pass -kernel FILE ...
 ```
 
@@ -149,7 +149,7 @@ nikon-d750           Nikon D750 validation prototype (EXPEED 4, experimental)
    ```
 
 5. 运行 `tools/run.py` 的结果见 [validation](validation.md) 的 M0：
-   0.18 s、退出码 0、`qemu.log` 记录 halt 时的 `r0/r1/sp/lr`。
+   0.39 s、退出码 0、`qemu.log` 记录 halt 时的 `r0/r1/sp/lr`。
 
 Windows 侧仍没有 MSYS2 构建产物；本仓库交付的是可复现的源码 + WSL 构建路径。
 `C:\Program Files\qemu` 的 stock 二进制依旧不能加载这个 machine。

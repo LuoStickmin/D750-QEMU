@@ -169,7 +169,7 @@ In priority order:
 1. **Find the next boot stage** (recommended; prerequisite for all GUI/CMOS work):
    - Find the descriptor table consumers/ROM handoff conventions in the image;
    - Use `-machine entry=` to verify candidate entries one by one;
-   - Use `--strict` to catch the first unmodeled access.
+   - Use `--strict` to catch the first unmodeled access (`d750-strict:` log, `run.py` exit code 7).
 2. **LCD dump hook (completed)**:
    - `lcd-base/width/height/stride/format/out` are configurable;
    - Dump PPM on halt and every 2 seconds; disabled when `lcd-base=0`;

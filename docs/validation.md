@@ -35,14 +35,17 @@ python tools/run.py --payload ...\b1010_115a.bin --flash ...\a1010_011100.bin --
 
 - 若 `entry_ok=false`：先看 `run.py` 打印的 `pc`，确认 `-machine entry=` 是否被
   解析；再检查 `-kernel` 是否真的指向 `b1010`。
-- 若 QEMU 报 `Bad address`：用 `--strict` 重跑，拿到第一个未映射访问；这通常
-  就是 M1 的第一个设备地址。
+- 若入口跑飞：用 `--strict` 重跑。第一条未建模访问会以 `d750-strict:` 记录
+  （地址、宽度、方向、PC），`run.py` 以退出码 7 结束；这通常就是 M1 的第一个
+  设备地址。
+- 若 `halt.return_ok=false`（退出码 6）：guest 是从异常路径滑到 `0xFF0` 的，
+  不能记为 M0 通过。
 
 **实测结果（2026-11-05，已通过）**：
 
 ```
 session runs/20261105-075610/
-exit=0  timed_out=False  wall_seconds=0.18  uart=0B  mmio_events=0
+exit=0  timed_out=False  wall_seconds=0.393  uart=0B  mmio_events=0
 qemu.log: d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000
           sp=0x97ffff00 lr=0x00000ff0 firmware returned to the assisted trampoline
 ```
@@ -106,7 +109,8 @@ python tools/run.py --payload ... --flash ... --timeout 10
 
 流程固定：
 
-1. `--strict` 跑，拿到第一个未建模访问（地址、宽度、方向、PC）；
+1. `--strict` 跑：`qemu.log` 出现 `d750-strict:` 行（地址、宽度、方向、PC），
+   `session.json.strict` 记录同样内容，`run.py` 退出码 7；
 2. 在 `nikon-d750-lab.c` 里加最小 MemoryRegionOps，只实现**观察到的**访问；
 3. 加一个拒绝用例（错误宽度/错误方向应记录并返回 0，而不是静默通过）；
 4. 重跑 M0–M2，确认没有回退；
@@ -130,10 +134,26 @@ python tools/run.py --payload ... --flash ... `
 PPM/PNG 像素正确，产物 `analysis/lcd-testcard.png`。这只证明“guest RAM →
 扫描/dump”链路，不证明固件 GUI；`docs/gui-cmos.md` §3.2 有同样声明。
 
+### 运行退出码（`tools/run.py`）
+
+| 退出码 | 含义 |
+| --- | --- |
+| 0 | 运行结束，未触发 strict / suspicious |
+| 2 | 找不到 `qemu-system-arm` |
+| 3 | 该 QEMU 没有 `nikon-d750` 机器（stock 构建） |
+| 4 | `--gdb` 时 GDB stub 未打开 |
+| 6 | halt 从异常状态到达（`return_ok=false`） |
+| 7 | `--strict` 在第一条未建模访问处停止 |
+
 ## 2. 判定规则
 
 - 没有 `session.json` 的运行不算证据；
-- 没有记录命令行、payload/flash 的 SHA-256 的运行不算证据；
+- 没有记录命令行、payload/flash 的 SHA-256 的运行不算证据（`run.py` 自 v0.1.1
+  起写入 `payload_sha256` / `flash_sha256`）；
+- `session.json.halt.return_ok` 必须为 `true`；`false`（退出码 6）表示 guest 从
+  异常路径到达 halt，不能记为 M0 通过；
+- `session.json.status` 是机器可读结论：`halt` / `strict-stop` /
+  `halt-suspicious` / `timeout` / `ran`；
 - 串口里出现字符串不等于“启动完成”，只等于“这条输出路径通了”；
 - PC 到达某个地址不等于“函数执行正确”，要同时看它前后是否触发了预期 MMIO；
 - `-smp 2` 的结果不能外推到单核，反之亦然。
@@ -156,8 +176,8 @@ PPM/PNG 像素正确，产物 `analysis/lcd-testcard.png`。这只证明“guest
 runs/20261105-123456/
 ├── command.json    精确 argv、entry、是否 GDB
 ├── uart.log         guest 串口原始字节
-├── qemu.log         -d guest_errors 的诊断（含 d750-probe/d750-uart）
-└── session.json     汇总：exit、timed_out、uart、mmio、snapshot
+├── qemu.log         -d guest_errors 的诊断（含 d750-probe/d750-strict/d750-uart）
+└── session.json     汇总：status、payload/flash SHA-256、exit、uart、mmio、halt、snapshot
 ```
 
 这些文件可能包含固件行为/路径，**不要**直接公开；发布前按 z7-qemu 的

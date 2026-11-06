@@ -41,9 +41,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "build failed (exit $LASTEXITCODE); see docs/build.md"
 }
 
-$qemu = Join-Path $root ".build\build\qemu-system-arm.exe"
-if (-not (Test-Path $qemu)) {
-    throw "build reported success but $qemu is missing"
+$qemu = Get-ChildItem -Path (Join-Path $root ".build\src\*\build") `
+    -Filter "qemu-system-arm.exe" -ErrorAction SilentlyContinue |
+    Select-Object -First 1 -ExpandProperty FullName
+if (-not $qemu) {
+    throw "build reported success but .build\src\*\build\qemu-system-arm.exe is missing"
 }
 Write-Host "== machine check =="
 & $qemu -M help | Select-String "nikon-d750"

@@ -24,7 +24,7 @@ Following the structure of WonderLantern's z7-qemu / z9-qemu, this is a QEMU
 - main image `b1010_115a.bin` loaded at `0x90000000`, entry `0x9027D52C`;
 - assisted startup: low 64 KiB RAM, SP at the top of RAM, LR pointing at the
   `0xFF0` halt window;
-- result: the entry runs and returns cleanly, `exit=0`, 0.18 s,
+- result: the entry runs and returns cleanly, `exit=0`, 0.39 s,
   `r0=0x80002000`, 0 MMIO, 0 UART;
 - cross-check: `entry_pc=0x9027D52C`, `entry_ok=true`, CPSR `0x400001d3`;
 - the entry is a **called function**, not reset; without assistance it pushes

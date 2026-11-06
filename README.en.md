@@ -31,9 +31,9 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
   - [2.2 Run](#22-run)
   - [2.3 Static Verification Only](#23-static-verification-only)
   - [2.4 First Actual Run (M0 Passed)](#24-first-actual-run-m0-passed)
-- [3. Machine Model](#3-machine-model)
+- [3. Machine Model (One-Liner Version)](#3-machine-model-one-liner-version)
   - [3.1 GUI & CMOS Status](#31-gui--cmos-status)
-- [4. Static Evidence Collected](#4-static-evidence-collected)
+- [4. Static Evidence Collected (Real Bytes)](#4-static-evidence-collected-real-bytes)
 - [5. Directory Structure & Dependencies](#5-directory-structure--dependencies)
 - [6. Relationship with z7-qemu / z9-qemu](#6-relationship-with-z7-qemu--z9-qemu)
 - [7. Boundaries & Future Work](#7-boundaries--future-work)
@@ -47,12 +47,12 @@ Currently **completed and verified**:
 | Item | Status |
 | --- | --- |
 | Static evidence: vector table, entry, page tables, flash/RAM windows, UART candidates | ✅ Ran on real `D750_0115` modules, see [docs/findings.md](docs/findings.md) |
-| Board source code `nikon-d750-lab.c/.h` | ✅ Written (QEMU 11.1 API, 10.2.4 adapted via prepare script) |
+| Board source code `nikon-d750-lab.c/.h` | ✅ Written (QEMU 11.1 API; 10.2.4 is text-adapted by the prepare script but has not been built here) |
 | Overlay install script `qemu/prepare_source.py` | ✅ Idempotent, unit tests cover 11.1 / 10.2 / unknown version rejection |
 | `fwscan` / `run` / `probe` / `build` tools | ✅ Written; `probe` tested with real RSP against stock QEMU `-M virt` |
-| Host-side tests | ✅ `python3 tests/run_tests.py` → 20 passed |
+| Host-side tests | ✅ `python3 tests/run_tests.py` → 23 passed |
 | Board C code compilation | ✅ Compiled on WSL Ubuntu 26.04 (gcc 15.2) + QEMU 11.1.0 |
-| `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.18s |
+| `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.39s |
 | LCD scanout/dump pipeline | ✅ Configurable framebuffer → PPM; test card verified; firmware image still absent |
 | M1 (MMIO) / M2 (UART) / M3 (Devices) | ⏳ Not started; current execution fragment accesses 0 MMIO |
 | Full camera UI / ISP / CMOS / Storage | ❌ Out of scope |
@@ -154,7 +154,7 @@ python3 tools/run.py \
 
 Measured output (evidence in `evidence/m0/`, `evidence/m0-gdb/`):
 ```text
-exit=0  timed_out=False  wall_seconds=0.18  uart=0B  mmio_events=0
+exit=0  timed_out=False  wall_seconds=0.393  uart=0B  mmio_events=0
 d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 ```
 
@@ -179,9 +179,9 @@ d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 | Flash window | `0x10000000`, 8 MiB, loads `a1010_011100.bin` | Med-High: descriptor table references `0x1002CB8C/0x100A1094/0x100F48C0` |
 | UART candidate | `0x80005010..0x80005014` byte registers | Medium: driver fragment `0x27CC00..0x27D304` |
 | GIC/timer | `a9mpcore_priv` @ `0x1E000000` | Low: placeholder, no access evidence yet |
-| Diagnostics | 4 GiB low-priority catch-all, logs unknown MMIO | — |
+| Diagnostics | 4 GiB low-priority catch-all; `strict=on` logs the first access and stops | — |
 
-The machine is **diagnostics-first**: by default, unmodeled accesses are logged in `qemu.log` (PC/address/width/direction) instead of returning plausible values; `-machine strict=on` makes QEMU stop at the first unknown access. This is better for verification than "filling zeros to fake boot past it".
+The machine is **diagnostics-first**: by default, unmodeled accesses are logged in `qemu.log` (PC/address/width/direction) instead of returning plausible values. With `-machine strict=on` the first unmodeled access is still logged (prefix `d750-strict:`) and the run is stopped immediately; `tools/run.py` reports the address and exits with code 7. This is better for verification than "filling zeros to fake boot past it".
 
 ### 3.1 GUI & CMOS Status
 **GUI: No firmware image yet, but scanout pipeline is ready.** Provides host-side LCD dump:
@@ -230,12 +230,14 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 ├── qemu/
 │   ├── nikon-d750-lab.c/.h     Board model (CPU/RAM/flash/MPCore/UART/LCD dump/diagnostics)
 │   └── prepare_source.py       Installs overlay into QEMU source tree (idempotent)
+├── .github/workflows/ci.yml    Host-side tests + manifest checks
 ├── tools/
 │   ├── fwscan.py               Static verification profile, generates manifest
 │   ├── run.py                  Launch, timeout, evidence collection
 │   ├── probe.py                Minimal GDB RSP client
+│   ├── manifest.py             Regenerate/verify SHA256SUMS and MANIFEST.json
 │   └── build.py                Download/unpack/overlay/build/record
-├── tests/                      20 host-side tests (no QEMU build required)
+├── tests/                      23 host-side tests (no QEMU build required)
 ├── bitrate/                    D750 1080p 64/60 Mbps patcher, test, report
 ├── analysis/
 │   ├── d750-0115.json          Real image scan results
@@ -248,6 +250,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original
 ├── PRODUCT.md  MANIFEST.json  SHA256SUMS
+├── CHANGELOG.md                Version and fix log
 ├── LICENSE                     GPLv2 text (GPL-2.0-or-later)
 ├── Setup-D750.ps1  Run-D750.ps1
 └── .build/ .local/ runs/       Local generated artifacts (Git ignored)

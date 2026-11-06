@@ -19,6 +19,24 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 
 > 本项目不包含、不下载任何 Nikon 固件。固件由你本地提供，工具只读。
 
+## 目录
+
+- [项目总览（两条工作线）](SUMMARY.md)
+- [高码率修改](bitrate/README.md)
+- [贡献与法律边界](CONTRIBUTING.md)
+- [1. 当前状态](#1-当前状态先读这一节)
+- [2. 快速开始](#2-快速开始)
+  - [2.1 构建（需要 C 工具链）](#21-构建需要-c-工具链)
+  - [2.2 跑](#22-跑)
+  - [2.3 只做静态核对](#23-只做静态核对)
+  - [2.4 第一次实跑（M0 已通过）](#24-第一次实跑m0-已通过)
+- [3. 机器模型（一句话版）](#3-机器模型一句话版)
+  - [3.1 GUI 与 CMOS 现在到哪一步](#31-gui-与-cmos-现在到哪一步)
+- [4. 已经拿到的静态证据（真实字节）](#4-已经拿到的静态证据真实字节)
+- [5. 目录](#5-目录)
+- [6. 与 z7-qemu / z9-qemu 的关系](#6-与-z7-qemu--z9-qemu-的关系)
+- [7. 边界](#7-边界)
+
 ---
 
 ## 1. 当前状态（先读这一节）
@@ -28,12 +46,13 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | 项目 | 状态 |
 | --- | --- |
 | 静态证据：向量表、入口、页表、flash/RAM 窗口、串口候选 | ✅ 在真实 `D750_0115` 模块上跑通，见 [docs/findings.md](docs/findings.md) |
-| 板级源码 `nikon-d750-lab.c/.h` | ✅ 已写（QEMU 11.1 API，10.2.4 由 prepare 脚本适配） |
+| 板级源码 `nikon-d750-lab.c/.h` | ✅ 已写（QEMU 11.1 API；10.2.4 由 prepare 脚本做文本适配，未实际编译验证） |
 | overlay 安装脚本 `qemu/prepare_source.py` | ✅ 幂等，单测覆盖 11.1 / 10.2 / 拒绝未知版本 |
-| `fwscan` / `run` / `probe` / `build` 工具 | ✅ 已写；`probe` 已对**已安装的 stock QEMU `-M virt`** 做过真实 RSP 联调 |
-| 主机侧测试 | ✅ `python tests/run_tests.py` → 20 passed |
+| `fwscan` / `run` / `probe` / `build` 工具 | ✅ 已写；`probe` 手工对**已安装的 stock QEMU `-M virt`** 做过真实 RSP 联调（测试套件只覆盖协议编解码） |
+| 主机侧测试 | ✅ `python tests/run_tests.py` → 23 passed |
 | 板级 C 代码编译 | ✅ 已在 WSL Ubuntu 26.04（gcc 15.2）+ QEMU 11.1.0 上编译通过 |
-| `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.18 s 正常退出 |
+| `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.39 s 正常退出 |
+| strict 诊断 / halt 校验 | ✅ 第一条未建模访问记 `d750-strict:` 后停止（`run.py` 退出码 7）；halt 记录带 `return_ok=`，异常路径退出码 6 |
 | LCD 扫描输出/dump 管线 | ✅ 可配置帧缓冲 → PPM；测试卡验证通过；固件画面仍无 |
 | M1（MMIO 序列）/ M2（串口）/ M3（补设备） | ⏳ 尚未推进；这一次执行片段没有访问任何 MMIO |
 | 完整相机 UI / ISP / CMOS / 存储 | ❌ 不在本原型范围 |
@@ -149,7 +168,7 @@ python3 tools/run.py \
 实测（证据保存在 `evidence/m0/`、`evidence/m0-gdb/`）：
 
 ```
-exit=0  timed_out=False  wall_seconds=0.18  uart=0B  mmio_events=0
+exit=0  timed_out=False  wall_seconds=0.393  uart=0B  mmio_events=0
 d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 ```
 
@@ -183,11 +202,12 @@ d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 | Flash 窗口 | `0x10000000`，8 MiB，装 `a1010_011100.bin` | 中高：描述符表引用 `0x1002CB8C/0x100A1094/0x100F48C0` |
 | 串口候选 | `0x80005010..0x80005014` 字节寄存器 | 中：driver 片段 `0x27CC00..0x27D304` |
 | GIC/定时器 | `a9mpcore_priv` @ `0x1E000000` | 低：占位地址，尚无访问证据 |
-| 诊断 | 4 GiB 低优先级 catch-all，记录未知 MMIO | — |
+| 诊断 | 4 GiB 低优先级 catch-all；`strict=on` 时记录第一条后停止 | — |
 
 机器是**诊断优先**的：默认把未建模访问记进 `qemu.log`（PC/地址/宽度/方向），
-而不是返回貌似合理的值；`-machine strict=on` 则直接让 QEMU 在第一次未知访问处
-停下。这比“先填一堆零把 boot 骗过去”更适合验证阶段。
+而不是返回貌似合理的值；`-machine strict=on` 仍会记录第一条未建模访问
+（前缀 `d750-strict:`），随后立即停止本次运行，`tools/run.py` 以退出码 7 报告该地址。
+这比“先填一堆零把 boot 骗过去”更适合验证阶段。
 
 ### 3.1 GUI 与 CMOS 现在到哪一步
 
@@ -249,6 +269,7 @@ python tools/run.py --payload ... --flash ... `
 
 ```text
 .
+├── .github/workflows/ci.yml    主机侧测试 + 清单校验
 ├── qemu/
 │   ├── nikon-d750-lab.c/.h     板级模型（CPU/RAM/flash/MPCore/串口/LCD dump/诊断窗口）
 │   └── prepare_source.py       把 overlay 装进 QEMU 源码树（幂等）
@@ -256,8 +277,9 @@ python tools/run.py --payload ... --flash ... `
 │   ├── fwscan.py               静态核对 profile，生成 manifest
 │   ├── run.py                  启动、超时、证据收集
 │   ├── probe.py                最小 GDB RSP 客户端
+│   ├── manifest.py             重新生成/校验 SHA256SUMS 与 MANIFEST
 │   └── build.py                下载/解包/overlay/构建/记录
-├── tests/                      20 个主机侧测试（无需 QEMU 构建）
+├── tests/                      23 个主机侧测试（无需 QEMU 构建）
 ├── bitrate/                    D750 1080p 64/60 Mbps 改表工具、测试、说明
 ├── analysis/
 │   ├── d750-0115.json          真实镜像的扫描结果
@@ -270,6 +292,7 @@ python tools/run.py --payload ... --flash ... `
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
 ├── PRODUCT.md  MANIFEST.json  SHA256SUMS
+├── CHANGELOG.md                版本与修复记录
 ├── LICENSE                     GPLv2 文本（GPL-2.0-or-later）
 ├── Setup-D750.ps1  Run-D750.ps1
 └── .build/ .local/ runs/       本地生成物（Git 忽略）

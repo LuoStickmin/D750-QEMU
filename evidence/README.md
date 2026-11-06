@@ -6,7 +6,7 @@
 
 | 目录/文件 | 内容 | 关键结论 |
 | --- | --- | --- |
-| `m0/` | `command.json`、`session.json`、`qemu.log`、`uart.log` | 非 GDB 的 M0：exit 0、0.18 s、halt 记录 `r0=0x80002000` |
+| `m0/` | `command.json`、`session.json`、`qemu.log`、`uart.log` | 非 GDB 的 M0：exit 0、0.39 s、halt 记录 `r0=0x80002000` |
 | `m0-gdb/` | 同上，含 RSP 快照 | `entry_pc=0x9027d52c`、`entry_ok=true`、CPSR `0x400001d3`；guest 自行退出后 RSP 断开 |
 | `lcd/` | 同上 + `lcd.ppm` | 8×8 ARGB8888 从 `0x92000000` dump；证明扫描/dump 链路 |
 | `boot-scan.txt` | 10 个候选入口的扫描输出 | 全部 0 MMIO；`0x9025d700` 2 s 未返回；下一阶段不在 `b1010` 内 |
@@ -19,6 +19,9 @@
   `d750-probe:` 是机器自己写的前缀。
 - `command.json` / `session.json` 里的路径已替换为 `<repo>`、`<firmware>`、
   `<build>` 占位符（公开仓库的隐私处理）；换机器/换目录后按新路径重跑即可。
+- 本目录的 M0/GDB/LCD 证据由 **v0.1.0** 二进制生成。v0.1.1 起 `session.json`
+  另记 `status`、`payload_sha256`、`flash_sha256`，`halt` 另记
+  `return_ok` / `mode`；旧文件没有这些字段，`run.py` 仍可解析。
 
 ## 边界
 

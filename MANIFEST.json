@@ -1,19 +1,20 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-06T07:30:00+08:00",
+  "generated": "2026-11-06T08:41:08+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
-    "size": 100591008,
-    "sha256": "7b84c339a1f6cfe7381d27b9c91c45816ecb0e2ca727329bc2e6acb55353b4c5",
+    "release": "v0.1.1",
+    "size": 100594216,
+    "sha256": "28c1ac20675ae7c7df1f7f48b4e48ed15a62ccf5e678d3a257399578aafee1ae",
     "external": true,
     "url": "https://github.com/LuoStickmin/D750-QEMU/releases/latest/download/qemu-system-arm",
-    "note": "Not committed to Git; published as a GitHub Release asset."
+    "note": "Not committed to Git; published as a GitHub Release asset (v0.1.1)."
   },
   "tests": {
-    "qemu": "20 passed",
-    "bitrate": "4 passed"
+    "qemu": "23 passed",
+    "bitrate": "4 passed with D750_MODULE; 4 skipped without it"
   },
   "release": "https://github.com/LuoStickmin/D750-QEMU/releases/latest",
   "evidence": {
@@ -79,6 +80,11 @@
   "firmware_included": false,
   "files": [
     {
+      "path": ".github/workflows/ci.yml",
+      "size": 657,
+      "sha256": "453ee1a4bad3a9f1f98961a922f016f1edb693e86871b3e40bac3cd1bd2e613d"
+    },
+    {
       "path": ".gitignore",
       "size": 284,
       "sha256": "703d0a3845bab11284a5abeae8a5ebfb305ec0d18d1f4ab8b5ffc98e89816263"
@@ -115,8 +121,8 @@
     },
     {
       "path": "analysis/tiff_scan.py",
-      "size": 4512,
-      "sha256": "275d75ab78ba59d64570422687b54be7383d99184ac785390cac66e12a80eb5b"
+      "size": 4556,
+      "sha256": "3c3cd004c132192350205ca1a2717c2cd03829d54761b22d185532df9a7f3e2c"
     },
     {
       "path": "binary/COPYING",
@@ -126,22 +132,22 @@
     {
       "path": "binary/qemu-system-arm.sha256",
       "size": 83,
-      "sha256": "54714c57d8c8cd6692b756f512a89468d206b569c340749f03bf8684eaf75172"
+      "sha256": "07739289599eb5f8e85f4812da39c1d30e41f56405d9600bcafcdd63a8730a24"
     },
     {
       "path": "binary/README.en.md",
-      "size": 1629,
-      "sha256": "42055be1a21d341a1da9c591efbfc9d73d2d4f42b93eaacda2c2a3d15e920339"
+      "size": 1687,
+      "sha256": "c3e74f3afd516998524515d47a4729b23b7a0f8d168709b766d38ea2a5309d2b"
     },
     {
       "path": "binary/README.md",
-      "size": 1561,
-      "sha256": "11ef7a487b2786a4692b561e004357a8307040568e1ef38a5607ef42a1da03fc"
+      "size": 1634,
+      "sha256": "7814ffe332db081ff7883009f486fe32d68f8d3a7f6e77da8394e08af49362b2"
     },
     {
       "path": "bitrate/d750_bitrate_patch.py",
-      "size": 9095,
-      "sha256": "87aa9950dd1c2eb3e3644ac3ee8eda0bde9df6e3b92c8bef17ee092840929539"
+      "size": 9139,
+      "sha256": "346bd08e1ea6aedf1156ff4d5b24385c0bfbc06f851d52403ae4bef32231c9f6"
     },
     {
       "path": "bitrate/README.en.md",
@@ -150,13 +156,18 @@
     },
     {
       "path": "bitrate/README.md",
-      "size": 6758,
-      "sha256": "e9813be95b3f18606bdfa2ee22e1fbf8a3c00af5efb7615eda05150fbe3acc8d"
+      "size": 6067,
+      "sha256": "0f4d3ba9d339bc893d0115ed744ffe3a021d6e59e0020c53680f5cce98e3811f"
     },
     {
       "path": "bitrate/test_d750_bitrate_patch.py",
-      "size": 1921,
-      "sha256": "4afe34557a571e424fe001f462257ae526117639b0839565526090933ee5945d"
+      "size": 1965,
+      "sha256": "960ab547b2d5415927c875cd20e22c2501c660bfef414226d13e1d8eda83c66c"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "size": 2316,
+      "sha256": "65b8370c3b8b543b17eef00341f30aee6607d730ffd2836c2a5db3c836185b80"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -170,53 +181,53 @@
     },
     {
       "path": "docs/architecture.en.md",
-      "size": 8717,
-      "sha256": "639f9392837ee938d935236e4d6220ae60cafeebe7bfdd86bb08fbe14bfe6c6c"
+      "size": 9644,
+      "sha256": "10667fc27047e351be6c466b72dfc0ede242b06e54a65508534eacefcac62547"
     },
     {
       "path": "docs/architecture.md",
-      "size": 7792,
-      "sha256": "82d0b5c2b807dd8002a1a6a2d91fd8b5d4ee1bde65bc483d734a219d438328c2"
+      "size": 8651,
+      "sha256": "e0345fb6eff9d8c00b34423d53baeca2f48e4956d0f430fd46d9587368f9f8cc"
     },
     {
       "path": "docs/build.en.md",
-      "size": 6278,
-      "sha256": "dbe8e69f816471f3e51a26bca9f635822cac4a8b389fea4facf598a12816e467"
+      "size": 6311,
+      "sha256": "a096ac35147c613079df9f0c28c3e3afb50181d20da0ae78efb3bbb17163a8e0"
     },
     {
       "path": "docs/build.md",
-      "size": 5829,
-      "sha256": "53ac1bb972993f1e000604fc3a16c3d7b75f2d85f66d161071e3731e343270c0"
+      "size": 5861,
+      "sha256": "4717f4c9d9afce8b2184c720d2cc27db4e77e30827f31e52d7e8863e91f44725"
     },
     {
       "path": "docs/findings.en.md",
-      "size": 13680,
-      "sha256": "e7d89b31527361510973a2952de2e1baa9144ef2d9aad92da1c1d4eb53ae2ca7"
+      "size": 13687,
+      "sha256": "ae291f7972bbe5a8478d83d88b998536e736d09f773ff749346a7bc772128dd1"
     },
     {
       "path": "docs/findings.md",
-      "size": 12032,
-      "sha256": "4b0926ff22633fb479c8affc8e50187a8b069354272069dfe326d595610b8abd"
+      "size": 12033,
+      "sha256": "b35d6f705ec7a1308e8d28ad1c2cf1b04194618fa2c1846c6c49237a6ab54e2f"
     },
     {
       "path": "docs/gui-cmos.en.md",
-      "size": 9844,
-      "sha256": "ce5b730285b60b0ae3354a0acf6b2d7280cc781fb621d2298696db84fa726ab3"
+      "size": 9887,
+      "sha256": "4b160627ad4bde939b41475c29ca5710cd8f91b3c4fcb1731c44cf861c7f2179"
     },
     {
       "path": "docs/gui-cmos.md",
-      "size": 8704,
-      "sha256": "ff5c5249b647f54b3b8ae8a0ebcfddaed833df1287c7224c354127980616cfdb"
+      "size": 8754,
+      "sha256": "ffd3432224b2f60db52cd3c6ee147d473d81d5974eafb6985b3353f0425c9b90"
     },
     {
       "path": "docs/validation.en.md",
-      "size": 8208,
-      "sha256": "bd5aa5a5d885587fb3cd01577bab42719cefbdba610618388c1bfc8df08c3357"
+      "size": 9321,
+      "sha256": "0d7c79046b0f5f88b4eb4097a78c29c39f29f015d281bfc19bebecd0ff1fdd44"
     },
     {
       "path": "docs/validation.md",
-      "size": 7210,
-      "sha256": "a65a83e01c52703d7e9a8f99633c9bdb4f2949a8cbeb4bc57f2d858a9dfb6d95"
+      "size": 8247,
+      "sha256": "e9a8cf540123a89ae011a9e0899c26df062ca574d1522a642612158e09a0aa38"
     },
     {
       "path": "evidence/boot-scan.txt",
@@ -290,13 +301,13 @@
     },
     {
       "path": "evidence/README.en.md",
-      "size": 1728,
-      "sha256": "309ae512ba2a099aba5025f9caa24e4ff78384976e5d25ae43424eb61d55809e"
+      "size": 1997,
+      "sha256": "cc57ecddccccbe5e461f6be26ec52818b413a2e185bfdf7de9509dd5892f353b"
     },
     {
       "path": "evidence/README.md",
-      "size": 1545,
-      "sha256": "10de3f5e07e59582447718abb1c433a75acbc430d2da34e17b0c9488969b033e"
+      "size": 1786,
+      "sha256": "20fb5cd39f3c36dc79cddf4c4b61546302941e8206c5ad8b9e8824e1d0efde09"
     },
     {
       "path": "LICENSE",
@@ -315,18 +326,18 @@
     },
     {
       "path": "PRODUCT.en.md",
-      "size": 6153,
-      "sha256": "496c25dc119925e80233ac184479cdf043a78550d5571aba5031398d1737d385"
+      "size": 6362,
+      "sha256": "1b78bd30c94391a83431ba46e44a90142d03fe47e32331eee2f9642510a8cf0c"
     },
     {
       "path": "PRODUCT.md",
-      "size": 5822,
-      "sha256": "7144b21cd211f97be735a28b5d24067ce3a9feeb943f75cd2e4015e95dc4529a"
+      "size": 6029,
+      "sha256": "29f10e185d1ad022b2306c6ec987fa2e2175038bd1b418db0b80f653043c761d"
     },
     {
       "path": "qemu/nikon-d750-lab.c",
-      "size": 28176,
-      "sha256": "b989916a8d321ecd891856107f550ded1e8957bdab3c221496e7bfb710c335f2"
+      "size": 30535,
+      "sha256": "832be457ab64c354183aef6d94b672a010136de960b0cc739f7cdb0702dff171"
     },
     {
       "path": "qemu/nikon-d750-lab.h",
@@ -340,13 +351,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 16539,
-      "sha256": "bf29023eb4ad78fae34732de352d3a9dcab68cdb5efe11105eda58a8f44ef945"
+      "size": 17008,
+      "sha256": "e34ddefefae42aaadda625040796553ff4f00ef9e77db2913557b4b41530597c"
     },
     {
       "path": "README.md",
-      "size": 14314,
-      "sha256": "c4a1a16a1df5f9b30a06ebf905ac628376c95ff4fe665d5b2aebb9c45b0fc3f9"
+      "size": 15719,
+      "sha256": "3d59b0aba3a609e81e5df9de090b9d9f57076a1efca8b999aecdd9389f0ec9e8"
     },
     {
       "path": "Run-D750.ps1",
@@ -355,18 +366,18 @@
     },
     {
       "path": "Setup-D750.ps1",
-      "size": 1712,
-      "sha256": "c061980e8de1aa3334811d664288e06fb7b2184ee62867de80b47cfe9cf09069"
+      "size": 1861,
+      "sha256": "22be07bc6aa1aad5654b5da6c2b9fdc0824dded2b90b58fa87af8c4fce416908"
     },
     {
       "path": "SUMMARY.en.md",
       "size": 4033,
-      "sha256": "2b0995f10cedc2c16f73ae010ecbe25581239dd010d34a8f534bfe591e78d0f7"
+      "sha256": "3c76119ef07b40bd658f7eb2f6967e26071a64cbd4d49dbecc70778028e44d97"
     },
     {
       "path": "SUMMARY.md",
       "size": 3670,
-      "sha256": "997cd388bcf06258d5cd95cc66379cb86ec332bc54009326afd3c70d7ed60276"
+      "sha256": "30cd51310fdcb63f3ffb76a4acda78535fa89450c7e9e321b11c83d21426977c"
     },
     {
       "path": "tests/run_tests.py",
@@ -385,8 +396,8 @@
     },
     {
       "path": "tests/test_probe_and_session.py",
-      "size": 5671,
-      "sha256": "1eb16ba7f96c6e4fad3695ae7adcd782e16c43ff2e83c31f0baed47c02144eef"
+      "size": 7527,
+      "sha256": "783d3e3d8045b53459b83f95cea57e4ebcb78a2c571e814ac9a503ee8c7c0474"
     },
     {
       "path": "tests/tmputil.py",
@@ -404,14 +415,19 @@
       "sha256": "c87049cc70e269540e783cbe01994370e855778c95f24c77faf7071cb3e760a7"
     },
     {
+      "path": "tools/manifest.py",
+      "size": 5213,
+      "sha256": "1af4ae63a1f95083522b6c5a0df1e8ed33e3cafacc7ce48e051664478e5db2b3"
+    },
+    {
       "path": "tools/probe.py",
-      "size": 9588,
-      "sha256": "b6b93d7bf86b08223184c23915339182f04d8641d1787c80390b75f38abf64bc"
+      "size": 9691,
+      "sha256": "28a99ba7bbd92f9477ca6f70376b8cf5ffd9b603662919c13ee3f282f8d33ad9"
     },
     {
       "path": "tools/run.py",
-      "size": 14652,
-      "sha256": "e24ae482d64f199d69f69ba8bf6c260448996a2bc060dfd54d5cad2cc179fa78"
+      "size": 17540,
+      "sha256": "9691698af5deddce794ba5f4634c5699f4a427b5564c56656827a326ee3e04a3"
     }
   ]
 }

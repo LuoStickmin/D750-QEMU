@@ -88,14 +88,14 @@ The literal at `0x25D7FC` is `0x90020000`, and the same code section also contai
 `0x25D758..0x25D800` is a compact address/length table; its first few entries are:
 
 ```
-0x25D760  0x9027D52C  0xAE000200   <- 入口或阶段描述符
+0x25D760  0x9027D52C  0xAE000200   <- entry or stage descriptor
 0x25D768  0x902A2E9C  0x90284000
 0x25D770  0x90280000  0x9128DB64
 0x25D778  0x10000000  0x00030344
 0x25D780  0x912BDEA8  0x10030344
 0x25D798  0x9132EC00  0x100A1480  0x0005344C   <- (dest, src, size)?
 0x25D7B0  0x9132EBF4  0x100A1094  0x00000004
-0x25D7F8  0x1002CB8C  0x90020000               <- (src, dest) 页表?
+0x25D7F8  0x1002CB8C  0x90020000               <- (src, dest) page table?
 ```
 
 Reading it as a load table that **copies several segments from flash to RAM** is an inference: `0x100A1480 + 0x5344C`
@@ -192,8 +192,8 @@ d750-probe: pc=0x9027d534 wr addr=0xfffffff8 size=4 value=0
 d750-probe: pc=0x9027d534 wr addr=0xfffffffc size=4 value=0
 d750-probe: pc=0x9027d53c wr addr=0x00000000 size=4 value=0
 d750-probe: pc=0x9027d560 wr addr=0x00000000 size=4 value=0x1041d688
-d750-probe: pc=0x9027d584 rd addr=0xfffffff0 ...（四条 pop）
-d750-probe: pc=0x00000000 rd addr=0x00000000 ...（跑飞）
+d750-probe: pc=0x9027d584 rd addr=0xfffffff0 ... (four pops)
+d750-probe: pc=0x00000000 rd addr=0x00000000 ... (runaway)
 ```
 
 Corresponding disassembly:
@@ -203,7 +203,7 @@ Corresponding disassembly:
 0x27D530  mov  r3, #0
 0x27D534  push {r4, r5, r6, lr}   ; SP=0 -> 0xFFFFFFF0..0xFFFFFFFC
 0x27D538  ldrhs r0, [pc, #...]
-0x27D53C  str  r0, [r3]           ; 写地址 0
+0x27D53C  str  r0, [r3]           ; store to address 0
 ...
 0x27D584  pop  {...}              ; LR=0 -> PC=0
 ```
@@ -222,7 +222,7 @@ Machine changes: map the low 64 KiB as RAM; `SP=0x97FFFF00`, `LR=0x00000FF0`, `r
 Measured:
 
 ```
-exit=0  timed_out=False  wall_seconds=0.18  uart=0B  mmio_events=0
+exit=0  timed_out=False  wall_seconds=0.393  uart=0B  mmio_events=0
 d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000
           sp=0x97ffff00 lr=0x00000ff0
 ```

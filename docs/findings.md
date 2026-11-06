@@ -221,7 +221,7 @@ d750-probe: pc=0x00000000 rd addr=0x00000000 ...（跑飞）
 实测：
 
 ```
-exit=0  timed_out=False  wall_seconds=0.18  uart=0B  mmio_events=0
+exit=0  timed_out=False  wall_seconds=0.393  uart=0B  mmio_events=0
 d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000
           sp=0x97ffff00 lr=0x00000ff0
 ```

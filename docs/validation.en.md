@@ -35,14 +35,16 @@ Failure handling:
 
 - If `entry_ok=false`: first look at the `pc` printed by `run.py`, and confirm whether `-machine entry=` is
   parsed; then check whether `-kernel` really points to `b1010`.
-- If QEMU reports `Bad address`: rerun with `--strict` to get the first unmapped access; this is usually
-  the first device address for M1.
+- If the entry runs away: rerun with `--strict`. The first unmodeled access is logged as `d750-strict:`
+  (address, width, direction, PC) and `run.py` exits with code 7; this is usually the first device address for M1.
+- If `halt.return_ok=false` (exit code 6): the guest slid into `0xFF0` through an exception path, and the run
+  must not be recorded as a passing M0.
 
 **Measured result (2026-11-05, passed)**:
 
 ```
 session runs/20261105-075610/
-exit=0  timed_out=False  wall_seconds=0.18  uart=0B  mmio_events=0
+exit=0  timed_out=False  wall_seconds=0.393  uart=0B  mmio_events=0
 qemu.log: d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000
           sp=0x97ffff00 lr=0x00000ff0 firmware returned to the assisted trampoline
 ```
@@ -57,7 +59,7 @@ this negative result is saved in `docs/findings.md` §11.
 snapshot.entry_pc = 0x9027d52c
 snapshot.entry_ok = true
 snapshot.cpsr     = 0x400001d3   (SVC, A/I/F masked, Z set)
-stop.kind         = connection-closed   (guest 自行退出，RSP 断开)
+stop.kind         = connection-closed   (guest exited by itself; RSP link closed)
 ```
 
 ### M0-neg — Negative control
@@ -106,7 +108,8 @@ If `uart.bytes == 0` but there are many `d750-uart: rd +0x11` entries in `qemu.l
 
 Fixed procedure:
 
-1. Run with `--strict` to get the first unmodeled access (address, width, direction, PC);
+1. Run with `--strict`: `qemu.log` gets a `d750-strict:` line (address, width, direction, PC),
+   `session.json.strict` records the same, and `run.py` exits with code 7;
 2. Add minimal MemoryRegionOps in `nikon-d750-lab.c`, implementing only the **observed** accesses;
 3. Add a rejection test case (wrong width/wrong direction should be logged and return 0, not silently pass);
 4. Rerun M0–M2 to confirm there is no regression;
@@ -130,10 +133,26 @@ Pass criteria:
 PPM/PNG pixels are correct, artifact `analysis/lcd-testcard.png`. This only proves the "guest RAM →
 scan/dump" pipeline, not the firmware GUI; `docs/gui-cmos.md` §3.2 makes the same statement.
 
+### Run exit codes (`tools/run.py`)
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Run finished without strict/suspicious state |
+| 2 | `qemu-system-arm` not found |
+| 3 | That QEMU has no `nikon-d750` machine (stock build) |
+| 4 | `--gdb` was requested but the GDB stub did not open |
+| 6 | Halt was reached from an exception state (`return_ok=false`) |
+| 7 | `--strict` stopped at the first unmodeled access |
+
 ## 2. Evaluation rules
 
 - A run without `session.json` does not count as evidence;
-- A run without a recorded command line and SHA-256 of payload/flash does not count as evidence;
+- A run without a recorded command line and SHA-256 of payload/flash does not count as evidence
+  (`run.py` writes `payload_sha256` / `flash_sha256` since v0.1.1);
+- `session.json.halt.return_ok` must be `true`; `false` (exit code 6) means the guest reached the halt window
+  through an exception path and the run is not a passing M0;
+- `session.json.status` is the machine-readable verdict: `halt` / `strict-stop` / `halt-suspicious` /
+  `timeout` / `ran`;
 - A string appearing on the UART does not mean "boot completed"; it only means "this output path works";
 - The PC reaching an address does not mean "the function executed correctly"; also check whether the expected MMIO was triggered before and after it;
 - Results from `-smp 2` cannot be extrapolated to a single core, and vice versa.
@@ -154,10 +173,10 @@ scan/dump" pipeline, not the firmware GUI; `docs/gui-cmos.md` §3.2 makes the sa
 
 ```
 runs/20261105-123456/
-├── command.json    精确 argv、entry、是否 GDB
-├── uart.log         guest 串口原始字节
-├── qemu.log         -d guest_errors 的诊断（含 d750-probe/d750-uart）
-└── session.json     汇总：exit、timed_out、uart、mmio、snapshot
+├── command.json    exact argv, entry, GDB flag
+├── uart.log         raw guest serial bytes
+├── qemu.log         -d guest_errors diagnostics (incl. d750-probe/d750-strict/d750-uart)
+└── session.json     summary: status, payload/flash SHA-256, exit, uart, mmio, halt, snapshot
 ```
 
 These files may contain firmware behavior/paths; **do not** publish them directly; before publication, review them separately according to z7-qemu's publication process.

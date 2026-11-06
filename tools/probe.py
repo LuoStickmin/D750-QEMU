@@ -11,9 +11,10 @@ Only the subset needed for boot validation is implemented:
 It deliberately does *not* implement the full RSP, thread migration or
 calling into the guest.  Use gdb-multiarch for interactive debugging.
 
-The client is also exercised against a stock QEMU ``-M virt`` instance in
-the test suite, so a protocol regression is visible without the custom
-machine.
+The client was validated manually against a stock QEMU ``-M virt`` instance
+(register/memory reads, hardware breakpoints, continue, CPSR decoding).  The
+unit tests only cover packet encoding/decoding and the stop-reply parser, so
+they can run without QEMU.
 """
 from __future__ import annotations
 

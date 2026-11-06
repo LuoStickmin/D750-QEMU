@@ -14,9 +14,10 @@
  *   M3  how far does it get once the first missing device is supplied?
  *
  * The machine therefore favours *diagnostics* over plausible-looking data:
- * an unmapped access is logged with PC/address/size/direction instead of
- * silently returning zero, and strict=on removes the catch-all window so
- * QEMU stops on the first access it does not model.
+ * an unmodelled access is logged with PC/address/size/direction instead of
+ * silently returning zero.  strict=on keeps the same window but records the
+ * first access as "d750-strict:" and stops the run, so a strict run always
+ * ends either at the assisted trampoline or at an explicit diagnostic.
  *
  * Inputs (nothing is downloaded or embedded):
  *   -kernel  FILE   the decrypted main image, normally b1010_115a.bin
@@ -115,9 +116,26 @@ static uint64_t d750_guest_pc(void)
     return ARM_CPU(cs)->env.regs[15];
 }
 
+/*
+ * One window, two contracts.  By default the access is logged and the guest
+ * keeps running (the "collect a whole sequence" mode).  With strict=on the
+ * first access is still logged -- but with the "d750-strict:" prefix, so the
+ * address is not lost -- and the run is stopped instead of letting the guest
+ * continue into an exception handler that could look like a clean return.
+ */
 static uint64_t d750_probe_read(void *opaque, hwaddr addr, unsigned size)
 {
     NikonD750MachineState *s = opaque;
+
+    if (s->strict) {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "d750-strict: pc=0x%08" PRIx64
+                      " rd addr=0x%08" HWADDR_PRIx " size=%u"
+                      " (first unmodelled access, stopping)\n",
+                      d750_guest_pc(), addr, size);
+        qemu_system_shutdown_request(SHUTDOWN_CAUSE_GUEST_SHUTDOWN);
+        return 0;
+    }
 
     if (s->probe_events < 512 || (s->probe_events % 4096) == 0) {
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -134,6 +152,16 @@ static void d750_probe_write(void *opaque, hwaddr addr, uint64_t value,
                              unsigned size)
 {
     NikonD750MachineState *s = opaque;
+
+    if (s->strict) {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "d750-strict: pc=0x%08" PRIx64
+                      " wr addr=0x%08" HWADDR_PRIx " size=%u value=0x%08" PRIx64
+                      " (first unmodelled access, stopping)\n",
+                      d750_guest_pc(), addr, size, value);
+        qemu_system_shutdown_request(SHUTDOWN_CAUSE_GUEST_SHUTDOWN);
+        return;
+    }
 
     if (s->probe_events < 512 || (s->probe_events % 4096) == 0) {
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -258,7 +286,23 @@ static void d750_lcd_tick(void *opaque)
  * LR = D750_HALT_TRAMPOLINE; when it returns, the fetch from this
  * four-byte window is both the "entry finished" evidence and a clean
  * shutdown request, so a run terminates instead of spinning.
+ *
+ * A fault, however, enters the guest vector table (all zeros here), slides
+ * through low memory and can reach the same 0xFF0 window from abort mode
+ * with SP=0.  That would look exactly like a successful M0, so the state is
+ * checked and recorded explicitly.
  */
+
+static bool d750_halt_state_is_clean(NikonD750MachineState *s, ARMCPU *cpu)
+{
+    MachineState *machine = MACHINE(s);
+    uint32_t expected_sp = (uint32_t)(D750_RAM_BASE + machine->ram_size - 0x100);
+    uint32_t mode = cpu->env.uncached_cpsr & CPSR_M;
+
+    return mode == ARM_CPU_MODE_SVC &&
+           cpu->env.regs[14] == (uint32_t)D750_HALT_TRAMPOLINE &&
+           cpu->env.regs[13] == expected_sp;
+}
 
 static uint64_t d750_halt_read(void *opaque, hwaddr addr, unsigned size)
 {
@@ -267,15 +311,21 @@ static uint64_t d750_halt_read(void *opaque, hwaddr addr, unsigned size)
     d750_lcd_dump(s);
     if (current_cpu) {
         ARMCPU *cpu = ARM_CPU(current_cpu);
+        bool clean = d750_halt_state_is_clean(s, cpu);
+        uint32_t mode = cpu->env.uncached_cpsr & CPSR_M;
 
         qemu_log_mask(LOG_GUEST_ERROR,
                       "d750-halt: pc=0x%08" PRIx64
                       " r0=0x%08" PRIx32 " r1=0x%08" PRIx32
                       " sp=0x%08" PRIx32 " lr=0x%08" PRIx32
-                      " firmware returned to the assisted trampoline\n",
+                      " return_ok=%s mode=0x%02" PRIx32 " %s\n",
                       d750_guest_pc(),
                       cpu->env.regs[0], cpu->env.regs[1],
-                      cpu->env.regs[13], cpu->env.regs[14]);
+                      cpu->env.regs[13], cpu->env.regs[14],
+                      clean ? "true" : "false", mode,
+                      clean ? "firmware returned to the assisted trampoline"
+                            : "unexpected state (exception or wild branch "
+                              "reached the trampoline)");
     } else {
         qemu_log_mask(LOG_GUEST_ERROR,
                       "d750-halt: firmware returned to the assisted trampoline\n");
@@ -606,14 +656,13 @@ static void nikon_d750_init(MachineState *machine)
         }
     }
 
-    /* Catch-all diagnostics.  Real regions above win by priority; strict
-     * mode leaves the holes empty so an unexpected access traps in QEMU. */
-    if (!s->strict) {
-        memory_region_init_io(&s->probe, OBJECT(s), &d750_probe_ops, s,
-                              "nikon-d750.probe", D750_PROBE_SIZE);
-        memory_region_add_subregion_overlap(sysmem, 0, &s->probe,
-                                            D750_PROBE_PRIORITY);
-    }
+    /* Catch-all diagnostics.  The window is always present: strict mode
+     * changes the contract from "log and continue" to "log and stop", so
+     * the first missing access still leaves an address in qemu.log. */
+    memory_region_init_io(&s->probe, OBJECT(s), &d750_probe_ops, s,
+                          "nikon-d750.probe", D750_PROBE_SIZE);
+    memory_region_add_subregion_overlap(sysmem, 0, &s->probe,
+                                        D750_PROBE_PRIORITY);
 
     /* Low memory: the entry stores a word at address 0 and reads it back,
      * so the first 64 KiB must be writable RAM.  A four-byte halt window
@@ -746,7 +795,7 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
                                    nikon_d750_get_strict,
                                    nikon_d750_set_strict);
     object_class_property_set_description(oc, "strict",
-        "Abort on unmodelled MMIO instead of logging and returning 0");
+        "Stop the run at the first unmodelled MMIO access (logs d750-strict:)");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,

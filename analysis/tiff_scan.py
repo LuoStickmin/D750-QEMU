@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Read-only TIFF evidence scanner for Nikon EXPEED firmware modules.
 
 This does not modify any firmware.  It answers one question: does a module

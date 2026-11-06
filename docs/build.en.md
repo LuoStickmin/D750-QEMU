@@ -84,7 +84,7 @@ python tools/build.py --source D:\src\qemu-11.1.0 --overlay-only
 ## 4. Post-build self-check
 
 ```powershell
-& .build\build\qemu-system-arm.exe -M help | Select-String nikon
+& .build\src\qemu-11.1.0\build\qemu-system-arm.exe -M help | Select-String nikon
 ```
 
 You should see:
@@ -96,7 +96,7 @@ nikon-d750           Nikon D750 validation prototype (EXPEED 4, experimental)
 Then confirm the machine starts (without a payload it reports a clear error; this is expected):
 
 ```powershell
-& .build\build\qemu-system-arm.exe -M nikon-d750 -display none -monitor none
+& .build\src\qemu-11.1.0\build\qemu-system-arm.exe -M nikon-d750 -display none -monitor none
 # nikon-d750: a decrypted main payload is required; pass -kernel FILE ...
 ```
 
@@ -115,7 +115,7 @@ Then confirm the machine starts (without a payload it reports a clear error; thi
 | configure cannot find glib/pixman | Incomplete MSYS2 packages or wrong PATH | Run `pkg-config --modversion glib-2.0` in a UCRT64 shell |
 | `ninja: command not found` | ninja not installed or wrong shell | Use `--msys-root`; do not run configure directly from PowerShell |
 | Symbolic link permission error | Developer Mode is not enabled on Windows | Enable it and retry, or switch to WSL |
-| `machine 'nikon-d750' not found` | The installed QEMU was used | Use `.build/src/qemu-<版本>/build/qemu-system-arm` |
+| `machine 'nikon-d750' not found` | The installed QEMU was used | Use `.build/src/qemu-<version>/build/qemu-system-arm` |
 | Download 404 | Version number/mirror unavailable | Download the tarball in advance and use `--archive` |
 
 ## 7. Verification record for this environment (2026-11-05)
@@ -148,7 +148,7 @@ Notes:
    ```
 
 5. The results of running `tools/run.py` are in M0 of [validation](validation.md):
-   0.18 s, exit code 0, and `qemu.log` records `r0/r1/sp/lr` at halt.
+   0.39 s, exit code 0, and `qemu.log` records `r0/r1/sp/lr` at halt.
 
 The Windows side still has no MSYS2 build artifact; this repository delivers reproducible source + a WSL build path.
 The stock binary at `C:\Program Files\qemu` still cannot load this machine.

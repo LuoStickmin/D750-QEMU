@@ -3,8 +3,8 @@
 # D750-QEMU Product Snapshot
 
 The repository root is the **deliverable product directory** of the `nikon-d750`
-validation prototype: source code, tools, documentation, the prebuilt Linux binary,
-and the evidence from actual runs.
+validation prototype: source code, tools, documentation, the evidence from actual
+runs, and a Release link to the prebuilt Linux binary.
 
 It can be copied as a whole; after copying, just re-run `tools/run.py` with the new
 absolute paths.
@@ -13,17 +13,17 @@ absolute paths.
 
 | Item | Value |
 | --- | --- |
-| Generated | 2026-11-05 (Asia/Shanghai) |
+| Generated | 2026-11-06 (Asia/Shanghai) |
 | Host | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | Compiler | gcc 15.2.0 |
 | QEMU | 11.1.0 (overlay build) |
-| Binary | GitHub Release asset (Linux x86-64, about 96 MiB) |
-| Host-side tests | 20 passed (QEMU) + 4 passed (bitrate) |
+| Binary | GitHub Release v0.1.1 asset (Linux x86-64, about 96 MiB) |
+| Host-side tests | 23 passed (QEMU) + 4 passed (bitrate; needs a local module, 4 skipped without one) |
 
 ## 2. Verified Facts
 
 1. **M0 passes**: `b1010_115a.bin` is loaded at `0x90000000`, the entry point `0x9027D52C`
-   runs to completion and returns to the halt window, exiting normally in 0.18 s.
+   runs to completion and returns to the halt window, exiting normally in 0.39 s.
    `evidence/m0/`, `evidence/m0-gdb/`.
 2. **Entry check**: RSP reads `entry_pc=0x9027d52c`, `entry_ok=true`,
    `cpsr=0x400001d3` (SVC, A/I/F masked).
@@ -44,9 +44,11 @@ D750-QEMU/
 ├── CONTRIBUTING.md / .en.md   Legal and contribution boundaries
 ├── MANIFEST.json              File list, SHA-256, evidence summary
 ├── SHA256SUMS                 sha256sum -c compatible checksum list
+├── CHANGELOG.md               Version and fix log
+├── .github/workflows/ci.yml   Host-side tests + manifest checks
 ├── qemu/                      QEMU overlay: nikon-d750-lab.c/.h + prepare_source.py
-├── tools/                     fwscan / run / probe / build
-├── tests/                     20 host-side tests (no QEMU build needed)
+├── tools/                     fwscan / run / probe / manifest / build
+├── tests/                     23 host-side tests (no QEMU build needed)
 ├── bitrate/                   1080p 64/60 Mbps patcher, tests, report
 ├── docs/                      findings / architecture / validation / build / gui-cmos (+ .en.md)
 ├── analysis/

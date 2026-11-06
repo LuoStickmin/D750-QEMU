@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  host-tests:
+    name: host tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Host-side tests
+        run: python tests/run_tests.py
+      - name: Bitrate patch tests (4 skipped without D750_MODULE)
+        run: python bitrate/test_d750_bitrate_patch.py
+      - name: Manifest and checksum integrity
+        run: python tools/manifest.py --check

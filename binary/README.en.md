@@ -11,9 +11,10 @@ Prebuilt QEMU binary for the Nikon `nikon-d750` overlay.
 | Item | Value |
 | --- | --- |
 | QEMU version | 11.1.0 |
+| Release | v0.1.1 (strict-stop and `return_ok` checks) |
 | Platform | Linux x86-64 (WSL2 Ubuntu 26.04) |
-| Size | 100,591,008 bytes |
-| SHA-256 | `7b84c339a1f6cfe7381d27b9c91c45816ecb0e2ca727329bc2e6acb55353b4c5` |
+| Size | 100,594,216 bytes |
+| SHA-256 | `28c1ac20675ae7c7df1f7f48b4e48ed15a62ccf5e678d3a257399578aafee1ae` |
 | License | GPLv2; see `COPYING` in the same directory |
 
 ## Download and run

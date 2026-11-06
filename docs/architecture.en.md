@@ -11,8 +11,8 @@ specification.
 Its implementation form is the same as z7-qemu / z9-qemu: a **QEMU source overlay**.
 
 ```
-hw/arm/nikon-d750-lab.c   板级模型（约 450 行）
-hw/arm/nikon-d750-lab.h   内存映射常量
+hw/arm/nikon-d750-lab.c   board model (~850 lines)
+hw/arm/nikon-d750-lab.h   memory-map constants
 hw/arm/meson.build        + arm_ss.add(...)
 hw/arm/Kconfig            + config NIKON_D750_LAB
 configs/devices/arm-softmmu/default.mak  + CONFIG_NIKON_D750_LAB=y
@@ -20,13 +20,14 @@ configs/devices/arm-softmmu/default.mak  + CONFIG_NIKON_D750_LAB=y
 
 `qemu/prepare_source.py` installs the above into the QEMU source tree, idempotently and repeatably. QEMU 11.1's chardev
 frontend type is called `CharFrontend`; in 10.x it is called `CharBackend`. The overlay targets 11.1, and the prepare
-script performs one textual substitution on 10.x trees, so both generations compile.
+script performs one textual substitution on 10.x trees, so both generations share the same
+source. Only 11.1.0 has actually been built here; 10.x compilation is unverified.
 
 ## 2. Memory Map (Prototype Defaults)
 
 | Start | Size | Contents | Attributes |
 | --- | --- | --- | --- |
-| `0x00000000` | 4 GiB | diagnostic catch-all | `MemoryRegionOps`, priority -1000 |
+| `0x00000000` | 4 GiB | diagnostic catch-all | `MemoryRegionOps`, priority -1000; strict logs once then stops |
 | `0x00000000` | 64 KiB | low-memory RAM (vectors/boot globals) | RAM, priority 0 |
 | `0x00000FF0` | 4 B | halt window (auxiliary LR return point) | IO, priority 1 |
 | `0x10000000` | 8 MiB | `a1010_011100.bin` (flash) | RAM-backed, writable in the prototype |
@@ -80,9 +81,13 @@ monitor's `system_reset`.
 - The first 512 records are logged individually; afterwards one in every 4096 is sampled, to keep polling from
   flooding the log.
 - `run.py` aggregates the log into `session.json.mmio.by_address` (address × direction × count × first PC).
+- `strict=on`: the first access is logged as `d750-strict:` and the run is stopped; `run.py` stores it in
+  `session.json.strict` and exits with code 7. The address is not lost, and the guest never falls into an exception vector.
+  Note: the shutdown request takes effect at the end of the current TB, so a halt line may follow `d750-strict:` in the
+  log; trust `session.json.status=strict-stop`.
 
-This is not a model that "returns plausible values". It deliberately lets the guest keep running while leaving the real
-access sequence for the next round of modeling.
+This is not a model that "returns plausible values". By default it lets the guest keep running while leaving the real
+access sequence for the next round of modeling; strict turns "the first missing device" into an explicit stop.
 
 ### 4.2 Serial Port (`0x80005000`)
 
@@ -129,7 +134,7 @@ For test card generation/validation, see `docs/gui-cmos.md` §3.2.
 | --- | --- |
 | Unknown MMIO returns 0 instead of random values | Lets the guest keep going while leaving the real address behind; random values would create inexplicable state |
 | Not strict by default | One run captures the whole access sequence, which is faster than stopping at a new address each time |
-| `strict=on` is kept | For cases that need an exact stop at the "first missing device" |
+| `strict=on` | Logs the first unmodeled access (`d750-strict:`) and stops; `run.py` exits 7 |
 | No HLE / no RAM patching | What this stage must prove is "which behaviors are the firmware's own", not to coax out the UI |
 | UART does only TX + fixed status | First turn "is there any output" into an observable fact |
 
@@ -140,7 +145,7 @@ For test card generation/validation, see `docs/gui-cmos.md` §3.2.
 | CPU | 2× Cortex-A15 | 4× AArch64 | 1× Cortex-A9 (assumed) |
 | payload | 33 MB @ `0x10020000` | 82 MB | 20 MB @ `0x90000000` |
 | Display/ISP | yes | yes | no |
-| Boot assistance | yes (explicitly calls the original function) | yes | no, natural boot first |
+| Boot assistance | yes (explicitly calls the original function) | yes | yes (assisted SP/LR + halt window) |
 | Acceptance | UI/shooting/RAW | UI/shooting/RAW/video | M0–M3 boot evidence |
 
 Nothing is inherited in terms of addresses, IRQs, or peripheral protocols; only the engineering form and evidence
@@ -152,9 +157,10 @@ discipline are inherited.
 - `d750_probe_read/write()`: catch-all.
 - `d750_uart_read/write()`: candidate serial port.
 - `d750_halt_read()`: entry return point; the optional LCD dump is also triggered here.
+- `d750_halt_state_is_clean()`: checks CPSR mode, LR and SP to tell a real return from a fault.
 - `d750_lcd_dump()`: guest RAM → PPM.
 - Machine properties: `payload`, `flash`, `entry`, `strict`, `lcd-*`.
-- Log prefixes: `d750-probe:` / `d750-uart:`; `run.py` parses by prefix.
+- Log prefixes: `d750-probe:` / `d750-strict:` / `d750-uart:`; `run.py` parses by prefix.
 
 ## 8. Known Limitations
 
@@ -165,3 +171,5 @@ discipline are inherited.
 5. No VMState/migration; recovery means starting a new process.
 6. Cache/TLB behavioral differences are not implemented, and there is no cycle accuracy; TCG timing does not represent
    the hardware.
+7. The halt window sits at the end of the low-memory NOP sled: both a real return and an exception that slides to `0xFF0`
+   can reach it. The machine records `return_ok` to tell them apart, and `run.py` exits 6 on `false`.

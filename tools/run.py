@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import hashlib
 import json
 import os
 import re
@@ -39,6 +40,11 @@ UART_RE = re.compile(r"d750-uart: pc=(0x[0-9a-f]+) rd \+0x([0-9a-f]+) size=(\d+)
 HALT_RE = re.compile(
     r"d750-halt: pc=(0x[0-9a-f]+) r0=(0x[0-9a-f]+) r1=(0x[0-9a-f]+)"
     r" sp=(0x[0-9a-f]+) lr=(0x[0-9a-f]+)"
+    r"(?: return_ok=(true|false) mode=(0x[0-9a-f]+))?"
+)
+STRICT_RE = re.compile(
+    r"d750-strict: pc=(0x[0-9a-f]+) (rd|wr) addr=(0x[0-9a-f]+) size=(\d+)"
+    r"(?: value=(0x[0-9a-f]+))?"
 )
 LCD_RE = re.compile(
     r"d750-lcd: dumped (\d+)x(\d+) \(([^,]+), stride (\d+)\)"
@@ -85,6 +91,17 @@ def free_port() -> int:
         return int(s.getsockname()[1])
 
 
+def sha256_file(path: Path) -> str | None:
+    """SHA-256 of a firmware input, or None when the file is absent."""
+    if not path.is_file():
+        return None
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def summarize_probe_log(path: Path) -> dict:
     events = []
     if not path.is_file():
@@ -126,9 +143,29 @@ def summarize_halt(path: Path) -> dict | None:
     match = HALT_RE.search(path.read_text(encoding="utf-8", errors="replace"))
     if not match:
         return None
+    return_ok = None
+    if match.group(6) is not None:
+        return_ok = match.group(6) == "true"
     return {
         "pc": match.group(1), "r0": match.group(2), "r1": match.group(3),
         "sp": match.group(4), "lr": match.group(5),
+        "return_ok": return_ok, "mode": match.group(7),
+        # Old (v0.1.0) binaries did not record return_ok; only an explicit
+        # false makes the halt suspicious.
+        "suspicious": return_ok is False,
+    }
+
+
+def summarize_strict(path: Path) -> dict | None:
+    """Parse the first strict-mode stop record (d750-strict:)."""
+    if not path.is_file():
+        return None
+    match = STRICT_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+    if not match:
+        return None
+    return {
+        "pc": match.group(1), "rw": match.group(2), "addr": match.group(3),
+        "size": int(match.group(4)), "value": match.group(5) or "0x00000000",
     }
 
 
@@ -237,7 +274,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--entry", type=lambda s: int(s, 0),
                         help=f"initial PC (default 0x{DEFAULT_ENTRY:x})")
     parser.add_argument("--strict", action="store_true",
-                        help="do not map the catch-all diagnostic window")
+                        help="stop at the first unmodelled MMIO access "
+                             "(logs d750-strict: and exits)")
     parser.add_argument("--timeout", type=float, default=10.0,
                         help="run time in seconds (non-GDB mode)")
     parser.add_argument("--gdb", action="store_true",
@@ -291,14 +329,21 @@ def main(argv: list[str] | None = None) -> int:
         print(" ".join(cmd))
         return 0
 
+    payload_path = Path(args.payload).resolve()
+    flash_path = Path(args.flash).resolve() if args.flash else None
     started = time.time()
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True)
     session: dict = {
         "argv": cmd,
         "entry": f"0x{entry:08x}",
-        "payload": str(Path(args.payload).resolve()),
-        "flash": str(Path(args.flash).resolve()) if args.flash else None,
+        "payload": str(payload_path),
+        "payload_sha256": sha256_file(payload_path),
+        "payload_size": payload_path.stat().st_size if payload_path.is_file() else None,
+        "flash": str(flash_path) if flash_path else None,
+        "flash_sha256": sha256_file(flash_path) if flash_path else None,
+        "flash_size": (flash_path.stat().st_size
+                       if flash_path and flash_path.is_file() else None),
         "started": _dt.datetime.now().isoformat(timespec="seconds"),
     }
 
@@ -339,17 +384,37 @@ def main(argv: list[str] | None = None) -> int:
     session["mmio"] = summarize_probe_log(run_dir / "qemu.log")
     session["halt"] = summarize_halt(run_dir / "qemu.log")
     session["lcd"] = summarize_lcd(run_dir / "qemu.log")
+    session["strict"] = summarize_strict(run_dir / "qemu.log")
+
+    if session["timed_out"]:
+        status = "timeout"
+    elif session["strict"] is not None:
+        status = "strict-stop"
+    elif session["halt"] and session["halt"]["suspicious"]:
+        status = "halt-suspicious"
+    elif session["halt"] is not None:
+        status = "halt"
+    elif session["exit"] == 0:
+        status = "ran"
+    else:
+        status = f"exit-{session['exit']}"
+    session["status"] = status
+
     (run_dir / "session.json").write_text(json.dumps(session, indent=2) + "\n",
                                           encoding="utf-8")
 
     print(f"session: {run_dir}")
-    print(f"entry 0x{entry:08x}  exit={session['exit']}  "
+    print(f"status={status}  entry 0x{entry:08x}  exit={session['exit']}  "
           f"timed_out={session['timed_out']}  uart={session['uart']['bytes']}B  "
           f"mmio_events={session['mmio']['events']}")
     if session["halt"]:
         halt = session["halt"]
         print(f"halt: pc={halt['pc']} r0={halt['r0']} r1={halt['r1']} "
-              f"sp={halt['sp']} lr={halt['lr']}")
+              f"sp={halt['sp']} lr={halt['lr']} return_ok={halt['return_ok']}")
+    if session["strict"]:
+        stop = session["strict"]
+        print(f"strict: {stop['rw']} {stop['addr']} size={stop['size']} "
+              f"(pc {stop['pc']})")
     if session["lcd"]:
         lcd = session["lcd"]
         print(f"lcd: {lcd['width']}x{lcd['height']} {lcd['format']} "
@@ -367,6 +432,15 @@ def main(argv: list[str] | None = None) -> int:
         print("top unmodelled MMIO:")
         for rec in session["mmio"]["by_address"][:10]:
             print(f"  {rec['rw']} {rec['addr']} x{rec['count']} (first pc {rec['first_pc']})")
+
+    if status == "strict-stop":
+        print("stopped at the first unmodelled access (exit code 7); "
+              "model this access before re-running M1/M2")
+        return 7
+    if status == "halt-suspicious":
+        print("warning: the trampoline was reached from an unexpected state "
+              "(return_ok=false); this is not a clean entry return (exit code 6)")
+        return 6
     return 0
 
 

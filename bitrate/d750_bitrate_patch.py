@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Raise the D750 1080p movie bit-rate table from stock to a 64/60 Mbps profile.
 
 The D750 `b1010_115a.bin` module contains a 28-byte-per-entry movie quality

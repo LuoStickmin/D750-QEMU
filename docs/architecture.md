@@ -10,7 +10,7 @@
 实现形态与 z7-qemu / z9-qemu 相同：一个 **QEMU source overlay**。
 
 ```
-hw/arm/nikon-d750-lab.c   板级模型（约 450 行）
+hw/arm/nikon-d750-lab.c   板级模型（约 850 行）
 hw/arm/nikon-d750-lab.h   内存映射常量
 hw/arm/meson.build        + arm_ss.add(...)
 hw/arm/Kconfig            + config NIKON_D750_LAB
@@ -19,13 +19,14 @@ configs/devices/arm-softmmu/default.mak  + CONFIG_NIKON_D750_LAB=y
 
 `qemu/prepare_source.py` 负责把上述内容装进 QEMU 源码树，幂等、可重复。
 QEMU 11.1 的 chardev 前端类型叫 `CharFrontend`；10.x 叫 `CharBackend`。
-overlay 以 11.1 为准，prepare 脚本在 10.x 树上做一次文本替换，因此两代都能编。
+overlay 以 11.1 为准；prepare 脚本在 10.x 树上做一次文本替换，让两代共用同一份
+源码。本仓库只在 11.1.0 上实际编译过，10.x 的编译支持尚未验证。
 
 ## 2. 内存映射（原型默认值）
 
 | 起始 | 大小 | 内容 | 属性 |
 | --- | --- | --- | --- |
-| `0x00000000` | 4 GiB | 诊断 catch-all | `MemoryRegionOps`，优先级 -1000 |
+| `0x00000000` | 4 GiB | 诊断 catch-all | `MemoryRegionOps`，优先级 -1000；strict 时记录首条后停止 |
 | `0x00000000` | 64 KiB | 低内存 RAM（向量/启动全局） | RAM，优先级 0 |
 | `0x00000FF0` | 4 B | halt 窗口（辅助 LR 返回点） | IO，优先级 1 |
 | `0x10000000` | 8 MiB | `a1010_011100.bin`（flash） | RAM 后端，原型可写 |
@@ -79,9 +80,13 @@ PC 指过去”的最小语义，避免多一层无法解释的行为。
 - 前 512 条逐条记录，之后每 4096 条抽样一次，避免轮询刷爆日志。
 - `run.py` 会把日志聚合成 `session.json.mmio.by_address`（地址 × 方向 × 次数
   × 首次 PC）。
+- `strict=on`：第一条访问改记 `d750-strict:` 并请求 QEMU 退出；`run.py` 把它
+  写入 `session.json.strict`，退出码 7。地址不会丢，也不会掉进异常向量。
+  注意：shutdown 请求在当前 TB 结束后才生效，日志里 `d750-strict:` 之后可能
+  还跟一条 halt；以 `session.json.status=strict-stop` 为准。
 
-这不是“返回合理值”的模型。它故意让 guest 继续跑，同时把真实访问序列留给
-下一轮建模。
+这不是“返回合理值”的模型。默认让 guest 继续跑，把真实访问序列留给下一轮建模；
+strict 则把“第一个缺失设备”变成一次显式停止。
 
 ### 4.2 串口（`0x80005000`）
 
@@ -128,7 +133,7 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 | --- | --- |
 | 未知 MMIO 返回 0 而不是随机值 | 让 guest 继续走，同时留下真实地址；随机值会制造无法解释的状态 |
 | 默认不 strict | 一次运行拿到整段访问序列，比每次停在一个新地址快 |
-| `strict=on` 保留 | 需要“第一个缺失设备”的精确停点时使用 |
+| `strict=on` | 记录第一条未建模访问（`d750-strict:`）后停止；`run.py` 退出码 7 |
 | 不做 HLE/不做 RAM 补丁 | 当前阶段要证明的是“哪些行为是固件自己的”，不是把 UI 骗出来 |
 | UART 只做 TX + 固定状态 | 先把“有没有输出”变成可观测事实 |
 
@@ -139,7 +144,7 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 | CPU | 2× Cortex-A15 | 4× AArch64 | 1× Cortex-A9（假设） |
 | payload | 33 MB @ `0x10020000` | 82 MB | 20 MB @ `0x90000000` |
 | 显示/ISP | 有 | 有 | 无 |
-| 启动辅助 | 有（显式调用原函数） | 有 | 无，先跑自然启动 |
+| 启动辅助 | 有（显式调用原函数） | 有 | 有（辅助 SP/LR + halt 窗口） |
 | 验收 | UI/拍摄/RAW | UI/拍摄/RAW/录像 | M0–M3 启动证据 |
 
 不继承任何地址、IRQ 或外设协议；只继承工程形态和证据纪律。
@@ -150,6 +155,7 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 - `d750_probe_read/write()`：catch-all。
 - `d750_uart_read/write()`：候选串口。
 - `d750_halt_read()`：入口返回点；可选的 LCD dump 也在这里触发。
+- `d750_halt_state_is_clean()`：校验 CPSR 模式、LR、SP，区分正常返回与异常路径。
 - `d750_lcd_dump()`：guest RAM → PPM。
 - 机器属性：`payload`、`flash`、`entry`、`strict`、`lcd-*`。
 - 日志前缀：`d750-probe:` / `d750-uart:`，`run.py` 按前缀解析。
@@ -162,3 +168,5 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 4. 串口、GIC 基址、CPU 型号均为假设。
 5. 没有 VMState/迁移；恢复方式是重新起进程。
 6. 没有实现 cache/TLB 行为差异、没有 cycle 精度；TCG 的时序不代表硬件。
+7. halt 窗口位于低内存 NOP 滑梯末端：正常返回和“异常后滑到 `0xFF0`”都可能
+   触发它；机器用 `return_ok` 区分，`run.py` 对 `false` 返回退出码 6。
