@@ -2,6 +2,18 @@
 
 > [English](README.en.md) | 中文
 
+> **更新日志 · 2025-11-07 · M1 启动链解析**
+>
+> - **a1010 真实加载基址 = `0x10018000`**（不是 `0x10000000`）：`bx ip = 0x1002CB8C` → 文件偏移 `0x14B8C`...
+> - **Thumb 位修正**：须改为 `0x1002CB8D`...
+> - **config 槽 `0x100F48C0/C4/C8` 在 a1010 模块之外**...
+> - **「0 MMIO」疑似根因**：未映射 flash 读 `0xFF` → `blxne` 跳到 `0xFFFFFFFF` 跑飞...
+> - 复现：`python stub_trace.py --find-base ...`
+>
+> 状态：**M1 ≈ 90%**——入口/基址已定，待 QEMU 实跑进入 `0x1002CB8D` 并抓到第一条 MMIO。
+
+---
+
 > **本仓库有两条工作线**：QEMU 验证原型（本文）与 D750 1080p 高码率修改
 > （5 个 HQ 行 42/35、24/20 → 64/60 Mbps）。合并总览见
 > [SUMMARY.md](SUMMARY.md)，高码率细节见 [bitrate/README.md](bitrate/README.md)，
