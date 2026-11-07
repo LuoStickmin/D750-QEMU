@@ -2,6 +2,18 @@
 
 > [中文](README.md) | English
 
+> **Update Log · 2025-11-07 · M1 Boot-Chain Resolution**
+>
+> - **a1010 real load base = `0x10018000`** (not `0x10000000`): `bx ip = 0x1002CB8C` → file offset `0x14B8C`, inside a1010's code region, a clean Thumb-2 function (`push {r4,lr}; movs r0,#0x14; bl …`), fully disassembled and confirmed.
+> - **Thumb-bit fix**: the `bx` target `0x1002CB8C` has bit0=0 → enters ARM, but the code is Thumb; must be **`0x1002CB8D`** (patch the b1010 file literal at `0x25D7F8`, or have QEMU trap `0x9025D750` and do `ip|=1`).
+> - **config slots `0x100F48C0/C4/C8` are outside the a1010 module** (≈ base+`0xDC8C0`); they must be filled from the next module / full flash, otherwise the boot stub takes a degenerate "no-callback" path and no MMIO is observed.
+> - **Likely root cause of "0 MMIO"**: when unmapped flash reads `0xFF`, the stub's `blxne r0` jumps to `0xFFFFFFFF` (enters Thumb) and dies immediately; fix: make unmapped reads return 0, or supply the full flash.
+> - Repro: `python stub_trace.py --find-base --a1010 a1010_011100.bin` (should hit `base=0x10018000, foff=0x14B8C`). See [update_log_1107.md](update_log_1107.md).
+>
+> Status: **M1 ≈ 90%** — entry/base pinned down; pending a real QEMU run that enters `0x1002CB8D` and captures the first MMIO.
+
+---
+
 > **This repository has two workstreams**: the QEMU validation prototype
 > (this file) and a D750 1080p high-bitrate modification (five HQ rows from
 > 42/35 and 24/20 to 64/60 Mbps). Combined overview:
