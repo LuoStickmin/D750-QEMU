@@ -1,8 +1,16 @@
 # Changelog
 
-## Unreleased — 2026-11-09
+## v0.2.1 — 2026-11-09
 
-三条无输入验证 + 后续 TTBR0 实验（机器新增 4 个选项，二进制待重新发布）：
+三条无输入验证 + 后续 TTBR0 实验；新二进制作为 GitHub Release v0.2.1 发布。
+
+### 发行
+
+- Linux x86-64 二进制：100,624,848 字节，SHA-256
+  `aa4f2a5f8bf97db4d2d310ddac4e0b2289ec98602edec854ba38184ca49cb891`；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+- 新增机器选项：`flash-size`、`aux-ram-size`、`mmu-table`、`vector-fix`
+  （`tools/run.py` 同名参数）。
 
 - 静态：b1010 内无 `0x9025D700` 调用者、无 BSS 回调 `0x902A2EA0/A4/A8` 的
   写入者；描述符表解析为 4 条 `(dest, src, size)` 拷贝项，源地址全部落在

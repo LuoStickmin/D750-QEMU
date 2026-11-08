@@ -67,7 +67,7 @@ Currently **completed and verified**:
 | Board source code `nikon-d750-lab.c/.h` | ✅ Written (QEMU 11.1 API; 10.2.4 is text-adapted by the prepare script but has not been built here) |
 | Overlay install script `qemu/prepare_source.py` | ✅ Idempotent, unit tests cover 11.1 / 10.2 / unknown version rejection |
 | `fwscan` / `run` / `probe` / `build` tools | ✅ Written; `probe` tested with real RSP against stock QEMU `-M virt` |
-| Host-side tests | ✅ `python3 tests/run_tests.py` → 26 passed |
+| Host-side tests | ✅ `python3 tests/run_tests.py` → 27 passed |
 | Board C code compilation | ✅ Compiled on WSL Ubuntu 26.04 (gcc 15.2) + QEMU 11.1.0 |
 | `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.39s |
 | M1 boot-chain run | ⚠️ **Reached the target, not closed**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; then hits an M-profile instruction at `0x100240AC`, so the target module is not A-core code. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |

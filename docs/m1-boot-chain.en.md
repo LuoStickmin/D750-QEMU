@@ -35,6 +35,10 @@ to decide what the A-core's `0x1002CB8C` actually belongs to.
 | `a1010-base=<addr>` | `0x10018000` | where the a1010 image is loaded inside the flash window |
 | `thumb-fix=on\|off` | `on` | patch the **in-memory copy** of the `0x25D7F8` literal from `0x1002CB8C` to `0x1002CB8D`; the file is never modified |
 | `mmu-bringup=on\|off` | `on` | emulate the missing boot ROM: install a 4 GiB identity table, write DACR/TTBR0/TTBCR, and put the table base into the config slot |
+| `mmu-table=<addr>` | `0` (auto) | place the identity table at this address and **do not override** the config slot (use the image value); the 2026-11-09 check used it to verify `0x201E2200` is a valid TTBR0 |
+| `flash-size=<size>` | 8 MiB | flash window size (max 64 MiB), so the full 20 MiB b1010 can be mapped |
+| `aux-ram-size=<size>` | `0` | add a RAM bank at `0x20000000` (e.g. `4M`) |
+| `vector-fix=on\|off` | `off` | install a minimal ARM vector table at `0x90020000` (SVC/IRQ/FIQ return, faults spin) |
 | `mpcore-base=<addr>` | `0xE000E000` | A9 MPCore (GIC/timers/watchdog) base; set `0x1E000000` to reproduce the "unmapped" observation |
 
 In `boot-mode=stub` the initial PC is the internal trampoline `0x1000` (not

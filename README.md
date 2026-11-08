@@ -67,7 +67,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | 板级源码 `nikon-d750-lab.c/.h` | ✅ 已写（QEMU 11.1 API；10.2.4 由 prepare 脚本做文本适配，未实际编译验证） |
 | overlay 安装脚本 `qemu/prepare_source.py` | ✅ 幂等，单测覆盖 11.1 / 10.2 / 拒绝未知版本 |
 | `fwscan` / `run` / `probe` / `build` 工具 | ✅ 已写；`probe` 手工对**已安装的 stock QEMU `-M virt`** 做过真实 RSP 联调（测试套件只覆盖协议编解码） |
-| 主机侧测试 | ✅ `python tests/run_tests.py` → 26 passed |
+| 主机侧测试 | ✅ `python tests/run_tests.py` → 27 passed |
 | 板级 C 代码编译 | ✅ 已在 WSL Ubuntu 26.04（gcc 15.2）+ QEMU 11.1.0 上编译通过 |
 | `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.39 s 正常退出 |
 | M1 启动链实跑 | ⚠️ **到目标但未闭合**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；随后在 `0x100240AC` 撞到 M-profile 指令，说明目标模块不属于 A-core。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
@@ -348,7 +348,7 @@ python tools/run.py --payload ... --flash ... `
 │   ├── m1_analyze.py           M1 静态分析四件套（1107 更新工具，disasm 需 capstone）
 │   ├── manifest.py             重新生成/校验 SHA256SUMS 与 MANIFEST
 │   └── build.py                下载/解包/overlay/构建/记录
-├── tests/                      26 个主机侧测试（无需 QEMU 构建）
+├── tests/                      27 个主机侧测试（无需 QEMU 构建）
 ├── bitrate/                    D750 1080p 64/60 Mbps 改表工具、测试、说明
 ├── analysis/
 │   ├── d750-0115.json          真实镜像的扫描结果
