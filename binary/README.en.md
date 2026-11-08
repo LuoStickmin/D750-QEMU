@@ -11,10 +11,10 @@ Prebuilt QEMU binary for the Nikon `nikon-d750` overlay.
 | Item | Value |
 | --- | --- |
 | QEMU version | 11.1.0 |
-| Release | v0.1.1 (strict-stop and `return_ok` checks) |
+| Release | v0.2.0 (M1 boot chain: `boot-mode=stub`, `a1010-base`, `thumb-fix`, `mmu-bringup`, `mpcore-base`) |
 | Platform | Linux x86-64 (WSL2 Ubuntu 26.04) |
-| Size | 100,594,216 bytes |
-| SHA-256 | `28c1ac20675ae7c7df1f7f48b4e48ed15a62ccf5e678d3a257399578aafee1ae` |
+| Size | 100,608,072 bytes |
+| SHA-256 | `3b97f46e797a2f110c1aef554c51b29f807fae7ba9ac8162eeb6ae45e08fd817` |
 | License | GPLv2; see `COPYING` in the same directory |
 
 ## Download and run
@@ -30,15 +30,25 @@ chmod +x binary/qemu-system-arm
 You should see:
 
 ```
-nikon-d750           Nikon D750 validation prototype (EXPEED 4, experimental)
+nikon-d750           Nikon D750 validation prototype (EXPEED 4, M1 boot chain, experimental)
 ```
 
-Start an M0 run:
+Start an M1 run (default):
 
 ```bash
 python3 tools/run.py --qemu binary/qemu-system-arm \
   --payload /path/to/b1010_115a.bin \
-  --flash   /path/to/a1010_011100.bin
+  --flash   /path/to/a1010_011100.bin \
+  --boot stub --a1010-base 0x10018000
+```
+
+M0 regression (legacy layout):
+
+```bash
+python3 tools/run.py --qemu binary/qemu-system-arm \
+  --payload /path/to/b1010_115a.bin \
+  --flash   /path/to/a1010_011100.bin \
+  --boot entry --a1010-base 0x10000000
 ```
 
 ## Dependencies

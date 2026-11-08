@@ -5,6 +5,15 @@
 M1 实跑轮：启动桩在 QEMU 里跑通并抓到第一条 a1010 MMIO；同时发现目标镜像
 是 M-profile，A-core 启动链并未闭合。固件文件仍然零修改。
 
+### 发行
+
+- 新构建的 Linux x86-64 二进制作为 GitHub Release **v0.2.0** 附件发布：
+  100,608,072 字节，SHA-256
+  `3b97f46e797a2f110c1aef554c51b29f807fae7ba9ac8162eeb6ae45e08fd817`。
+  包含 `boot-mode=stub|entry`、`a1010-base`、`thumb-fix`、`mmu-bringup`、
+  `mpcore-base`；`MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256`
+  已同步。v0.1.1 仍保留为历史附件。
+
 ### 新增
 
 - 机器选项：`boot-mode=stub|entry`（默认 `stub`）、`a1010-base`（默认
