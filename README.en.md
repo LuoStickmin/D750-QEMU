@@ -6,7 +6,7 @@
 >
 > | Date | Progress |
 > | --- | --- |
-> | 2026-11-08 | **M1 run**: stub → `0x1002CB8C` (Thumb, `args=0/0/2/0/1`, `LR=0x9025D754`), first MMIO `wr 0xE000E180 ← 0x00100000`; MPCore base corrected to **`0xE000E000`**; a1010 found to be M-profile firmware, so M1 is recorded as "reached target, not closed". Details: [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
+> | 2026-11-08 | **M1 run + v0.2.0**: stub → `0x1002CB8C` (Thumb, `args=0/0/2/0/1`, `LR=0x9025D754`), first MMIO `wr 0xE000E180 ← 0x00100000`; MPCore base corrected to **`0xE000E000`**; a1010 found to be M-profile firmware, so M1 is recorded as "reached target, not closed"; the Linux x86-64 binary is published as [Release v0.2.0](https://github.com/LuoStickmin/D750-QEMU/releases/tag/v0.2.0). Details: [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 > | 2026-11-07 | **Static resolution**: a1010 base `0x10018000`, entry file offset `0x14B8C`, Thumb bit, config slots `0x100F48C0/C4/C8`; raw material in `update_1107.zip` |
 > | 2026-11-06 | **v0.1.1**: M0 passed, strict/halt evidence fixes, LCD dump pipeline, 64/60 Mbps bitrate patch; see [CHANGELOG.md](CHANGELOG.md) |
 > | 2026-11-05 | **v0.1.0**: first public snapshot (M0, LCD dump, bilingual docs) |
