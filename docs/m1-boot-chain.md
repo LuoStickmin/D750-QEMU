@@ -185,3 +185,12 @@ python3 tools/run.py ... --boot stub --mpcore-base 0x1E000000
 - `mmu-bringup` 是**替代 boot ROM 的仿真垫片**，不是对 D750 boot ROM 的还原；
   它只保证 identity 映射，不保证 cache/权限属性与真机一致。
 - `thumb-fix` 只改内存副本；容器 CRC / `SHA1(body||K8)` 不受影响。
+
+---
+
+## 9. 后续（2026-11-09）
+
+三条无输入验证（静态调用链、12 种 flash 布局、Cortex-M3 启动 a1010）已把结论
+推进到“**flash 窗口更像 b1010 镜像**、a1010 确认是 M-core 固件、缺一级 boot
+ROM”。详见 [m1-tracks-2026-11-09.md](m1-tracks-2026-11-09.md)。本文的
+“a1010@`0x10018000` 可执行”仍是有效的**受控实验**，但不再被当作真实模块归属。

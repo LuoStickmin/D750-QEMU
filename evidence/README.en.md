@@ -10,6 +10,7 @@ This directory holds the evidence left by **actual runs**, not hand-written docu
 | `m0-gdb/` | Same as above, plus RSP snapshots | `entry_pc=0x9027d52c`, `entry_ok=true`, CPSR `0x400001d3`; RSP disconnects after the guest exits by itself |
 | `lcd/` | Same as above + `lcd.ppm` | 8×8 ARGB8888 dumped from `0x92000000`; demonstrates the scan/dump chain |
 | `m1/` | `command.json`, `session.json`, `qemu.log`, `uart.log` + `gdb-entry.json` | M1: stub → `0x1002CB8C` (Thumb, args 0/0/2/0/1); first MMIO `0xe000e180←0x00100000`; then hits an M-profile instruction at `0x100240AC` |
+| `m1/tracks/` | `layout-matrix.md`, `b1010-flash-svc.log`, `mcore-boot.log`/`.md` | 12-layout comparison; 303-block b1010-in-flash trace; a1010 boots with zero exceptions on Cortex-M3 and hangs at `0x00300F40` |
 | `boot-scan.txt` | Scan output for 10 candidate entry points | All 0 MMIO; `0x9025d700` did not return within 2 s; the next stage is not inside `b1010` |
 
 ## How to Read

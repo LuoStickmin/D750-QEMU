@@ -331,3 +331,20 @@ Full record: [m1-boot-chain.en.md](m1-boot-chain.en.md); conclusion-level summar
 - new input is needed: a full flash image / module offset table (to identify the real owner of `0x1002CB8C`), or
   hardware documentation confirming the core topology;
 - the only new hard device fact is the GIC base; the UART still produces 0 bytes.
+
+## 13. Three No-Input Checks (2026-11-09)
+
+Full record: [m1-tracks-2026-11-09.en.md](m1-tracks-2026-11-09.en.md). Summary:
+
+1. **Static**: b1010 contains no instruction/literal that calls `0x9025D700`, and no code that writes
+   `0x902A2EA0/A4/A8`; the descriptor table is four `(dest, src, size)` copies whose sources all fit the
+   "b1010 mapped in flash" hypothesis. The third copy `0x100A1480 + 0x5344C = 0x100F48CC`; the config slots are
+   exactly its last 12 bytes.
+2. **Layout matrix**: of 12 layouts, only **b1010@`0x10000000` + Thumb fix** produces a coherent A-core path
+   (39 basic blocks → a normal SVC, 0 aborts); a1010 at any base is data, M-instruction crashes, or early returns.
+3. **M-core**: a1010 runs `Reset_Handler`/`SystemInit` with zero exceptions on `mps2-an385`/`cortex-m3` (BE vector
+   table byte-swapped), then hangs polling the clock/PMU block at `0x00300F40` — independent confirmation of M-core
+   firmware.
+4. **New lead**: under the b1010-in-flash layout the config slot `0x100F48C0` reads `0x201E2200`, which looks like
+   a TTBR0 pointer (table base `0x201E2000`), suggesting the page table may live in `0x20000000` RAM; the M-core's
+   first peripheral to model is `0x00300F40`.

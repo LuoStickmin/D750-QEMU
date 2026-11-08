@@ -199,3 +199,14 @@ Evidence: `evidence/m1/{gic-unmapped,default,gdb-entry.json}`.
   cache/permission attributes.
 - `thumb-fix` only touches the in-memory copy; container CRC /
   `SHA1(body||K8)` are unaffected.
+
+---
+
+## 9. Follow-up (2026-11-09)
+
+Three no-input checks (static call chain, 12 flash layouts, booting a1010 on
+Cortex-M3) moved the conclusion to "**the flash window looks like b1010's
+image**, a1010 is confirmed M-core firmware, the first-stage boot ROM is
+missing". See [m1-tracks-2026-11-09.en.md](m1-tracks-2026-11-09.en.md). The
+"a1010@`0x10018000` executes" result here remains a valid **controlled
+experiment**, but is no longer treated as the real module attribution.

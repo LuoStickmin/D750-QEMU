@@ -1,0 +1,42 @@
+Loaded reset SP 0x0 PC 0x0 from vector table
+Loaded reset SP 0x2000f8c0 PC 0xc20d from vector table
+----------------
+IN: 
+0x0000c20c:  
+OBJD-T: 00f04ff8
+
+----------------
+IN: 
+0x0000c2ae:  
+OBJD-T: 1648016821f08001016014484ff0b10101607047
+
+----------------
+IN: 
+0x0000c2be:  
+OBJD-T: 0160
+
+----------------
+IN: 
+0x0000c2c0:  
+OBJD-T: 7047
+
+----------------
+IN: 
+0x0000c210:  
+OBJD-T: 04f0aaf8
+
+----------------
+IN: 
+0x00010368:  
+OBJD-T: 2c4910b548682c4ac0f31300104348604a684240120dfbd1
+
+----------------
+IN: 
+0x00010380:  
+OBJD-T: 40f001024a604a689207fcd4
+
+----------------
+IN: 
+0x00010386:  
+OBJD-T: 4a689207fcd4
+
