@@ -168,7 +168,8 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 - `d750_halt_state_is_clean()`：校验 CPSR 模式、LR、SP，区分正常返回与异常路径。
 - `d750_lcd_dump()`：guest RAM → PPM。
 - 机器属性：`payload`、`flash`、`entry`、`boot-mode`、`a1010-base`、
-  `thumb-fix`、`mmu-bringup`、`mpcore-base`、`strict`、`lcd-*`。
+  `thumb-fix`、`mmu-bringup`、`mmu-table`、`flash-size`、`aux-ram-size`、
+  `vector-fix`、`mpcore-base`、`strict`、`lcd-*`。
 - 日志前缀：`d750-probe:` / `d750-uart:` / `d750-a1010-io:`，`run.py` 按前缀解析。
 
 ## 8. 已知限制

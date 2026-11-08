@@ -39,14 +39,26 @@
 #define D750_LOWRAM_SIZE       (64ULL * 1024)
 #define D750_HALT_TRAMPOLINE   0x00000FF0ULL   /* "b ." placed here */
 
-/* Flash / first-stage window. */
+/* Flash / first-stage window.  Default 8 MiB; `-machine flash-size=` can
+ * grow it so the full 20 MiB b1010 image can be mapped at 0x10000000
+ * (2026-11-09 layout experiments). */
 #define D750_FLASH_BASE        0x10000000ULL
 #define D750_FLASH_SIZE        (8ULL * 1024 * 1024)
+#define D750_FLASH_SIZE_MAX    (64ULL * 1024 * 1024)
 
-/* a1010 load base.  Measured 2026-11-07: the b1010 boot stub's `bx ip`
- * target 0x1002CB8C only lands on a clean Thumb-2 function prologue when
- * a1010 is mapped at 0x10018000 (file offset 0x14B8C).  The earlier
- * 0x10000000 hypothesis mapped the same target onto a data table. */
+/* Optional second RAM bank at 0x20000000.  b1010 file offset 0xF48C0 holds
+ * 0x201E2200, which looks like a TTBR0 pointer (table base 0x201E2000); with
+ * an aux bank of at least 2 MiB the real config value can be used. */
+#define D750_AUXRAM_BASE       0x20000000ULL
+
+/* Payload offset that b1010's init installs as VBAR (0x90020000).  With
+ * `vector-fix=on` the loader writes a minimal ARM vector table there. */
+#define D750_VECTOR_OFF        0x20000ULL
+#define D750_VECTOR_LEN        0x60ULL
+
+/* a1010 load base.  The 2026-11-07 hypothesis (a1010 at 0x10018000) is kept
+ * as the default for the controlled M1 experiment; the 2026-11-09 layout
+ * matrix showed the flash window is more likely b1010's own image. */
 #define D750_A1010_BASE        0x10018000ULL
 
 /* M1 boot chain.  b1010 is loaded at D750_RAM_BASE; its startup hand-off

@@ -209,6 +209,14 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += ",mmu-bringup=off"
     if args.mpcore_base is not None:
         machine += f",mpcore-base=0x{args.mpcore_base:x}"
+    if args.flash_size is not None:
+        machine += f",flash-size=0x{args.flash_size:x}"
+    if args.aux_ram_size:
+        machine += f",aux-ram-size=0x{args.aux_ram_size:x}"
+    if args.mmu_table is not None:
+        machine += f",mmu-table=0x{args.mmu_table:x}"
+    if args.vector_fix:
+        machine += ",vector-fix=on"
     if args.strict:
         machine += ",strict=on"
     if args.lcd_base is not None:
@@ -284,6 +292,18 @@ def gdb_snapshot(port: int, entry: int, checkpoint: int | None,
     return result
 
 
+def parse_size(text: str) -> int:
+    """Parse a size with an optional K/M/G suffix (e.g. 4M, 0x1400000)."""
+    t = str(text).strip().lower()
+    mult = 1
+    for suffix, value in (("g", 1 << 30), ("m", 1 << 20), ("k", 1 << 10)):
+        if t.endswith(suffix):
+            mult = value
+            t = t[:-1]
+            break
+    return int(t, 0) * mult
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -321,6 +341,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mpcore-base", type=lambda s: int(s, 0),
                         help="override the MPCore/GIC base (diagnostics; default "
                              "0xE000E000)")
+    parser.add_argument("--flash-size", type=parse_size,
+                        help="flash window size (e.g. 20M or 0x1400000); "
+                             "default is the machine's 8M")
+    parser.add_argument("--aux-ram-size", type=parse_size, default=0,
+                        help="add a RAM bank at 0x20000000 (e.g. 4M; default 0)")
+    parser.add_argument("--mmu-table", type=lambda s: int(s, 0),
+                        help="place the identity table at this address and leave "
+                             "config slot 0x100F48C0 to the flash image")
+    parser.add_argument("--vector-fix", action="store_true", default=False,
+                        help="install a minimal ARM vector table at 0x90020000")
     parser.add_argument("--trace", action="append", default=[],
                         help="extra -d item, e.g. --trace in_asm (repeatable)")
     parser.add_argument("--strict", action="store_true",

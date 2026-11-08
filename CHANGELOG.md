@@ -2,7 +2,7 @@
 
 ## Unreleased — 2026-11-09
 
-三条无输入验证（不改变机器行为、不新增二进制）：
+三条无输入验证 + 后续 TTBR0 实验（机器新增 4 个选项，二进制待重新发布）：
 
 - 静态：b1010 内无 `0x9025D700` 调用者、无 BSS 回调 `0x902A2EA0/A4/A8` 的
   写入者；描述符表解析为 4 条 `(dest, src, size)` 拷贝项，源地址全部落在
@@ -12,10 +12,16 @@
   M 指令崩溃或提前返回。
 - M-core：a1010 在 `mps2-an385`/`cortex-m3` 上零异常启动，随后卡在
   `0x00300F40` 时钟/PMU 轮询，确认 M-core 固件。
+- **TTBR0 验证**：机器新增 `flash-size`、`aux-ram-size`、`mmu-table`、
+  `vector-fix`；用完整 20 MiB b1010 作 flash、`mmu-table=0x201E0000`、
+  `aux-ram-size=4M`、`vector-fix=on` 跑通：镜像内 `0x201E2200` 是有效
+  TTBR0 指针，MMU init 不再 fault；全程 0 undefined、1 次 SVC、0 abort，
+  并抓到 `0x80000000/0x80000004` 设备探测。对照（`vector-fix=off`）SVC 后
+  立刻 1.1M 次 undefined。
 - 结论：flash 窗口更像 b1010 镜像；`0x1002CB8C` 是 b1010 flash 副本中的
-  Thumb veneer；缺的是一级 boot ROM（`0x90020000` 向量表、BSS 回调、页表）。
+  Thumb veneer；缺的是一级 boot ROM（`0x90020000` 向量表、BSS 回调）。
 - 新增 `docs/m1-tracks-2026-11-09.md`/`.en.md` 与
-  `evidence/m1/tracks/`（布局矩阵、b1010 flash 轨迹、M-core 日志）。
+  `evidence/m1/tracks/`（布局矩阵、b1010 flash 轨迹、TTBR0 运行、M-core 日志）。
 
 ## v0.2.0 — 2026-11-08
 
