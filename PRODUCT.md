@@ -16,7 +16,7 @@
 | 编译器 | gcc 15.2.0 |
 | QEMU | 11.1.0（overlay 构建） |
 | 二进制 | GitHub Release v0.1.1 附件（Linux x86-64，约 96 MiB） |
-| 主机侧测试 | 23 passed（QEMU）+ 9 passed（bitrate/menu，需本地模块；无模块时 9 skipped） |
+| 主机侧测试 | 26 passed（QEMU）+ 9 passed（bitrate/menu，需本地模块；无模块时 9 skipped） |
 
 ## 2. 已验证的事实
 
@@ -30,6 +30,10 @@
    **这是主机写入的测试卡，不是固件 UI。**
 4. **boot 候选扫描**：镜像内 10 个候选入口全部 0 MMIO；下一阶段不在
    `b1010` 内（详见 `evidence/boot-scan.txt` 与 `docs/findings.md` §11.4）。
+5. **M1 到目标但未闭合**（2026-11-08）：启动桩 `0x9025D700` → `0x1002CB8C`
+   （Thumb，参数 0/0/2/0/1）→ 第一条 MMIO `0xE000E180←0x00100000`（GIC）；
+   随后在 `0x100240AC` 撞到 `MRS/MSR BASEPRI`，说明 a1010 是 M-profile 镜像，
+   不是 A-core 的下一阶段。证据：`evidence/m1/`、`docs/m1-boot-chain.md`。
 
 ## 3. 目录
 
@@ -86,7 +90,8 @@ FW=/path/to/D750_0115.dec.modules
 python3 tools/run.py \
   --qemu binary/qemu-system-arm \
   --payload "$FW/b1010_115a.bin" \
-  --flash   "$FW/a1010_011100.bin"
+  --flash   "$FW/a1010_011100.bin" \
+  --boot entry --a1010-base 0x10000000
 ```
 
 预期输出：
@@ -95,6 +100,21 @@ python3 tools/run.py \
 entry 0x9027d52c  exit=0  timed_out=False  uart=0B  mmio_events=0
 halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 ```
+
+M1（默认 `boot-mode=stub`）：
+
+```bash
+python3 tools/run.py --qemu binary/qemu-system-arm \
+  --payload ... --flash ... --boot stub --a1010-base 0x10018000 \
+  --timeout 6 --trace in_asm
+```
+
+```
+status=timeout  entry 0x9025d700  uart=0B  mmio_events=0
+```
+
+把 `--mpcore-base 0x1E000000` 加回去，可复现第一条未建模 MMIO：
+`wr 0xe000e180 size=4 at pc 0x10026b64`。
 
 LCD dump：
 
@@ -131,8 +151,9 @@ Nikon Hacker 补丁数据库、固件 ASCII 字符串 dump、硬编码本机路�
 - 固件 GUI：需要观测到 Display/GPU/GDU 的真实寄存器与帧缓冲；当前只有主机侧
   dump 管线。
 - CMOS：需要 Sensor/I2C/GDMA 的控制/数据契约；当前没有模型。
-- boot 下一阶段：镜像内候选入口已扫描完，全部 0 MMIO；下一步需要 flash/ROM
-  dump 或 loader 交接约定。
+- boot 下一阶段：M1 已把 1107 的地址假说实跑到 `0x1002CB8C`，但该目标是
+  M-profile 固件；下一步需要整片 flash/模块偏移表来定位 A-core 真正的下一阶段，
+  或确认双核拓扑。
 - 高码率实机：容器已可逐字节复现；下一步是静态检查 D750 更新器（型号/版本/
   隐藏校验）、确认同版本重刷策略，然后在备用机上按 `docs/hardware-test.md`
   的流程做短录与回放验证。更新器接受度与编码器行为目前**都没有实机记录**。

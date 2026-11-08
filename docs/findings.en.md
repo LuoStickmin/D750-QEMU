@@ -107,10 +107,14 @@ range but inside the 128 MiB RAM.
 
 There are **23,660** 32-bit literals in the main image that fall within `0x10000000..0x10800000`; the minimum is
 `0x10000000` and the maximum is `0x107FFF24`. The maximum sits exactly inside the 8 MiB boundary, so the prototype sets
-the flash window to **`0x10000000` + 8 MiB** and loads `a1010` at the start of the window.
+the flash window to **`0x10000000` + 8 MiB**. Since 2026-11-08 `a1010` is loaded at `0x10018000` by default
+(`-machine a1010-base=` overrides it) so that `bx 0x1002CB8C` lands on a Thumb prologue; this is a prototype mapping,
+not the real flash module offset.
 
 The three entries `0x100F48C0/0x100F48C4/0x100F48C8` exceed the size of `a1010`, showing that the real flash contains
-content beyond `a1010`; the prototype returns 0 for the parts not provided and states this in the documentation.
+content beyond `a1010`; the prototype returns 0 for the parts not provided and states this in the documentation. The
+2026-11-08 run further shows that b1010's init treats `0x100F48C0` as the **page-table base**, so `mmu-bringup` fills it
+with the identity-table address (§12).
 
 ## 6. Serial Port Candidate (Medium Confidence)
 
@@ -158,9 +162,11 @@ only used to confirm that the three windows `0x80xxxxxx`/`0x90xxxxxx`/`0x10xxxxx
 
 1. The real entry of the first-stage loader (boot ROM) on the D750 and the register state it delivers to `b1010`.
 2. The real register semantics of the `0x80005010` serial port (status bits, FIFO, baud rate).
-3. The real base addresses of the GIC/timers; `0x1E000000` is only the A9 reference address.
-4. Dual-core or single-core; how the second core is started (spin-table / bootreg).
-5. The layout of the flash content beyond `a1010`.
+3. ~~The real base addresses of the GIC/timers~~ — established as **`0xE000E000`** on 2026-11-08 (§12).
+4. Dual-core or single-core; how the second core is started (spin-table / bootreg). If a1010 belongs to a second
+   (Cortex-M) core, the firmware boundary between the two cores has to be redrawn.
+5. The layout of the flash content beyond `a1010`; a1010 itself is now confirmed to be an M-profile image and can no
+   longer be treated as the A-core's next stage (§12).
 6. Which address space `0x1041D9A8/0x1041DBA8` belongs to (another mapping of the `0x10000000` peripheral window?).
 
 ## 10. Re-verification
@@ -287,3 +293,41 @@ Therefore the most worthwhile investment right now is not to keep writing device
 - or a boot trace captured from the hardware side (PC/MMIO sequence).
 
 Without these inputs, the register contract of the GUI/CMOS can only be guessed, and this project does not guess.
+
+---
+
+## 12. M1 Run: Boot Stub and the a1010 Target (2026-11-08)
+
+Full record: [m1-boot-chain.en.md](m1-boot-chain.en.md); conclusion-level summary below.
+
+### 12.1 Established
+
+- The machine gained `boot-mode=stub`: from the MMU trampoline at `0x1000` into `0x9025D700`, the stub runs to
+  `bx ip`, and the target `0x1002CB8C` is entered in **Thumb** with `LR=0x9025D754` and `r0..r4=0,0,2,0,1`
+  (measured over GDB).
+- First a1010 MMIO: `wr 0xE000E180 ← 0x00100000` (GIC `ICENABLER0`). The MPCore base is therefore corrected from
+  `0x1E000000` to **`0xE000E000`**; after the correction the access is absorbed by the GIC model and the unmodelled
+  count drops to zero.
+- b1010's local init writes `SCTLR=0x1C05` to turn the MMU on, and the page-table base comes from config slot
+  `0x100F48C0`. With only a1010 loaded the slot reads 0, the init programs `TTBR0=0x42`, and the next fetch
+  prefetch-aborts at `0x9025DA84`. The `mmu-bringup` shim installs a 4 GiB identity table at the top of DRAM and
+  fills the slot, with zero changes to the firmware file.
+
+### 12.2 New question: a1010 is not the A-core's next stage
+
+- Execution hits `MRS r0, BASEPRI` / `MSR BASEPRI, r1` at `0x100240AC`; those are **ARMv7-M only**, so a Cortex-A9
+  must take an undefined exception (reproduced by QEMU).
+- a1010's header is a **big-endian Cortex-M vector table**: initial MSP `0x2000F8C0` at `0x00`, reset `0x0000C20D`
+  at `0x04`, and a typical `Reset_Handler` at `0xC20C` (`SystemInit` + `.data` copy loop). Its string is
+  `D750   Firmware A Copyright Nikon Corp.`.
+- So the Nov 7 `a1010-base=0x10018000` is self-consistent for Thumb decoding, but it points the A-core's `bx` at
+  M-core firmware. Two explanations remain:
+  1. the base is a coincidence and the A-core's `0x1002CB8C` belongs to an A-profile module not yet extracted;
+  2. the D750 has two cores, a1010 belongs to the M-core, and the A-core's next stage has not been obtained.
+
+### 12.3 Conclusion
+
+- **M1 is recorded as "reached the target, not closed"** and must not be accepted as complete;
+- new input is needed: a full flash image / module offset table (to identify the real owner of `0x1002CB8C`), or
+  hardware documentation confirming the core topology;
+- the only new hard device fact is the GIC base; the UART still produces 0 bytes.

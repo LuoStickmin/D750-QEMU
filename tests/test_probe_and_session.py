@@ -54,6 +54,22 @@ class SessionParsingTests(unittest.TestCase):
         self.assertEqual(len(summary["by_address"]), 2)
         self.assertEqual({r["rw"] for r in summary["by_address"]}, {"rd", "wr"})
 
+    def test_a1010_io_is_tagged(self):
+        with temp_dir() as td:
+            log = Path(td) / "qemu.log"
+            log.write_text(
+                "d750-probe: pc=0x9027d000 rd addr=0x80005011 size=1"
+                " (unmodelled read, returning 0)\n"
+                "d750-a1010-io: pc=0x1002cb9e wr addr=0x40000000 size=4"
+                " value=0x00000001 (unmodelled write from a1010)\n",
+                encoding="utf-8")
+            summary = run_mod.summarize_probe_log(log)
+        self.assertEqual(summary["events"], 2)
+        self.assertEqual(summary["a1010_events"], 1)
+        self.assertEqual(summary["first_a1010"]["addr"], "0x40000000")
+        self.assertEqual(summary["first_a1010"]["rw"], "wr")
+        self.assertEqual(summary["first_a1010"]["pc"], "0x1002cb9e")
+
     def test_uart_summary(self):
         with temp_dir() as td:
             uart = Path(td) / "uart.log"
@@ -135,24 +151,42 @@ class CommandTests(unittest.TestCase):
     def test_machine_and_loader_arguments(self):
         args = run_mod.parse_args([
             "--payload", "b1010.bin", "--flash", "a1010.bin",
-            "--entry", "0x9027d52c", "--strict", "--gdb",
+            "--boot", "entry", "--entry", "0x9027d52c", "--strict", "--gdb",
         ])
         cmd = run_mod.build_command(Path("qemu-system-arm"), args,
                                     Path("run"), 4321)
         text = " ".join(cmd)
-        self.assertIn("-M nikon-d750,entry=0x9027d52c,strict=on", text)
+        self.assertIn("-M nikon-d750,boot-mode=entry,entry=0x9027d52c"
+                      ",a1010-base=0x10018000,strict=on", text)
         self.assertIn("-kernel", cmd)
         self.assertIn("-bios", cmd)
         self.assertIn("-S", cmd)
         self.assertIn("tcp:127.0.0.1:4321", text)
         self.assertNotIn("\\", cmd[cmd.index("-serial") + 1])
 
-    def test_default_command_has_no_entry_override(self):
+    def test_default_command_uses_m1_stub(self):
         args = run_mod.parse_args(["--payload", "b1010.bin"])
         cmd = run_mod.build_command(Path("qemu-system-arm"), args,
                                     Path("run"), None)
-        self.assertIn("nikon-d750", cmd)
+        machine = cmd[cmd.index("-M") + 1]
+        self.assertTrue(machine.startswith("nikon-d750"))
+        self.assertIn("boot-mode=stub", machine)
+        self.assertIn("a1010-base=0x10018000", machine)
         self.assertNotIn("-S", cmd)
+
+    def test_trace_is_added_to_debug_list(self):
+        args = run_mod.parse_args(["--payload", "b1010.bin",
+                                   "--trace", "in_asm"])
+        cmd = run_mod.build_command(Path("qemu-system-arm"), args,
+                                    Path("run"), None)
+        self.assertEqual(cmd[cmd.index("-d") + 1], "guest_errors,in_asm")
+
+    def test_mpcore_base_override(self):
+        args = run_mod.parse_args(["--payload", "b1010.bin",
+                                   "--mpcore-base", "0x1e000000"])
+        cmd = run_mod.build_command(Path("qemu-system-arm"), args,
+                                    Path("run"), None)
+        self.assertIn("mpcore-base=0x1e000000", cmd[cmd.index("-M") + 1])
 
 
 STOCK_QEMU = Path(r"C:\Program Files\qemu\qemu-system-arm.exe")

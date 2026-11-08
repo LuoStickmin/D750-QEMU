@@ -20,8 +20,12 @@
 命令：
 
 ```powershell
-python tools/run.py --payload ...\b1010_115a.bin --flash ...\a1010_011100.bin --gdb --run-seconds 2
+python tools/run.py --payload ...\b1010_115a.bin --flash ...\a1010_011100.bin `
+  --boot entry --a1010-base 0x10000000 --gdb --run-seconds 2
 ```
+
+> M0 是旧默认值；2026-11-08 起机器默认 `boot-mode=stub`，复现 M0 必须显式
+> 加 `--boot entry --a1010-base 0x10000000`。
 
 通过条件（全部满足）：
 
@@ -73,33 +77,40 @@ stop.kind         = connection-closed   (guest 自行退出，RSP 断开)
 
 ### M1 — 第一段 MMIO 序列
 
-命令：
+M1 现在是默认模式（`boot-mode=stub`）。命令：
 
 ```powershell
-python tools/run.py --payload ... --flash ... --timeout 10
+python tools/run.py --payload ... --flash ... `
+  --boot stub --a1010-base 0x10018000 --timeout 6 --trace in_asm
 ```
 
-看 `session.json.mmio.by_address`：
+看 `session.json.mmio`：
 
-- 前 10 个地址按次数排序，记录 `addr / rw / count / first_pc`；
+- `first_a1010`：第一条**来自 a1010 地址范围**的未建模访问；GIC 已按
+  `0xE000E000` 建模后，默认运行应为 `null`；
+- `by_address`：前 10 个地址按次数排序，记录 `addr / rw / count / first_pc`；
 - 与 `docs/findings.md` §6 的串口候选对照：`0x80005010..14` 是否出现；
-- 与 `0x1E000000`（MPCore）对照：是否出现；若出现的是别的地址，记下来，
-  下一轮把 `D750_MPCORE_BASE` 改过去。
+- 与 `0xE000E000`（MPCore）对照：正常应被模型接住，不再出现在未建模列表里。
 
-通过条件：至少得到一个**可复现**的地址序列，并且两次运行的序列一致
-（TCG 单线程、无外部输入时应当一致）。
+通过条件（两层）：
 
-**当前结果**：`mmio_events=0`。入口这一段只做 RAM 内的初始化（写 `0x0`
-的向量槽、写栈），没有触达外设。所以 M1 的前置工作不是加设备，而是先找到
-调用者/下一阶段；否则 catch-all 没有东西可记录。
+1. **入口层**：GDB 断在 `0x1002CB8C` 时 `CPSR.T=1`、`LR=0x9025D754`、
+   `r0..r4=0,0,2,0,1`；`qemu.log` 能看到 `0x1002cb8c` 的 TB；
+2. **目标层**：该地址确实属于 A-core 的下一阶段，而不是另一颗核的镜像
+   （目前**不满足**：a1010 是 M-profile，见
+   [m1-boot-chain.md](m1-boot-chain.md)）。
+
+**当前结果**：入口层满足，第一条 a1010 MMIO 为
+`wr 0xE000E180 ← 0x00100000`（`evidence/m1/gic-unmapped/`）；目标层不满足，
+所以 M1 记为“到目标但未闭合”，不能按完成验收。
 
 ### M2 — 串口输出
 
 通过条件：`session.json.uart.bytes > 0`，且 `uart.tail` 是可读文本或稳定的
 二进制前缀。
 
-**当前结果**：`uart.bytes=0`，尚未到达串口路径；这与 M1 的“入口未触达外设”
-一致，不是串口模型失败。
+**当前结果**：`uart.bytes=0`，尚未到达串口路径；M1 已经进入 a1010 并产生
+GIC 写，但没有走到候选串口，这不是串口模型失败。
 
 若 `uart.bytes == 0` 但 `qemu.log` 中有大量 `d750-uart: rd +0x11`：
 

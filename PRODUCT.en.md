@@ -18,7 +18,7 @@ absolute paths.
 | Compiler | gcc 15.2.0 |
 | QEMU | 11.1.0 (overlay build) |
 | Binary | GitHub Release v0.1.1 asset (Linux x86-64, about 96 MiB) |
-| Host-side tests | 23 passed (QEMU) + 9 passed (bitrate/menu; needs a local module, 9 skipped without one) |
+| Host-side tests | 26 passed (QEMU) + 9 passed (bitrate/menu; needs a local module, 9 skipped without one) |
 
 ## 2. Verified Facts
 
@@ -32,6 +32,10 @@ absolute paths.
    **This is a host-written test card, not the firmware UI.**
 4. **Boot candidate scan**: all 10 candidate entry points inside the image yield 0 MMIO; the next stage is not inside
    `b1010` (see `evidence/boot-scan.txt` and `docs/findings.md` §11.4).
+5. **M1 reached the target but is not closed** (2026-11-08): boot stub `0x9025D700` → `0x1002CB8C` (Thumb, args
+   0/0/2/0/1) → first MMIO `0xE000E180←0x00100000` (GIC); execution then hits `MRS/MSR BASEPRI` at `0x100240AC`,
+   showing that a1010 is an M-profile image, not the A-core's next stage. Evidence: `evidence/m1/`,
+   `docs/m1-boot-chain.en.md`.
 
 ## 3. Directory
 
@@ -89,7 +93,8 @@ FW=/path/to/D750_0115.dec.modules
 python3 tools/run.py \
   --qemu binary/qemu-system-arm \
   --payload "$FW/b1010_115a.bin" \
-  --flash   "$FW/a1010_011100.bin"
+  --flash   "$FW/a1010_011100.bin" \
+  --boot entry --a1010-base 0x10000000
 ```
 
 Expected output:
@@ -98,6 +103,21 @@ Expected output:
 entry 0x9027d52c  exit=0  timed_out=False  uart=0B  mmio_events=0
 halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 ```
+
+M1 (default `boot-mode=stub`):
+
+```bash
+python3 tools/run.py --qemu binary/qemu-system-arm \
+  --payload ... --flash ... --boot stub --a1010-base 0x10018000 \
+  --timeout 6 --trace in_asm
+```
+
+```
+status=timeout  entry 0x9025d700  uart=0B  mmio_events=0
+```
+
+Add `--mpcore-base 0x1E000000` to reproduce the first unmodelled MMIO:
+`wr 0xe000e180 size=4 at pc 0x10026b64`.
 
 LCD dump:
 
@@ -135,8 +155,9 @@ contains no firmware, keys, decrypted images, or patched images.
 - Firmware GUI: need to observe the real registers and framebuffer of Display/GPU/GDU; currently there is only the host-side
   dump pipeline.
 - CMOS: need the control/data contract for Sensor/I2C/GDMA; currently there is no model.
-- Next boot stage: the candidate entry points inside the image have all been scanned, all 0 MMIO; the next step requires a flash/ROM
-  dump or a loader hand-off convention.
+- Next boot stage: M1 executed the Nov 7 address hypothesis up to `0x1002CB8C`, but that target is M-profile
+  firmware; the next step needs a full flash image / module offset table to find the A-core's real next stage, or
+  confirmation of the dual-core topology.
 - High-bitrate hardware: the container is now byte-reproducible. Next steps are a static review of the D750 updater
   (model/version/hidden checks), confirmation of the same-version reflash policy, then a spare-body test following
   `docs/hardware-test.md` (short clip + playback). Neither updater acceptance nor encoder behaviour has a hardware record yet.

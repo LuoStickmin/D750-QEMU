@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "<build>/qemu-system-arm",
+    "-M",
+    "nikon-d750,boot-mode=stub,a1010-base=0x10018000",
+    "-cpu",
+    "cortex-a9",
+    "-m",
+    "128M",
+    "-display",
+    "none",
+    "-monitor",
+    "none",
+    "-serial",
+    "file:evidence/m1/default/uart.log",
+    "-D",
+    "evidence/m1/default/qemu.log",
+    "-d",
+    "guest_errors,in_asm",
+    "-no-reboot",
+    "-nic",
+    "none",
+    "-kernel",
+    "<firmware>/b1010_115a.bin",
+    "-bios",
+    "<firmware>/a1010_011100.bin"
+  ],
+  "entry": "0x9025d700",
+  "gdb": false
+}

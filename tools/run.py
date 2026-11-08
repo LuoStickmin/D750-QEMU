@@ -30,11 +30,15 @@ from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parent.parent
 DEFAULT_ENTRY = 0x9027D52C
+BOOT_STUB = 0x9025D700
+DEFAULT_BOOT = "stub"
+DEFAULT_A1010_BASE = 0x10018000
 DEFAULT_CPU = "cortex-a9"
 
 PROBE_RE = re.compile(
-    r"d750-probe: pc=(0x[0-9a-f]+) (rd|wr) addr=(0x[0-9a-f]+) size=(\d+)"
-    r"(?: value=(0x[0-9a-f]+))?"
+    r"d750-(?P<src>probe|a1010-io): pc=(?P<pc>0x[0-9a-f]+) "
+    r"(?P<rw>rd|wr) addr=(?P<addr>0x[0-9a-f]+) size=(?P<size>\d+)"
+    r"(?: value=(?P<value>0x[0-9a-f]+))?"
 )
 UART_RE = re.compile(r"d750-uart: pc=(0x[0-9a-f]+) rd \+0x([0-9a-f]+) size=(\d+) -> (0x[0-9a-f]+)")
 HALT_RE = re.compile(
@@ -105,15 +109,17 @@ def sha256_file(path: Path) -> str | None:
 def summarize_probe_log(path: Path) -> dict:
     events = []
     if not path.is_file():
-        return {"events": 0, "by_address": []}
+        return {"events": 0, "a1010_events": 0, "first_a1010": None,
+                "by_address": []}
     text = path.read_text(encoding="utf-8", errors="replace")
     for match in PROBE_RE.finditer(text):
         events.append({
-            "pc": match.group(1),
-            "rw": match.group(2),
-            "addr": match.group(3),
-            "size": int(match.group(4)),
-            "value": match.group(5) or "0x00000000",
+            "source": "a1010" if match.group("src") == "a1010-io" else "probe",
+            "pc": match.group("pc"),
+            "rw": match.group("rw"),
+            "addr": match.group("addr"),
+            "size": int(match.group("size")),
+            "value": match.group("value") or "0x00000000",
         })
     counts: dict[tuple[str, str], dict] = {}
     for ev in events:
@@ -123,7 +129,13 @@ def summarize_probe_log(path: Path) -> dict:
                                       "size": ev["size"]})
         rec["count"] += 1
     by_addr = sorted(counts.values(), key=lambda r: r["count"], reverse=True)
-    return {"events": len(events), "by_address": by_addr[:50]}
+    a1010_events = [ev for ev in events if ev["source"] == "a1010"]
+    return {
+        "events": len(events),
+        "a1010_events": len(a1010_events),
+        "first_a1010": a1010_events[0] if a1010_events else None,
+        "by_address": by_addr[:50],
+    }
 
 
 def summarize_uart(path: Path, tail: int = 4096) -> dict:
@@ -186,8 +198,17 @@ def summarize_lcd(path: Path) -> dict | None:
 def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
                   gdb_port: int | None) -> list[str]:
     machine = "nikon-d750"
-    if args.entry is not None:
+    machine += f",boot-mode={args.boot}"
+    if args.boot == "entry" and args.entry is not None:
         machine += f",entry=0x{args.entry:x}"
+    if args.a1010_base is not None:
+        machine += f",a1010-base=0x{args.a1010_base:x}"
+    if not args.thumb_fix:
+        machine += ",thumb-fix=off"
+    if not args.mmu_bringup:
+        machine += ",mmu-bringup=off"
+    if args.mpcore_base is not None:
+        machine += f",mpcore-base=0x{args.mpcore_base:x}"
     if args.strict:
         machine += ",strict=on"
     if args.lcd_base is not None:
@@ -198,6 +219,7 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
                     f",lcd-format={args.lcd_format}")
         if args.lcd_out:
             machine += f",lcd-out={Path(args.lcd_out).as_posix()}"
+    debug = ",".join(["guest_errors", *args.trace])
     cmd = [
         str(qemu), "-M", machine,
         "-cpu", args.cpu,
@@ -206,7 +228,7 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         "-monitor", "none",
         "-serial", "file:" + str(run_dir / "uart.log").replace("\\", "/"),
         "-D", str(run_dir / "qemu.log"),
-        "-d", "guest_errors",
+        "-d", debug,
         "-no-reboot",
         "-nic", "none",
         "-kernel", str(Path(args.payload).resolve()),
@@ -271,8 +293,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--qemu", help="qemu-system-arm binary")
     parser.add_argument("--cpu", default=DEFAULT_CPU)
     parser.add_argument("--ram", default="128M")
+    parser.add_argument("--boot", choices=("stub", "entry"), default=DEFAULT_BOOT,
+                        help="startup mode: 'stub' runs the b1010 boot chain and "
+                             "hands off to a1010 (M1, default); 'entry' starts at "
+                             "--entry directly (M0)")
     parser.add_argument("--entry", type=lambda s: int(s, 0),
-                        help=f"initial PC (default 0x{DEFAULT_ENTRY:x})")
+                        help=f"initial PC for --boot entry (default 0x{DEFAULT_ENTRY:x})")
+    parser.add_argument("--a1010-base", type=lambda s: int(s, 0),
+                        default=DEFAULT_A1010_BASE,
+                        help="address the a1010 module is mapped at "
+                             f"(default 0x{DEFAULT_A1010_BASE:x})")
+    parser.add_argument("--thumb-fix", dest="thumb_fix", action="store_true",
+                        default=True,
+                        help="patch the bx literal to 0x1002CB8D (default)")
+    parser.add_argument("--no-thumb-fix", dest="thumb_fix", action="store_false",
+                        help="leave the firmware literal untouched (a1010 will "
+                             "be entered in ARM state)")
+    parser.add_argument("--mmu-bringup", dest="mmu_bringup",
+                        action="store_true", default=True,
+                        help="supply the boot ROM's identity page table and "
+                             "TTBR0/DACR before the stub enables the MMU "
+                             "(default)")
+    parser.add_argument("--no-mmu-bringup", dest="mmu_bringup",
+                        action="store_false",
+                        help="start directly at the stub (expected to fault when "
+                             "the stub enables the MMU)")
+    parser.add_argument("--mpcore-base", type=lambda s: int(s, 0),
+                        help="override the MPCore/GIC base (diagnostics; default "
+                             "0xE000E000)")
+    parser.add_argument("--trace", action="append", default=[],
+                        help="extra -d item, e.g. --trace in_asm (repeatable)")
     parser.add_argument("--strict", action="store_true",
                         help="stop at the first unmodelled MMIO access "
                              "(logs d750-strict: and exits)")
@@ -300,6 +350,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     entry = args.entry if args.entry is not None else DEFAULT_ENTRY
+    start = BOOT_STUB if args.boot == "stub" else entry
+    # The machine may start at its internal MMU trampoline (0x1000) and only
+    # then branch to the stub; the session still reports the architectural
+    # entry (0x9025D700), while GDB expects the actual first PC.
+    expected_pc = (0x1000 if args.boot == "stub" and args.mmu_bringup
+                   else start)
     qemu = find_qemu(args.qemu)
     if qemu is None:
         print("error: qemu-system-arm not found; pass --qemu or build the "
@@ -323,7 +379,7 @@ def main(argv: list[str] | None = None) -> int:
     port = free_port() if args.gdb else None
     cmd = build_command(qemu, args, run_dir, port)
     (run_dir / "command.json").write_text(json.dumps({
-        "argv": cmd, "entry": f"0x{entry:08x}", "gdb": bool(args.gdb),
+        "argv": cmd, "entry": f"0x{start:08x}", "gdb": bool(args.gdb),
     }, indent=2) + "\n", encoding="utf-8")
     if args.dry_run:
         print(" ".join(cmd))
@@ -336,7 +392,7 @@ def main(argv: list[str] | None = None) -> int:
                             stderr=subprocess.STDOUT, text=True)
     session: dict = {
         "argv": cmd,
-        "entry": f"0x{entry:08x}",
+        "entry": f"0x{start:08x}",
         "payload": str(payload_path),
         "payload_sha256": sha256_file(payload_path),
         "payload_size": payload_path.stat().st_size if payload_path.is_file() else None,
@@ -356,7 +412,7 @@ def main(argv: list[str] | None = None) -> int:
             proc.terminate()
             return 4
         try:
-            session["snapshot"] = gdb_snapshot(port or 0, entry,
+            session["snapshot"] = gdb_snapshot(port or 0, expected_pc,
                                                args.checkpoint, args.run_seconds)
         except Exception as exc:  # noqa: BLE001 - record, do not hide
             session["error"] = f"{type(exc).__name__}: {exc}"
@@ -404,9 +460,10 @@ def main(argv: list[str] | None = None) -> int:
                                           encoding="utf-8")
 
     print(f"session: {run_dir}")
-    print(f"status={status}  entry 0x{entry:08x}  exit={session['exit']}  "
+    print(f"status={status}  entry 0x{start:08x}  exit={session['exit']}  "
           f"timed_out={session['timed_out']}  uart={session['uart']['bytes']}B  "
-          f"mmio_events={session['mmio']['events']}")
+          f"mmio_events={session['mmio']['events']}  "
+          f"a1010_io={session['mmio']['a1010_events']}")
     if session["halt"]:
         halt = session["halt"]
         print(f"halt: pc={halt['pc']} r0={halt['r0']} r1={halt['r1']} "
@@ -428,6 +485,10 @@ def main(argv: list[str] | None = None) -> int:
     if session["uart"]["tail"]:
         print("uart tail:")
         print(session["uart"]["tail"][-1200:])
+    first_a1010 = session["mmio"].get("first_a1010")
+    if first_a1010:
+        print(f"first a1010 MMIO: {first_a1010['rw']} {first_a1010['addr']} "
+              f"size={first_a1010['size']} at pc {first_a1010['pc']}")
     if session["mmio"]["by_address"]:
         print("top unmodelled MMIO:")
         for rec in session["mmio"]["by_address"][:10]:

@@ -29,8 +29,8 @@ overlay 以 11.1 为准；prepare 脚本在 10.x 树上做一次文本替换，�
 | `0x00000000` | 4 GiB | 诊断 catch-all | `MemoryRegionOps`，优先级 -1000；strict 时记录首条后停止 |
 | `0x00000000` | 64 KiB | 低内存 RAM（向量/启动全局） | RAM，优先级 0 |
 | `0x00000FF0` | 4 B | halt 窗口（辅助 LR 返回点） | IO，优先级 1 |
-| `0x10000000` | 8 MiB | `a1010_011100.bin`（flash） | RAM 后端，原型可写 |
-| `0x1E000000` | 0x2000 | `a9mpcore_priv`（GIC/定时器/看门狗） | 占位基址 |
+| `0x10000000` | 8 MiB | flash 窗口；`-bios` 镜像按 `a1010-base`（默认 `0x10018000`）装入 | RAM 后端，原型可写 |
+| `0xE000E000` | 0x2000 | `a9mpcore_priv`（GIC/定时器/看门狗） | 运行证据：首条 a1010 MMIO 为 `0xE000E180` |
 | `0x80005000` | 0x100 | 候选字节串口 | 子区域，优先级 0 |
 | `0x90000000` | `-m`（默认 128 MiB） | 主镜像与 DRAM | `machine->ram` |
 
@@ -39,19 +39,26 @@ overlay 以 11.1 为准；prepare 脚本在 10.x 树上做一次文本替换，�
 
 ## 3. 启动流程
 
-1. `-kernel`（或 `-machine payload=`）给出 `b1010`，`-bios`（或 `flash=`）给出
-   `a1010`；两者都只读打开，`load_image_targphys` 装入对应窗口。
+1. `-kernel`（或 `-machine payload=`）给出 `b1010`，装入 `0x90000000`；
+   `-bios`（或 `flash=`）给出 `a1010`，装入 flash 窗口内的 `a1010-base`
+   （默认 `0x10018000`）。镜像只读打开，payload 由机器读入宿主缓冲后
+   注册为 ROM blob（便于 `thumb-fix` 只改内存副本）。
 2. 创建 `-smp` 个 `machine->cpu_type` CPU（默认 `cortex-a9`）。
-3. 创建 `a9mpcore_priv`，把每个 CPU 的 IRQ/FIQ/VIRQ/VFIQ 接到 GIC 的
-   4×N 个 sysbus IRQ 输出（顺序与 `include/hw/intc/arm_gic.h` 一致）。
-4. 初始 PC = `entry`：
-   - `-machine entry=0x...` 显式给出；
-   - 否则 `0x9027D52C`（`D750_RAM_BASE + D750_ENTRY_OFFSET`）。
-5. **辅助启动状态**（第一次实跑后加入）：
+3. 创建 `a9mpcore_priv` 并映射到 `mpcore-base`（默认 `0xE000E000`），把每个
+   CPU 的 IRQ/FIQ/VIRQ/VFIQ 接到 GIC 的 4×N 个 sysbus IRQ 输出。
+4. 初始 PC 由 `boot-mode` 决定：
+   - `boot-mode=stub`（默认，M1）：先建 4 GiB identity 页表与一小段 ARM
+     垫片（`0x1000`），垫片写 `DACR/TTBR0/TTBCR` 后跳 `0x9025D700`；
+     同时把页表基址写进 config 槽 `0x100F48C0`，并把 b1010 的
+     `bx` 字面量在内存里改成 `0x1002CB8D`（`thumb-fix`）。
+   - `boot-mode=entry`（M0）：PC = `entry`（默认 `0x9027D52C`），
+     `-machine entry=0x...` 显式覆盖。
+5. **辅助启动状态**（M0 第一次实跑后加入，entry 模式使用）：
    - `SP = D750_RAM_BASE + ram_size - 0x100`（默认 `0x97FFFF00`）；
    - `LR = 0x00000FF0`（halt 窗口）；
    - `r0 = 0`；
    - CPSR 保持 QEMU ARM reset 的 SVC + A/I/F 屏蔽值。
+   - stub 模式改用 `SP = RAM 顶 - 0x1000`、`LR = 0`，让错误返回可见。
 
 入口在 `0x9027D52C` 处先 `push {r4,r5,r6,lr}`，所以没有 SP 时会写
 `0xFFFFFFF0..0xFFFFFFFC`；执行完 `pop` 回 LR。第一次实跑里 LR=0 导致 PC 跑飞，
@@ -104,8 +111,11 @@ strict 则把“第一个缺失设备”变成一次显式停止。
 ### 4.3 MPCore
 
 `a9mpcore_priv` 提供 GIC、per-CPU 私有定时器、全局定时器和看门狗。
-基址 `0x1E000000` 是 A9 参考布局，**没有** D750 访问证据；如果固件访问的是
-别的地址，catch-all 会记录下真实地址。
+基址由 2026-11-08 的运行证据定为 **`0xE000E000`**：a1010 的第一条 MMIO 是
+`wr 0xE000E180 ← 0x00100000`（GIC distributor `ICENABLER0`），同一次运行
+还出现 `gic_cpu_write: Bad offset 80`。旧的 `0x1E000000` 是 A9 参考布局，
+没有 D750 访问证据；现在保留 `mpcore-base=` 属性，便于诊断时改回旧地址复现
+“未映射”观测。
 
 ### 4.4 SMP
 
@@ -157,15 +167,18 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 - `d750_halt_read()`：入口返回点；可选的 LCD dump 也在这里触发。
 - `d750_halt_state_is_clean()`：校验 CPSR 模式、LR、SP，区分正常返回与异常路径。
 - `d750_lcd_dump()`：guest RAM → PPM。
-- 机器属性：`payload`、`flash`、`entry`、`strict`、`lcd-*`。
-- 日志前缀：`d750-probe:` / `d750-uart:`，`run.py` 按前缀解析。
+- 机器属性：`payload`、`flash`、`entry`、`boot-mode`、`a1010-base`、
+  `thumb-fix`、`mmu-bringup`、`mpcore-base`、`strict`、`lcd-*`。
+- 日志前缀：`d750-probe:` / `d750-uart:` / `d750-a1010-io:`，`run.py` 按前缀解析。
 
 ## 8. 已知限制
 
 1. 已在 WSL（Ubuntu 26.04 / gcc 15.2）编译并跑到 M0；Windows MSYS2 产物未构建。
-2. M1–M3 未完成：入口是 init 函数，调用者/下一阶段还没找到。
-3. `a1010` 之外的 flash 内容缺失，读到的是 0。
-4. 串口、GIC 基址、CPU 型号均为假设。
+2. M1 已到达 1107 的目标并抓到第一条 MMIO，但目标镜像是 M-profile，A-core
+   启动链未闭合。
+3. `a1010` 之外的 flash 内容缺失，读到的是 0；config 槽 `0x100F48C0` 由
+   `mmu-bringup` 垫片回填。
+4. 串口语义、CPU 型号仍为假设；GIC 基址已由运行证据定为 `0xE000E000`。
 5. 没有 VMState/迁移；恢复方式是重新起进程。
 6. 没有实现 cache/TLB 行为差异、没有 cycle 精度；TCG 的时序不代表硬件。
 7. halt 窗口位于低内存 NOP 滑梯末端：正常返回和“异常后滑到 `0xFF0`”都可能

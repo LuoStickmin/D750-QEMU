@@ -32,6 +32,7 @@
 
 #include "qapi/error.h"
 #include "qapi/visitor.h"
+#include "qemu/bswap.h"
 #include "qemu/error-report.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
@@ -81,12 +82,19 @@ typedef struct NikonD750MachineState {
 
     char *payload;
     char *flash_path;
+    char *boot;                 /* "entry" (M0) or "stub" (M1)             */
     uint64_t entry;             /* UINT64_MAX means "use the inferred one" */
+    uint64_t a1010_base;        /* where the a1010 module is mapped        */
+    uint32_t a1010_size;        /* bytes actually loaded, 0 = none         */
+    bool thumb_fix;             /* patch the bx literal to Thumb state     */
+    bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
+    uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
     uint32_t uart_status;
 
     uint64_t probe_events;
     uint64_t uart_events;
+    uint64_t a1010_io_events;
 
     /* Optional framebuffer dump path.  No address is guessed: the window is
      * inert until -machine lcd-base=... is supplied. */
@@ -116,6 +124,18 @@ static uint64_t d750_guest_pc(void)
     return ARM_CPU(cs)->env.regs[15];
 }
 
+/* True when the current instruction belongs to the a1010 module.  The M1
+ * acceptance point is the first unmodelled access issued from this range:
+ * b1010's own diagnostics are expected, a1010's are the next stage. */
+static bool d750_pc_in_a1010(NikonD750MachineState *s)
+{
+    uint64_t pc = d750_guest_pc();
+
+    return s->a1010_size != 0 &&
+           pc >= s->a1010_base &&
+           pc - s->a1010_base < s->a1010_size;
+}
+
 /*
  * One window, two contracts.  By default the access is logged and the guest
  * keeps running (the "collect a whole sequence" mode).  With strict=on the
@@ -134,6 +154,18 @@ static uint64_t d750_probe_read(void *opaque, hwaddr addr, unsigned size)
                       " (first unmodelled access, stopping)\n",
                       d750_guest_pc(), addr, size);
         qemu_system_shutdown_request(SHUTDOWN_CAUSE_GUEST_SHUTDOWN);
+        return 0;
+    }
+
+    if (d750_pc_in_a1010(s)) {
+        if (s->a1010_io_events < 64 || (s->a1010_io_events % 1024) == 0) {
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "d750-a1010-io: pc=0x%08" PRIx64
+                          " rd addr=0x%08" HWADDR_PRIx " size=%u"
+                          " (unmodelled read from a1010, returning 0)\n",
+                          d750_guest_pc(), addr, size);
+        }
+        s->a1010_io_events++;
         return 0;
     }
 
@@ -160,6 +192,18 @@ static void d750_probe_write(void *opaque, hwaddr addr, uint64_t value,
                       " (first unmodelled access, stopping)\n",
                       d750_guest_pc(), addr, size, value);
         qemu_system_shutdown_request(SHUTDOWN_CAUSE_GUEST_SHUTDOWN);
+        return;
+    }
+
+    if (d750_pc_in_a1010(s)) {
+        if (s->a1010_io_events < 64 || (s->a1010_io_events % 1024) == 0) {
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "d750-a1010-io: pc=0x%08" PRIx64
+                          " wr addr=0x%08" HWADDR_PRIx " size=%u value=0x%08"
+                          PRIx64 " (unmodelled write from a1010)\n",
+                          d750_guest_pc(), addr, size, value);
+        }
+        s->a1010_io_events++;
         return;
     }
 
@@ -488,6 +532,95 @@ static void nikon_d750_set_strict(Object *obj, bool value, Error **errp)
     s->strict = value;
 }
 
+static char *nikon_d750_get_boot(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return g_strdup(s->boot);
+}
+
+static void nikon_d750_set_boot(Object *obj, const char *value, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    g_free(s->boot);
+    s->boot = g_strdup(value);
+}
+
+static void nikon_d750_get_a1010_base(Object *obj, Visitor *v,
+                                      const char *name, void *opaque,
+                                      Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value = s->a1010_base;
+
+    visit_type_uint64(v, name, &value, errp);
+}
+
+static void nikon_d750_set_a1010_base(Object *obj, Visitor *v,
+                                      const char *name, void *opaque,
+                                      Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value;
+
+    if (!visit_type_uint64(v, name, &value, errp)) {
+        return;
+    }
+    s->a1010_base = value;
+}
+
+static bool nikon_d750_get_thumb_fix(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return s->thumb_fix;
+}
+
+static void nikon_d750_set_thumb_fix(Object *obj, bool value, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    s->thumb_fix = value;
+}
+
+static bool nikon_d750_get_mmu_bringup(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return s->mmu_bringup;
+}
+
+static void nikon_d750_set_mmu_bringup(Object *obj, bool value, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    s->mmu_bringup = value;
+}
+
+static void nikon_d750_get_mpcore_base(Object *obj, Visitor *v,
+                                       const char *name, void *opaque,
+                                       Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value = s->mpcore_base;
+
+    visit_type_uint64(v, name, &value, errp);
+}
+
+static void nikon_d750_set_mpcore_base(Object *obj, Visitor *v,
+                                       const char *name, void *opaque,
+                                       Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value;
+
+    if (!visit_type_uint64(v, name, &value, errp)) {
+        return;
+    }
+    s->mpcore_base = value;
+}
+
 static void nikon_d750_get_lcd_base(Object *obj, Visitor *v,
                                     const char *name, void *opaque,
                                     Error **errp)
@@ -613,6 +746,136 @@ static void nikon_d750_set_lcd_out(Object *obj, const char *value,
 }
 
 /* ------------------------------------------------------------------ */
+/* M1 boot-stub assistance                                             */
+/* ------------------------------------------------------------------ */
+/*
+ * The measured hand-off is `bx ip` at 0x9025D750 with ip = 0x1002CB8C,
+ * while file 0x14B8C is Thumb-2 code.  The payload is read into a host
+ * buffer, the 32-bit literal at b1010 file offset 0x25D7F8 is corrected
+ * to 0x1002CB8D, and the patched image is registered as a ROM blob.  This
+ * is the in-memory equivalent of the firmware repack described in
+ * docs/findings.md: no instruction bytes change and the file on disk is
+ * never touched.
+ *
+ * The patch has to happen here rather than through the loaded image:
+ * load_image_targphys() registers a ROM blob whose bytes are only written
+ * at machine reset, after nikon_d750_init() has returned.
+ */
+static void d750_load_payload(NikonD750MachineState *s, const char *path,
+                              uint64_t addr, uint64_t max_size)
+{
+    gchar *data = NULL;
+    gsize size = 0;
+    GError *err = NULL;
+
+    if (!g_file_get_contents(path, &data, &size, &err)) {
+        error_report("nikon-d750: cannot load payload '%s': %s", path,
+                     err ? err->message : "unknown error");
+        g_clear_error(&err);
+        exit(1);
+    }
+    if (size > max_size) {
+        error_report("nikon-d750: payload '%s' (%" G_GSIZE_FORMAT
+                     " bytes) does not fit in RAM (%" PRIu64 " bytes)",
+                     path, size, max_size);
+        g_free(data);
+        exit(1);
+    }
+
+    if (!strcmp(s->boot, "stub") && s->thumb_fix &&
+        size >= D750_BX_LITERAL_OFF + sizeof(uint32_t)) {
+        uint32_t word = ldl_le_p(data + D750_BX_LITERAL_OFF);
+
+        if (word == (uint32_t)D750_BX_TARGET) {
+            stl_le_p(data + D750_BX_LITERAL_OFF, word | 1);
+            info_report("nikon-d750: M1 thumb fix: [0x%08" PRIx64
+                        "] 0x%08" PRIx64 " -> 0x%08" PRIx64,
+                        (uint64_t)(D750_RAM_BASE + D750_BX_LITERAL_OFF),
+                        (uint64_t)D750_BX_TARGET,
+                        (uint64_t)D750_BX_TARGET | 1);
+        } else {
+            warn_report("nikon-d750: bx literal at payload offset 0x%08"
+                        PRIx64 " is 0x%08" PRIx32 ", expected 0x%08" PRIx64
+                        "; thumb-fix skipped",
+                        (uint64_t)D750_BX_LITERAL_OFF, word,
+                        (uint64_t)D750_BX_TARGET);
+        }
+    }
+
+    rom_add_blob_fixed(path, data, size, addr);
+    g_free(data);
+}
+
+/*
+ * b1010's local init (0x9025DA40) ends with `mcr p15, 0, r2, c1, c0, 0`
+ * writing SCTLR = 0x1C05, i.e. it enables the MMU.  On real hardware the
+ * boot ROM has already installed TTBR0, DACR and an identity page table;
+ * this prototype starts at the stub, so it has to supply that state.
+ *
+ * This builds the missing pieces architecturally (no CP15 field pokes):
+ * a 4 GiB identity map of 1 MiB sections at the top of DRAM, plus a small
+ * ARM prologue in low RAM that programs DACR/TTBR0/TTBCR and branches to
+ * the stub.  Returns the prologue address.
+ */
+static uint64_t d750_build_boot_mmu(MachineState *machine)
+{
+    uint64_t table_base = D750_RAM_BASE + machine->ram_size
+                          - D750_BOOT_MMU_TABLE_DELTA;
+    uint64_t vec = D750_LOWRAM_BASE + D750_BOOT_MMU_TRAMPOLINE;
+    uint8_t *table = g_malloc0(D750_BOOT_MMU_TABLE_SIZE);
+    uint32_t code[10] = {
+        0xE59F0014,             /* ldr r0, [pc, #0x14]  -> 0xFFFFFFFF     */
+        0xEE030F10,             /* mcr p15, 0, r0, c3, c0, 0  (DACR)      */
+        0xE59F0010,             /* ldr r0, [pc, #0x10]  -> table_base     */
+        0xEE020F10,             /* mcr p15, 0, r0, c2, c0, 0  (TTBR0)     */
+        0xE3A00000,             /* mov r0, #0                             */
+        0xEE020F50,             /* mcr p15, 0, r0, c2, c0, 2  (TTBCR)     */
+        0xE59FF004,             /* ldr pc, [pc, #4]     -> stub           */
+        0xFFFFFFFF,             /* DACR literal                           */
+        0,                      /* TTBR0 literal, filled below            */
+        0,                      /* stub entry literal, filled below       */
+    };
+    uint8_t blob[sizeof(code)];
+    int i;
+
+    for (i = 0; i < 4096; i++) {
+        /* section descriptor: PA | AP=rw | C=1 | B=1 | type=section */
+        stl_le_p(table + i * 4, ((uint32_t)i << 20) | 0x0C0E);
+    }
+    rom_add_blob_fixed("d750.boot-pagetable", table,
+                       D750_BOOT_MMU_TABLE_SIZE, table_base);
+    g_free(table);
+
+    /*
+     * b1010's init does:
+     *     r0 = *(0x100F48C0);
+     *     TTBR0 = (r0 & ~0x3FF) | 0x42;
+     *     TTBR1 = TTBR0;
+     * so the config slot is the page-table base.  With zero flash it is 0
+     * and the MMU comes up with TTBR0 = 0x42; supply our table instead.
+     */
+    {
+        uint8_t slot[4];
+
+        stl_le_p(slot, (uint32_t)table_base);
+        rom_add_blob_fixed("d750.boot-cfg0", slot, sizeof(slot),
+                           D750_CONFIG_SLOT0);
+    }
+
+    code[8] = (uint32_t)table_base;
+    code[9] = (uint32_t)D750_BOOT_STUB;
+    for (i = 0; i < (int)ARRAY_SIZE(code); i++) {
+        stl_le_p(blob + i * 4, code[i]);
+    }
+    rom_add_blob_fixed("d750.boot-mmu", blob, sizeof(blob), vec);
+
+    info_report("nikon-d750: M1 boot-ROM MMU shim: identity 4 GiB, "
+                "table=0x%08" PRIx64 ", trampoline=0x%08" PRIx64,
+                table_base, vec);
+    return vec;
+}
+
+/* ------------------------------------------------------------------ */
 /* Machine                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -625,11 +888,17 @@ static void nikon_d750_init(MachineState *machine)
     DeviceState *mpcore;
     SysBusDevice *busdev;
     uint64_t entry;
+    uint64_t start;
     int i;
 
     if (!payload) {
         error_report("nikon-d750: a decrypted main payload is required; "
                      "pass -kernel FILE or -machine nikon-d750,payload=FILE");
+        exit(1);
+    }
+    if (strcmp(s->boot, "entry") != 0 && strcmp(s->boot, "stub") != 0) {
+        error_report("nikon-d750: boot must be 'entry' (M0) or 'stub' (M1), "
+                     "not '%s'", s->boot);
         exit(1);
     }
     if (machine->ram_size < D750_RAM_MIN ||
@@ -649,11 +918,23 @@ static void nikon_d750_init(MachineState *machine)
                            D750_FLASH_SIZE, &error_fatal);
     memory_region_add_subregion(sysmem, D750_FLASH_BASE, &s->flash);
     if (flash) {
-        if (load_image_targphys(flash, D750_FLASH_BASE, D750_FLASH_SIZE,
-                                &error_fatal) < 0) {
+        uint64_t limit = D750_FLASH_BASE + D750_FLASH_SIZE;
+        ssize_t loaded;
+
+        if (s->a1010_base < D750_FLASH_BASE || s->a1010_base >= limit) {
+            error_report("nikon-d750: a1010-base 0x%08" PRIx64
+                         " is outside the flash window [0x%08" PRIx64
+                         ", 0x%08" PRIx64 ")",
+                         s->a1010_base, (uint64_t)D750_FLASH_BASE, limit);
+            exit(1);
+        }
+        loaded = load_image_targphys(flash, s->a1010_base,
+                                     limit - s->a1010_base, &error_fatal);
+        if (loaded < 0) {
             error_report("nikon-d750: cannot load flash image '%s'", flash);
             exit(1);
         }
+        s->a1010_size = (uint32_t)loaded;
     }
 
     /* Catch-all diagnostics.  The window is always present: strict mode
@@ -689,7 +970,7 @@ static void nikon_d750_init(MachineState *machine)
     qdev_prop_set_uint32(mpcore, "num-irq", D750_GIC_NUM_IRQ);
     busdev = SYS_BUS_DEVICE(mpcore);
     sysbus_realize_and_unref(busdev, &error_fatal);
-    sysbus_mmio_map(busdev, 0, D750_MPCORE_BASE);
+    sysbus_mmio_map(busdev, 0, s->mpcore_base);
     for (i = 0; i < machine->smp.cpus; i++) {
         DeviceState *cpudev = DEVICE(qemu_get_cpu(i));
 
@@ -712,24 +993,43 @@ static void nikon_d750_init(MachineState *machine)
     }
 
     /* Payload goes in last, after the RAM window exists. */
-    if (load_image_targphys(payload, D750_RAM_BASE, machine->ram_size,
-                            &error_fatal) < 0) {
-        error_report("nikon-d750: cannot load payload '%s'", payload);
-        exit(1);
-    }
+    d750_load_payload(s, payload, D750_RAM_BASE, machine->ram_size);
 
     entry = s->entry == UINT64_MAX ? D750_RAM_BASE + D750_ENTRY_OFFSET
                                    : s->entry;
+    if (strcmp(s->boot, "stub") != 0) {
+        start = entry;
+    } else if (s->mmu_bringup) {
+        start = d750_build_boot_mmu(machine);
+    } else {
+        start = D750_BOOT_STUB;
+    }
+
     for (i = 0; i < machine->smp.cpus; i++) {
         CPUState *cs = qemu_get_cpu(i);
         ARMCPU *cpu = ARM_CPU(cs);
 
-        /* Assisted startup: the inferred entry is a called function, so
-         * supply a stack and a return trampoline instead of reset values. */
-        cpu->env.regs[13] = D750_RAM_BASE + machine->ram_size - 0x100;
-        cpu->env.regs[14] = D750_HALT_TRAMPOLINE;
-        cpu->env.regs[0] = 0;
-        cpu_set_pc(cs, entry);
+        if (!strcmp(s->boot, "stub")) {
+            /* M1: start where the real chain starts and let b1010 hand
+             * control to a1010.  SVC mode with IRQ/FIQ masked, a stack near
+             * the top of DRAM, LR=0 so an unexpected return is visible. */
+            cpu->env.uncached_cpsr = ARM_CPU_MODE_SVC | CPSR_I | CPSR_F;
+            cpu->env.thumb = 0;
+            cpu->env.regs[13] = D750_RAM_BASE + machine->ram_size
+                                - D750_BOOT_STUB_SP_DELTA;
+            cpu->env.regs[14] = 0;
+            memset(&cpu->env.regs[0], 0,
+                   sizeof(cpu->env.regs[0]) * 13);
+            cpu_set_pc(cs, start);
+        } else {
+            /* Assisted startup: the inferred entry is a called function, so
+             * supply a stack and a return trampoline instead of reset
+             * values. */
+            cpu->env.regs[13] = D750_RAM_BASE + machine->ram_size - 0x100;
+            cpu->env.regs[14] = D750_HALT_TRAMPOLINE;
+            cpu->env.regs[0] = 0;
+            cpu_set_pc(cs, entry);
+        }
     }
 
     if (s->lcd_base) {
@@ -738,13 +1038,15 @@ static void nikon_d750_init(MachineState *machine)
                   qemu_clock_get_ms(QEMU_CLOCK_REALTIME) + 2000);
     }
 
-    info_report("nikon-d750: payload=%s @ 0x%08" PRIx64
-                ", flash=%s @ 0x%08" PRIx64
-                ", entry=0x%08" PRIx64 ", ram=%" PRIu64 " MiB, cpus=%u%s",
-                payload, (uint64_t)D750_RAM_BASE,
-                flash ? flash : "(none)", (uint64_t)D750_FLASH_BASE,
-                entry, machine->ram_size / MiB, machine->smp.cpus,
-                s->strict ? ", strict" : "");
+    info_report("nikon-d750: boot=%s, payload=%s @ 0x%08" PRIx64
+                ", a1010=%s @ 0x%08" PRIx64
+                ", start=0x%08" PRIx64 ", ram=%" PRIu64 " MiB, cpus=%u%s%s",
+                s->boot, payload, (uint64_t)D750_RAM_BASE,
+                flash ? flash : "(none)", s->a1010_base,
+                start,
+                machine->ram_size / MiB, machine->smp.cpus,
+                s->strict ? ", strict" : "",
+                s->thumb_fix ? ", thumb-fix" : "");
 }
 
 static void nikon_d750_instance_init(Object *obj)
@@ -752,6 +1054,11 @@ static void nikon_d750_instance_init(Object *obj)
     NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
 
     s->entry = UINT64_MAX;
+    s->boot = g_strdup("stub");
+    s->a1010_base = D750_A1010_BASE;
+    s->thumb_fix = true;
+    s->mmu_bringup = true;
+    s->mpcore_base = D750_MPCORE_BASE;
     s->uart_status = 0x03;
     s->lcd_width = 640;
     s->lcd_height = 480;
@@ -767,7 +1074,7 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
         NULL
     };
 
-    mc->desc = "Nikon D750 validation prototype (EXPEED 4, experimental)";
+    mc->desc = "Nikon D750 validation prototype (EXPEED 4, M1 boot chain, experimental)";
     mc->init = nikon_d750_init;
     mc->default_cpu_type = ARM_CPU_TYPE_NAME("cortex-a9");
     mc->valid_cpu_types = valid_cpu_types;
@@ -796,6 +1103,34 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
                                    nikon_d750_set_strict);
     object_class_property_set_description(oc, "strict",
         "Stop the run at the first unmodelled MMIO access (logs d750-strict:)");
+
+    object_class_property_add_str(oc, "boot-mode",
+                                  nikon_d750_get_boot,
+                                  nikon_d750_set_boot);
+    object_class_property_set_description(oc, "boot-mode",
+        "Startup mode: 'stub' (M1, b1010 boot chain, default) or 'entry' (M0, assisted entry)");
+    object_class_property_add(oc, "a1010-base", "uint64",
+                              nikon_d750_get_a1010_base,
+                              nikon_d750_set_a1010_base, NULL, NULL);
+    object_class_property_set_description(oc, "a1010-base",
+        "Address where the a1010 module is mapped inside the flash window (default 0x10018000)");
+    object_class_property_add_bool(oc, "thumb-fix",
+                                   nikon_d750_get_thumb_fix,
+                                   nikon_d750_set_thumb_fix);
+    object_class_property_set_description(oc, "thumb-fix",
+        "Patch the in-memory bx literal to 0x1002CB8D so a1010 is entered in Thumb state");
+    object_class_property_add_bool(oc, "mmu-bringup",
+                                   nikon_d750_get_mmu_bringup,
+                                   nikon_d750_set_mmu_bringup);
+    object_class_property_set_description(oc, "mmu-bringup",
+        "Supply the boot ROM's identity page table and TTBR0/DACR before the "
+        "stub enables the MMU (default on; use off only to experiment)");
+    object_class_property_add(oc, "mpcore-base", "uint64",
+                              nikon_d750_get_mpcore_base,
+                              nikon_d750_set_mpcore_base, NULL, NULL);
+    object_class_property_set_description(oc, "mpcore-base",
+        "Cortex-A9 MPCore (GIC/timers/watchdog) base; default 0xE000E000, "
+        "measured from the first a1010 access");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,

@@ -19,6 +19,25 @@
 > [SUMMARY.md](SUMMARY.md)，高码率细节见 [bitrate/README.md](bitrate/README.md)，
 > 法律与贡献边界见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
+> **更新日志 · 2026-11-08 · M1 实跑与目标核验**
+>
+> - 启动桩 `0x9025D700` 在 QEMU 里跑通：MMU 引导垫片 → 桩 → `bx ip` →
+>   `0x1002CB8C`（Thumb，`r0..r4=0,0,2,0,1`，`LR=0x9025D754`）。
+> - 抓到第一条 a1010 MMIO：`wr 0xE000E180 ← 0x00100000`（GIC `ICENABLER0`）；
+>   据此把 MPCore 基址从 `0x1E000000` 修正为 **`0xE000E000`**。
+> - 发现并处理了 1107 未覆盖的坑：b1010 init 会写 `SCTLR=0x1C05` 打开 MMU，
+>   页表基址来自 config 槽 `0x100F48C0`；新增 `mmu-bringup` 垫片后固件零修改。
+> - **新问题**：a1010 带大端 Cortex-M 向量表，并在 `0x100240AC` 执行
+>   `MRS/MSR BASEPRI` → 它是 **M-profile 固件**，不是 A-core 的下一阶段。
+>   因此 M1 **不能记为完成**，需要整片 flash / 模块偏移表来定位 A-core 真正的
+>   `0x1002CB8C`。详见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md)。
+>
+> 上一轮（2026-11-07）的 Thumb 位与 config 槽结论仍成立；`a1010-base=
+> 0x10018000` 在指令解码上成立，但本轮证明该镜像属于 M-profile，核/模块归属
+> 存疑（见下）。
+
+---
+
 依据 [WonderLantern/z7-qemu](https://github.com/WonderLantern/z7-qemu) 与
 [WonderLantern/z9-qemu](https://github.com/WonderLantern/z9-qemu) 的组织方式，为
 Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU 板级 overlay +
@@ -43,6 +62,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
   - [2.2 跑](#22-跑)
   - [2.3 只做静态核对](#23-只做静态核对)
   - [2.4 第一次实跑（M0 已通过）](#24-第一次实跑m0-已通过)
+  - [2.5 M1 实跑（启动桩 → a1010 目标）](#25-m1-实跑启动桩--a1010-目标)
 - [3. 机器模型（一句话版）](#3-机器模型一句话版)
   - [3.1 GUI 与 CMOS 现在到哪一步](#31-gui-与-cmos-现在到哪一步)
 - [4. 已经拿到的静态证据（真实字节）](#4-已经拿到的静态证据真实字节)
@@ -62,14 +82,16 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | 板级源码 `nikon-d750-lab.c/.h` | ✅ 已写（QEMU 11.1 API；10.2.4 由 prepare 脚本做文本适配，未实际编译验证） |
 | overlay 安装脚本 `qemu/prepare_source.py` | ✅ 幂等，单测覆盖 11.1 / 10.2 / 拒绝未知版本 |
 | `fwscan` / `run` / `probe` / `build` 工具 | ✅ 已写；`probe` 手工对**已安装的 stock QEMU `-M virt`** 做过真实 RSP 联调（测试套件只覆盖协议编解码） |
-| 主机侧测试 | ✅ `python tests/run_tests.py` → 23 passed |
+| 主机侧测试 | ✅ `python tests/run_tests.py` → 26 passed |
 | 板级 C 代码编译 | ✅ 已在 WSL Ubuntu 26.04（gcc 15.2）+ QEMU 11.1.0 上编译通过 |
 | `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.39 s 正常退出 |
+| M1 启动链实跑 | ⚠️ **到目标但未闭合**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；随后在 `0x100240AC` 撞到 M-profile 指令，说明目标模块不属于 A-core。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
+| M1 机器选项 | ✅ `boot-mode=stub`、`a1010-base`、`thumb-fix`、`mmu-bringup`、`mpcore-base`；固件文件零修改 |
 | strict 诊断 / halt 校验 | ✅ 第一条未建模访问记 `d750-strict:` 后停止（`run.py` 退出码 7）；halt 记录带 `return_ok=`，异常路径退出码 6 |
 | LCD 扫描输出/dump 管线 | ✅ 可配置帧缓冲 → PPM；测试卡验证通过；固件画面仍无 |
 | 容器重打包 / 改后镜像复现 | ✅ 同作者工具链可逐字节复现（无修改回环 bit-identical；改后镜像 `9c88f3cc…` 可精确重建），见 [docs/hardware-test.md](docs/hardware-test.md) |
 | 实机测试 | ⚠️ **未验证**：更新器接受度、编码器行为、写卡/发热/回放都还没有实机记录 |
-| M1（MMIO 序列）/ M2（串口）/ M3（补设备） | ⏳ 尚未推进；这一次执行片段没有访问任何 MMIO |
+| M2（串口）/ M3（补设备） | ⏳ 未推进：本轮仍无串口输出（`uart=0B`）；GIC 已接上，等待下一条未建模访问 |
 | 完整相机 UI / ISP / CMOS / 存储 | ❌ 不在本原型范围 |
 
 > **另一条工作线（1080p 高码率）**：D750 码率表的 5 个 HQ 行已从
@@ -155,6 +177,9 @@ python3 tools/run.py --payload ... --flash ... --gdb --run-seconds 2
 `session.json`（含 MMIO 访问统计与串口尾部）。验收标准见
 [docs/validation.md](docs/validation.md)。
 
+> 上面的命令使用默认 `boot-mode=stub`（M1，从启动桩进链）。要回到 M0 的
+> 辅助入口，加 `--boot entry --a1010-base 0x10000000`，见 §2.4。
+
 ### 2.3 只做静态核对
 
 ```powershell
@@ -182,7 +207,8 @@ FW=/path/to/D750_0115.dec.modules
 python3 tools/run.py \
   --qemu ~/d750-build/src/qemu-11.1.0/build/qemu-system-arm \
   --payload "$FW/b1010_115a.bin" \
-  --flash   "$FW/a1010_011100.bin"
+  --flash   "$FW/a1010_011100.bin" \
+  --boot entry --a1010-base 0x10000000
 ```
 
 实测（证据保存在 `evidence/m0/`、`evidence/m0-gdb/`）：
@@ -207,6 +233,41 @@ d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
   不在 `b1010` 里**，更可能来自 boot ROM 或 `a1010` 之外的 flash 内容。
   详见 [findings §11.4](docs/findings.md#114-候选入口扫描负结果)。
 
+### 2.5 M1 实跑（启动桩 → a1010 目标）
+
+2026-11-08 新增。默认机器模式已经是 `boot-mode=stub`；M1 的完整记录（含失败点）
+见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md)，证据在 `evidence/m1/`。
+
+```sh
+FW=/path/to/D750_0115.dec.modules
+python3 tools/run.py \
+  --qemu ~/d750-build/src/qemu-11.1.0/build/qemu-system-arm \
+  --payload "$FW/b1010_115a.bin" --flash "$FW/a1010_011100.bin" \
+  --boot stub --a1010-base 0x10018000 --timeout 6 --trace in_asm
+```
+
+预期：
+
+```
+status=timeout  entry 0x9025d700  ...
+a1010_io=0                       # GIC 已按 0xE000E000 建模
+```
+
+把 MPCore 放回旧占位址可以复现“第一条 MMIO”的发现：
+
+```sh
+python3 tools/run.py ... --boot stub --mpcore-base 0x1E000000
+# session.json: mmio.first_a1010 = wr 0xe000e180 size=4 at pc 0x10026b64
+```
+
+GDB 现场（`-S -gdb tcp::12345` + `tools/probe.py`）应看到
+`pc=0x1002cb8c cpsr=0x600001f3`（T=1、SVC）、`lr=0x9025d754`、
+`r0..r4=0,0,2,0,1`。
+
+> **不要把它读成“M1 完成”**：`0x100240AC` 处是 `MRS/MSR BASEPRI`（ARMv7-M
+> 专有），继续执行必然 undefined；a1010 的头部也是大端 Cortex-M 向量表。
+> A-core 的下一阶段模块还没有拿到。
+
 ---
 
 ## 3. 机器模型（一句话版）
@@ -216,12 +277,13 @@ d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 | CPU | 1× Cortex-A9（`-smp 2` 可试） | 中：ARMv7 Thumb-2 + VFP/NEON + T-Kernel 字符串 |
 | 主 RAM | `0x90000000`，默认 128 MiB | 高：`0x90020000` 页表字面量、`0x9027D52C` 等指针 |
 | 主镜像装入 | `b1010_115a.bin` @ `0x90000000` | 高 |
-| 初始 PC | `0x9027D52C`（可用 `-machine entry=` 改） | 中：见 §4 的向量表矛盾 |
-| 低内存 | `0x0..0xFFFF` RAM；`0xFF0` 是 halt 窗口 | 运行证据：入口会向 `0x0` 写向量字 |
-| 辅助启动 | SP=RAM 顶、LR=`0xFF0`、r0=0 | 运行证据：入口 `push`/`pop` 后返回 |
-| Flash 窗口 | `0x10000000`，8 MiB，装 `a1010_011100.bin` | 中高：描述符表引用 `0x1002CB8C/0x100A1094/0x100F48C0` |
+| 初始 PC | `boot-mode=stub` 时为 `0x9025D700`（内部先经 `0x1000` 垫片）；`boot-mode=entry` 时为 `0x9027D52C` | 运行证据：两模式都实跑过 |
+| 低内存 | `0x0..0xFFFF` RAM；`0xFF0` 是 halt 窗口，`0x1000` 是 M1 MMU 垫片 | 运行证据：入口会向 `0x0` 写向量字 |
+| 辅助启动 | SP=RAM 顶、LR=`0xFF0`、r0=0（entry 模式） | 运行证据：入口 `push`/`pop` 后返回 |
+| Flash 窗口 | `0x10000000`，8 MiB；`-bios` 镜像按 `a1010-base` 装入（默认 `0x10018000`） | 中：a1010 在该基址下 `bx` 目标落在 Thumb 序言；但镜像本身是 M-profile，见 M1 文档 |
+| MMU 垫片 | `mmu-bringup=on`：DRAM 顶部 16 KiB identity 页表 + `DACR/TTBR0/TTBCR` 垫片；config 槽 `0x100F48C0` 填入页表基址 | 运行证据：不启用时 `SCTLR=0x1C05` 后立即 prefetch abort |
 | 串口候选 | `0x80005010..0x80005014` 字节寄存器 | 中：driver 片段 `0x27CC00..0x27D304` |
-| GIC/定时器 | `a9mpcore_priv` @ `0x1E000000` | 低：占位地址，尚无访问证据 |
+| GIC/定时器 | `a9mpcore_priv` @ **`0xE000E000`**（可 `mpcore-base=` 覆盖） | 高：第一条 a1010 MMIO 为 `0xE000E180 ← 0x00100000` |
 | 诊断 | 4 GiB 低优先级 catch-all；`strict=on` 时记录第一条后停止 | — |
 
 机器是**诊断优先**的：默认把未建模访问记进 `qemu.log`（PC/地址/宽度/方向），
@@ -295,19 +357,21 @@ python tools/run.py --payload ... --flash ... `
 │   └── prepare_source.py       把 overlay 装进 QEMU 源码树（幂等）
 ├── tools/
 │   ├── fwscan.py               静态核对 profile，生成 manifest
-│   ├── run.py                  启动、超时、证据收集
+│   ├── run.py                  启动、超时、证据收集（M0/M1 两套参数）
 │   ├── probe.py                最小 GDB RSP 客户端
+│   ├── stub_trace.py           启动桩单步模拟器（1107 更新工具，零依赖）
+│   ├── m1_analyze.py           M1 静态分析四件套（1107 更新工具，disasm 需 capstone）
 │   ├── manifest.py             重新生成/校验 SHA256SUMS 与 MANIFEST
 │   └── build.py                下载/解包/overlay/构建/记录
-├── tests/                      23 个主机侧测试（无需 QEMU 构建）
+├── tests/                      26 个主机侧测试（无需 QEMU 构建）
 ├── bitrate/                    D750 1080p 64/60 Mbps 改表工具、测试、说明
 ├── analysis/
 │   ├── d750-0115.json          真实镜像的扫描结果
 │   ├── lcd-testcard.png        LCD 管线测试卡（主机写入）
 │   └── ...                     仓库里已有的其他固件分析产物（见下）
 ├── binary/                     COPYING + 说明（二进制通过 GitHub Release 发布）
-├── evidence/                   M0 / GDB / LCD / boot-scan 运行证据
-├── docs/                       findings / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
+├── evidence/                   M0 / M1 / GDB / LCD / boot-scan 运行证据
+├── docs/                       findings / m1-boot-chain / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
 ├── SUMMARY.md / SUMMARY.en.md  两条工作线总览
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
@@ -344,8 +408,9 @@ python tools/run.py --payload ... --flash ... `
 ## 7. 边界
 
 - 这是**辅助验证原型**：入口是主机选定的、SP/LR 是主机给的，不等于自然上电启动。
-- 已在 WSL 上编译并跑到 M0；M1–M3 仍未完成，`0x1E000000` MPCore、串口寄存器语义、
-  CPU 型号都还是假设。
+- 已在 WSL 上编译并实跑：M0 干净返回；M1 到达 1107 的目标地址并抓到第一条
+  MMIO，但目标镜像是 M-profile，A-core 启动链尚未闭合。MPCore 基址已由运行
+  证据定为 `0xE000E000`；串口寄存器语义、CPU 型号仍是假设。
 - 没有签名、没有重打包、没有升级容器处理；固件文件全程只读。
 - 另见 [NOTICE.md](NOTICE.md) 与 [docs/validation.md](docs/validation.md)。
 

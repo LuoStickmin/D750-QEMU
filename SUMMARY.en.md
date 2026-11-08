@@ -7,7 +7,7 @@ firmware research:
 
 | Workstream | Content | Status |
 | --- | --- | --- |
-| **A. QEMU validation prototype** | `nikon-d750` machine, M0 boot, LCD dump, boot scan | M0 passed; M1–M3 incomplete |
+| **A. QEMU validation prototype** | `nikon-d750` machine, M0 boot, LCD dump, boot scan | M0 passed; M1 reached the target but is not closed (a1010 is M-profile); M2–M3 not started |
 | **B. 1080p high-bitrate modification** | raise 5 HQ rows from 42/35 and 24/20 to 64/60 Mbps | container-level verification passed and the image is byte-reproducible; camera capture untested |
 
 Neither workstream **contains firmware, keys, decrypted images or patched

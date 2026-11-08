@@ -1,5 +1,43 @@
 # Changelog
 
+## v0.2.0 — 2026-11-08
+
+M1 实跑轮：启动桩在 QEMU 里跑通并抓到第一条 a1010 MMIO；同时发现目标镜像
+是 M-profile，A-core 启动链并未闭合。固件文件仍然零修改。
+
+### 新增
+
+- 机器选项：`boot-mode=stub|entry`（默认 `stub`）、`a1010-base`（默认
+  `0x10018000`）、`thumb-fix`（内存内修 `bx` 字面量）、`mmu-bringup`
+  （identity 页表 + DACR/TTBR0/TTBCR 垫片 + config 槽回填）、`mpcore-base`。
+- `d750-a1010-io:` 日志：把“来自 a1010 地址范围的未建模访问”单独标出；
+  `tools/run.py` 汇总为 `mmio.a1010_events` / `mmio.first_a1010` 并打印。
+- `tools/run.py`：`--boot`、`--a1010-base`、`--thumb-fix/--no-thumb-fix`、
+  `--mmu-bringup/--no-mmu-bringup`、`--mpcore-base`、`--trace`。
+- `tools/stub_trace.py`（零依赖启动桩模拟器）与 `tools/m1_analyze.py`
+  （M1 静态分析四件套）：来自 2026-11-07 更新包，补 SPDX/来源头后原样保留。
+- `docs/m1-boot-chain.md` / `.en.md` 与 `evidence/m1/`：M1 实跑记录、GDB
+  现场、第一条 MMIO、失败点与复现命令。
+
+### 修正
+
+- **MPCore 基址 `0x1E000000` → `0xE000E000`**。依据：第一条 a1010 MMIO 是
+  `wr 0xE000E180 ← 0x00100000`（GIC `ICENABLER0`），同一运行还有
+  `gic_cpu_write: Bad offset 80`。
+- 启动桩的本地 init 会写 `SCTLR=0x1C05` 打开 MMU，页表基址来自 config 槽
+  `0x100F48C0`；不处理时 TTBR0 会被写成 `0x42` 并在 `0x9025DA84` 立即
+  prefetch abort。这是 1107 更新（默认跳过该 init）没有覆盖的路径。
+- 1107 的 `a1010-base=0x10018000` 与 Thumb 位在解码上成立，但 a1010 是
+  **大端 Cortex-M 镜像**（MRS/MSR BASEPRI、M-profile 向量表），不是 A-core
+  的下一阶段；M1 记为“到目标但未闭合”。
+
+### 兼容性
+
+- `boot-mode=entry` 保留 M0 行为；M0 证据（`evidence/m0*`）仍可用
+  `--boot entry` 复现，只是 flash 装入地址默认已改为 `a1010-base=0x10018000`，
+  复现旧证据时需同时加 `a1010-base=0x10000000`。
+- 主机侧测试 26 passed；固件/密钥/改后镜像仍不入库。
+
 ## Unreleased — 2026-11-06
 
 ### 文档

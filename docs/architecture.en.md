@@ -30,8 +30,8 @@ source. Only 11.1.0 has actually been built here; 10.x compilation is unverified
 | `0x00000000` | 4 GiB | diagnostic catch-all | `MemoryRegionOps`, priority -1000; strict logs once then stops |
 | `0x00000000` | 64 KiB | low-memory RAM (vectors/boot globals) | RAM, priority 0 |
 | `0x00000FF0` | 4 B | halt window (auxiliary LR return point) | IO, priority 1 |
-| `0x10000000` | 8 MiB | `a1010_011100.bin` (flash) | RAM-backed, writable in the prototype |
-| `0x1E000000` | 0x2000 | `a9mpcore_priv` (GIC/timers/watchdog) | placeholder base address |
+| `0x10000000` | 8 MiB | flash window; `-bios` image loaded at `a1010-base` (default `0x10018000`) | RAM-backed, writable in the prototype |
+| `0xE000E000` | 0x2000 | `a9mpcore_priv` (GIC/timers/watchdog) | runtime evidence: first a1010 MMIO is `0xE000E180` |
 | `0x80005000` | 0x100 | candidate byte serial port | subregion, priority 0 |
 | `0x90000000` | `-m` (default 128 MiB) | main image and DRAM | `machine->ram` |
 
@@ -40,19 +40,29 @@ vector word to `0x0` and reads it back; the 4-byte halt window at `0xFF0` overla
 
 ## 3. Boot Flow
 
-1. `-kernel` (or `-machine payload=`) supplies `b1010`, and `-bios` (or `flash=`) supplies `a1010`; both are opened
-   read-only and loaded into the corresponding window with `load_image_targphys`.
+1. `-kernel` (or `-machine payload=`) supplies `b1010`, loaded at `0x90000000`;
+   `-bios` (or `flash=`) supplies `a1010`, loaded at `a1010-base` inside the
+   flash window (default `0x10018000`). Images are opened read-only; the
+   payload is read into a host buffer and registered as a ROM blob, so
+   `thumb-fix` only changes the in-memory copy.
 2. Create `-smp` CPUs of type `machine->cpu_type` (default `cortex-a9`).
-3. Create `a9mpcore_priv`, and connect each CPU's IRQ/FIQ/VIRQ/VFIQ to the GIC's 4×N sysbus IRQ outputs (in the same
-   order as in `include/hw/intc/arm_gic.h`).
-4. Initial PC = `entry`:
-   - explicitly given by `-machine entry=0x...`;
-   - otherwise `0x9027D52C` (`D750_RAM_BASE + D750_ENTRY_OFFSET`).
-5. **Auxiliary boot state** (added after the first actual run):
+3. Create `a9mpcore_priv` at `mpcore-base` (default `0xE000E000`) and connect
+   each CPU's IRQ/FIQ/VIRQ/VFIQ to the GIC's 4×N sysbus IRQ outputs.
+4. The initial PC depends on `boot-mode`:
+   - `boot-mode=stub` (default, M1): build a 4 GiB identity page table and a
+     small ARM trampoline at `0x1000`; the trampoline writes
+     `DACR/TTBR0/TTBCR` and branches to `0x9025D700`. The table base is also
+     written into config slot `0x100F48C0`, and the b1010 `bx` literal is
+     changed to `0x1002CB8D` in memory (`thumb-fix`).
+   - `boot-mode=entry` (M0): PC = `entry` (default `0x9027D52C`),
+     overridable with `-machine entry=0x...`.
+5. **Auxiliary boot state** (added after the first M0 run; used by entry mode):
    - `SP = D750_RAM_BASE + ram_size - 0x100` (default `0x97FFFF00`);
    - `LR = 0x00000FF0` (halt window);
    - `r0 = 0`;
    - CPSR keeps QEMU's ARM reset value of SVC with A/I/F masked.
+   - stub mode instead uses `SP = top of RAM - 0x1000`, `LR = 0`, so a bad
+     return is visible.
 
 The entry at `0x9027D52C` starts with `push {r4,r5,r6,lr}`, so without an SP it writes `0xFFFFFFF0..0xFFFFFFFC`; when
 done it `pop`s back to LR. In the first actual run LR=0 caused the PC to run away, so the auxiliary state is
@@ -104,9 +114,13 @@ dense `rd +0x11` entries in `qemu.log`; adjust the model accordingly, rather tha
 
 ### 4.3 MPCore
 
-`a9mpcore_priv` provides the GIC, per-CPU private timers, the global timer, and the watchdog. The base address
-`0x1E000000` is the A9 reference layout, and there is **no** evidence of the D750 accessing it; if the firmware accesses
-a different address, the catch-all will record the real address.
+`a9mpcore_priv` provides the GIC, per-CPU private timers, the global timer, and
+the watchdog. The base is **`0xE000E000`**, measured on 2026-11-08: the first
+a1010 MMIO is `wr 0xE000E180 ← 0x00100000` (GIC distributor `ICENABLER0`), and
+the same run also reported `gic_cpu_write: Bad offset 80`. The old
+`0x1E000000` was the A9 reference layout with no D750 access evidence; the
+`mpcore-base=` property remains so diagnostics can put it back and reproduce
+the "unmapped" observation.
 
 ### 4.4 SMP
 
@@ -159,15 +173,20 @@ discipline are inherited.
 - `d750_halt_read()`: entry return point; the optional LCD dump is also triggered here.
 - `d750_halt_state_is_clean()`: checks CPSR mode, LR and SP to tell a real return from a fault.
 - `d750_lcd_dump()`: guest RAM → PPM.
-- Machine properties: `payload`, `flash`, `entry`, `strict`, `lcd-*`.
-- Log prefixes: `d750-probe:` / `d750-strict:` / `d750-uart:`; `run.py` parses by prefix.
+- Machine properties: `payload`, `flash`, `entry`, `boot-mode`, `a1010-base`,
+  `thumb-fix`, `mmu-bringup`, `mpcore-base`, `strict`, `lcd-*`.
+- Log prefixes: `d750-probe:` / `d750-strict:` / `d750-uart:` /
+  `d750-a1010-io:`; `run.py` parses by prefix.
 
 ## 8. Known Limitations
 
 1. Built and run to M0 under WSL (Ubuntu 26.04 / gcc 15.2); the Windows MSYS2 artifact has not been built.
-2. M1–M3 are incomplete: the entry is an init function, and the caller/next stage has not been found yet.
-3. Flash content beyond `a1010` is missing; reads return 0.
-4. The serial port, GIC base address, and CPU model are all assumptions.
+2. M1 reaches the Nov 7 target and its first MMIO, but the target module is
+   M-profile firmware; the A-core chain is not closed.
+3. Flash content beyond `a1010` is missing; reads return 0. The config slot
+   `0x100F48C0` is therefore supplied by the `mmu-bringup` shim.
+4. The serial port semantics and the exact CPU model are still assumptions;
+   the GIC base is now measured (`0xE000E000`).
 5. No VMState/migration; recovery means starting a new process.
 6. Cache/TLB behavioral differences are not implemented, and there is no cycle accuracy; TCG timing does not represent
    the hardware.

@@ -39,15 +39,53 @@
 #define D750_LOWRAM_SIZE       (64ULL * 1024)
 #define D750_HALT_TRAMPOLINE   0x00000FF0ULL   /* "b ." placed here */
 
-/* Flash / first-stage window.  The descriptor table refers to
- * 0x1002CB8C, 0x100A1094 and 0x100A1480, all inside a1010_011100.bin
- * when it is mapped at 0x10000000. */
+/* Flash / first-stage window. */
 #define D750_FLASH_BASE        0x10000000ULL
 #define D750_FLASH_SIZE        (8ULL * 1024 * 1024)
 
+/* a1010 load base.  Measured 2026-11-07: the b1010 boot stub's `bx ip`
+ * target 0x1002CB8C only lands on a clean Thumb-2 function prologue when
+ * a1010 is mapped at 0x10018000 (file offset 0x14B8C).  The earlier
+ * 0x10000000 hypothesis mapped the same target onto a data table. */
+#define D750_A1010_BASE        0x10018000ULL
+
+/* M1 boot chain.  b1010 is loaded at D750_RAM_BASE; its startup hand-off
+ * is at +0x25D700.  The hand-off at 0x9025D750 does `bx ip` with
+ * ip = *(0x9025D7F8).  The literal holds 0x1002CB8C (bit0=0, ARM state)
+ * although file 0x14B8C is Thumb code, so QEMU patches the in-memory copy
+ * to 0x1002CB8D by default instead of repacking the firmware. */
+#define D750_BOOT_STUB         0x9025D700ULL
+#define D750_BX_SITE           0x9025D750ULL
+#define D750_BX_LITERAL_OFF    0x25D7F8ULL
+#define D750_BX_TARGET         0x1002CB8CULL
+
+/* Stack given to the boot stub: 4 KiB below the top of the DRAM window. */
+#define D750_BOOT_STUB_SP_DELTA 0x1000ULL
+
+/* Emulated boot-ROM MMU bring-up.  b1010's local init at 0x9025DA40 ends by
+ * writing SCTLR = 0x1C05, i.e. it turns the MMU on assuming the boot ROM
+ * already installed TTBR0/DACR and an identity page table.  This machine
+ * starts directly at the stub, so it supplies that missing prologue:
+ *   - 16 KiB of short-descriptor section entries at the top of DRAM,
+ *   - a tiny ARM prologue in low RAM that writes DACR, TTBR0 and TTBCR,
+ *     then jumps to the stub.
+ * The page table identity-maps all 4 GiB with 1 MiB sections (AP=rw, C/B on).
+ */
+#define D750_BOOT_MMU_TRAMPOLINE 0x00001000ULL
+#define D750_BOOT_MMU_TABLE_SIZE 0x4000ULL
+#define D750_BOOT_MMU_TABLE_DELTA 0x10000ULL
+
+/* The boot stub reads the page-table base from this config slot and passes
+ * it to b1010's init, which programs TTBR0/TTBR1 with (value & ~0x3FF) | 0x42.
+ * With zero flash the slot reads 0 and the init enables the MMU with
+ * TTBR0 = 0x42, which faults at the next fetch. */
+#define D750_CONFIG_SLOT0      0x100F48C0ULL
+
 /* Cortex-A9 MPCore private block: GIC + per-CPU timers + watchdog.
- * Placeholder address; the payload has not yet been observed using it. */
-#define D750_MPCORE_BASE       0x1E000000ULL
+ * Measured 2026-11-08: the first a1010 MMIO access is a 32-bit write of
+ * 0x00100000 to 0xE000E180, i.e. GIC distributor ICENABLER0 at
+ * 0xE000E000 + 0x180.  The earlier 0x1E000000 guess was wrong. */
+#define D750_MPCORE_BASE       0xE000E000ULL
 #define D750_GIC_NUM_IRQ       96
 
 /* Byte-register serial block.  Code around file offset 0x27CC00 uses

@@ -20,8 +20,13 @@ Following z7-qemu's discipline: record the following four things separately, and
 Command:
 
 ```powershell
-python tools/run.py --payload ...\b1010_115a.bin --flash ...\a1010_011100.bin --gdb --run-seconds 2
+python tools/run.py --payload ...\b1010_115a.bin --flash ...\a1010_011100.bin `
+  --boot entry --a1010-base 0x10000000 --gdb --run-seconds 2
 ```
+
+> M0 is the legacy default; since 2026-11-08 the machine defaults to
+> `boot-mode=stub`, so reproducing M0 requires
+> `--boot entry --a1010-base 0x10000000`.
 
 Pass criteria (all must be met):
 
@@ -72,33 +77,46 @@ This control is used to prove that "`0x9027D52C` is more like an entry point tha
 
 ### M1 — First MMIO sequence
 
-Command:
+M1 is now the default mode (`boot-mode=stub`). Command:
 
 ```powershell
-python tools/run.py --payload ... --flash ... --timeout 10
+python tools/run.py --payload ... --flash ... `
+  --boot stub --a1010-base 0x10018000 --timeout 6 --trace in_asm
 ```
 
-Look at `session.json.mmio.by_address`:
+Look at `session.json.mmio`:
 
-- Sort the top 10 addresses by count, and record `addr / rw / count / first_pc`;
-- Compare against the UART candidates in `docs/findings.md` §6: check whether `0x80005010..14` appears;
-- Compare against `0x1E000000` (MPCore): check whether it appears; if a different address appears, note it,
-  and change `D750_MPCORE_BASE` to that address in the next round.
+- `first_a1010`: the first unmodelled access **originating in the a1010 address
+  range**. With the GIC modelled at `0xE000E000` it should be `null` in a
+  default run;
+- `by_address`: top 10 addresses by count, with `addr / rw / count / first_pc`;
+- Compare against the UART candidates in `docs/findings.md` §6: does
+  `0x80005010..14` appear?
+- Compare against `0xE000E000` (MPCore): it should normally be absorbed by the
+  model and not appear in the unmodelled list.
 
-Pass criteria: obtain at least one **reproducible** address sequence, and the sequences from two runs are identical
-(with single-threaded TCG and no external input, they should be identical).
+Pass criteria, in two layers:
 
-**Current result**: `mmio_events=0`. This entry segment only performs initialization within RAM (writing the vector slot at `0x0`
-and writing the stack), without reaching any peripherals. So the prerequisite work for M1 is not to add devices, but first to find
-the caller/next stage; otherwise the catch-all has nothing to record.
+1. **Entry layer**: with GDB stopped at `0x1002CB8C`, `CPSR.T=1`,
+   `LR=0x9025D754`, `r0..r4=0,0,2,0,1`; `qemu.log` contains a TB for
+   `0x1002cb8c`;
+2. **Target layer**: that address really belongs to the A-core's next stage and
+   not to another core's image. This is currently **not satisfied**: a1010 is
+   M-profile firmware, see [m1-boot-chain.en.md](m1-boot-chain.en.md).
+
+**Current result**: the entry layer passes and the first a1010 MMIO is
+`wr 0xE000E180 ← 0x00100000` (`evidence/m1/gic-unmapped/`); the target layer
+does not, so M1 is recorded as "reached the target, not closed" and must not be
+accepted as complete.
 
 ### M2 — UART output
 
 Pass criteria: `session.json.uart.bytes > 0`, and `uart.tail` is readable text or a stable
 binary prefix.
 
-**Current result**: `uart.bytes=0`; the UART path has not been reached yet. This is consistent with M1's "the entry does not reach peripherals"
-and is not a UART model failure.
+**Current result**: `uart.bytes=0`; the UART path has not been reached yet. M1
+does enter a1010 and issues a GIC write, but never reaches the candidate serial
+block, so this is not a UART model failure.
 
 If `uart.bytes == 0` but there are many `d750-uart: rd +0x11` entries in `qemu.log`:
 
