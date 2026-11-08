@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-08T10:26:02+08:00",
+  "generated": "2026-11-08T15:50:21+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -465,13 +465,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 21902,
-      "sha256": "d072ec8d45624755eb22bbd16c038b34f3dc0eef4d2557115428abef934c8ef5"
+      "size": 21506,
+      "sha256": "77bf298bbc514cadb34d87511d0fa0175976335682dc01576fc3368934508364"
     },
     {
       "path": "README.md",
-      "size": 20493,
-      "sha256": "66976425f467bb35b0627b2adc7bb238f6f2e5a077213463300b7bb49de37b60"
+      "size": 20221,
+      "sha256": "b0d41f8c87bf0b57f6c8110de3eb1d34daad8152f700b2d859038b0c56db8dcd"
     },
     {
       "path": "Run-D750.ps1",
@@ -552,6 +552,11 @@
       "path": "tools/stub_trace.py",
       "size": 19062,
       "sha256": "e314b4f7d3e8a21681569fa57bab1ea4d08606f172ff12d49946ad18a6552bd1"
+    },
+    {
+      "path": "update_1107.zip",
+      "size": 50848,
+      "sha256": "ec44063f065a82a52b63d0e97a1c1c2d0e0c61c170e70ddf460bc1039e61b967"
     }
   ],
   "source_version": "v0.2.0"

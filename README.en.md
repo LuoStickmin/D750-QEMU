@@ -2,15 +2,16 @@
 
 > [中文](README.md) | English
 
-> **Update Log · 2025-11-07 · M1 Boot-Chain Resolution**
+> **Recent update log**
 >
-> - **a1010 real load base = `0x10018000`** (not `0x10000000`): `bx ip = 0x1002CB8C` → file offset `0x14B8C`, inside a1010's code region, a clean Thumb-2 function (`push {r4,lr}; movs r0,#0x14; bl …`), fully disassembled and confirmed.
-> - **Thumb-bit fix**: the `bx` target `0x1002CB8C` has bit0=0 → enters ARM, but the code is Thumb; must be **`0x1002CB8D`** (patch the b1010 file literal at `0x25D7F8`, or have QEMU trap `0x9025D750` and do `ip|=1`).
-> - **config slots `0x100F48C0/C4/C8` are outside the a1010 module** (≈ base+`0xDC8C0`); they must be filled from the next module / full flash, otherwise the boot stub takes a degenerate "no-callback" path and no MMIO is observed.
-> - **Likely root cause of "0 MMIO"**: when unmapped flash reads `0xFF`, the stub's `blxne r0` jumps to `0xFFFFFFFF` (enters Thumb) and dies immediately; fix: make unmapped reads return 0, or supply the full flash.
-> - Repro: `python stub_trace.py --find-base --a1010 a1010_011100.bin` (should hit `base=0x10018000, foff=0x14B8C`). See [update_log_1107.md](update_log_1107.md).
+> | Date | Progress |
+> | --- | --- |
+> | 2026-11-08 | **M1 run**: stub → `0x1002CB8C` (Thumb, `args=0/0/2/0/1`, `LR=0x9025D754`), first MMIO `wr 0xE000E180 ← 0x00100000`; MPCore base corrected to **`0xE000E000`**; a1010 found to be M-profile firmware, so M1 is recorded as "reached target, not closed". Details: [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
+> | 2026-11-07 | **Static resolution**: a1010 base `0x10018000`, entry file offset `0x14B8C`, Thumb bit, config slots `0x100F48C0/C4/C8`; raw material in `update_1107.zip` |
+> | 2026-11-06 | **v0.1.1**: M0 passed, strict/halt evidence fixes, LCD dump pipeline, 64/60 Mbps bitrate patch; see [CHANGELOG.md](CHANGELOG.md) |
+> | 2026-11-05 | **v0.1.0**: first public snapshot (M0, LCD dump, bilingual docs) |
 >
-> Status: **M1 ≈ 90%** — entry/base pinned down; pending a real QEMU run that enters `0x1002CB8D` and captures the first MMIO.
+> Full changes and compatibility notes: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -21,27 +22,7 @@
 > [bitrate/README.md](bitrate/README.md); legal/contribution boundaries:
 > [CONTRIBUTING.md](CONTRIBUTING.en.md).
 
-> **Update log · 2026-11-08 · M1 run and target verification**
->
-> - The boot stub at `0x9025D700` now runs in QEMU: MMU trampoline → stub →
->   `bx ip` → `0x1002CB8C` (Thumb, `r0..r4=0,0,2,0,1`, `LR=0x9025D754`).
-> - First a1010 MMIO captured: `wr 0xE000E180 ← 0x00100000` (GIC
->   `ICENABLER0`); the MPCore base is therefore corrected from `0x1E000000` to
->   **`0xE000E000`**.
-> - Found and handled a trap the Nov 7 update missed: b1010's init writes
->   `SCTLR=0x1C05` to enable the MMU, and the page-table base comes from config
->   slot `0x100F48C0`. The new `mmu-bringup` shim handles it with zero firmware
->   changes.
-> - **New question**: a1010 carries a big-endian Cortex-M vector table and
->   executes `MRS/MSR BASEPRI` at `0x100240AC` → it is **M-profile firmware**,
->   not the A-core's next stage. M1 therefore **must not be marked complete**;
->   a full flash / module offset table is needed to find the A-core's real
->   `0x1002CB8C`. Details: [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md).
->
-> The Nov 7 Thumb-bit and config-slot conclusions still hold; the
-> `a1010-base=0x10018000` mapping is valid for instruction decoding, but this
-> round shows the image is M-profile, so its core/module attribution is now in
-> question (see below).
+---
 
 > **Disclaimer**: This project **does not contain** and **does not download** any Nikon firmware. Firmware must be provided locally by the user, and the entire toolchain processes it strictly read-only.
 

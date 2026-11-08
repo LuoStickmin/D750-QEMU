@@ -2,15 +2,16 @@
 
 > [English](README.en.md) | 中文
 
-> **更新日志 · 2025-11-07 · M1 启动链解析**
+> **更新日志（近期）**
 >
-> - **a1010 真实加载基址 = `0x10018000`**（不是 `0x10000000`）：`bx ip = 0x1002CB8C` → 文件偏移 `0x14B8C`...
-> - **Thumb 位修正**：须改为 `0x1002CB8D`...
-> - **config 槽 `0x100F48C0/C4/C8` 在 a1010 模块之外**...
-> - **「0 MMIO」疑似根因**：未映射 flash 读 `0xFF` → `blxne` 跳到 `0xFFFFFFFF` 跑飞...
-> - 复现：`python stub_trace.py --find-base ...`
+> | 日期 | 进展 |
+> | --- | --- |
+> | 2026-11-08 | **M1 实跑**：桩 → `0x1002CB8C`（Thumb，`args=0/0/2/0/1`，`LR=0x9025D754`），首条 MMIO `wr 0xE000E180 ← 0x00100000`；MPCore 基址修正为 **`0xE000E000`**；发现 a1010 是 M-profile 镜像，M1 记为“到目标未闭合”。详见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
+> | 2026-11-07 | **静态定位**：a1010 基址 `0x10018000`、入口文件偏移 `0x14B8C`、Thumb 位、config 槽 `0x100F48C0/C4/C8`；原始材料在 `update_1107.zip` |
+> | 2026-11-06 | **v0.1.1**：M0 通过、strict/halt 证据修复、LCD dump 管线、64/60 Mbps 改表；见 [CHANGELOG.md](CHANGELOG.md) |
+> | 2026-11-05 | **v0.1.0**：首个公开快照（M0、LCD dump、双语文档） |
 >
-> 状态：**M1 ≈ 90%**——入口/基址已定，待 QEMU 实跑进入 `0x1002CB8D` 并抓到第一条 MMIO。
+> 完整变更与兼容性说明见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
@@ -18,23 +19,6 @@
 > （5 个 HQ 行 42/35、24/20 → 64/60 Mbps）。合并总览见
 > [SUMMARY.md](SUMMARY.md)，高码率细节见 [bitrate/README.md](bitrate/README.md)，
 > 法律与贡献边界见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-> **更新日志 · 2026-11-08 · M1 实跑与目标核验**
->
-> - 启动桩 `0x9025D700` 在 QEMU 里跑通：MMU 引导垫片 → 桩 → `bx ip` →
->   `0x1002CB8C`（Thumb，`r0..r4=0,0,2,0,1`，`LR=0x9025D754`）。
-> - 抓到第一条 a1010 MMIO：`wr 0xE000E180 ← 0x00100000`（GIC `ICENABLER0`）；
->   据此把 MPCore 基址从 `0x1E000000` 修正为 **`0xE000E000`**。
-> - 发现并处理了 1107 未覆盖的坑：b1010 init 会写 `SCTLR=0x1C05` 打开 MMU，
->   页表基址来自 config 槽 `0x100F48C0`；新增 `mmu-bringup` 垫片后固件零修改。
-> - **新问题**：a1010 带大端 Cortex-M 向量表，并在 `0x100240AC` 执行
->   `MRS/MSR BASEPRI` → 它是 **M-profile 固件**，不是 A-core 的下一阶段。
->   因此 M1 **不能记为完成**，需要整片 flash / 模块偏移表来定位 A-core 真正的
->   `0x1002CB8C`。详见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md)。
->
-> 上一轮（2026-11-07）的 Thumb 位与 config 槽结论仍成立；`a1010-base=
-> 0x10018000` 在指令解码上成立，但本轮证明该镜像属于 M-profile，核/模块归属
-> 存疑（见下）。
 
 ---
 
