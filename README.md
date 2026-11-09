@@ -6,7 +6,7 @@
 >
 > | 日期 | 进展 |
 > | --- | --- |
-> | 2026-11-09 | **三条无输入验证 + 两轮跟进**：静态调用链、12 种 flash 布局、M-core 启动 → 完整 20 MiB b1010 验证镜像内 `0x201E2200` 是可用 TTBR0（页表 `0x201E0000`）→ 发现 `0x80000000` 是 `{pointer,count}` 工作队列槽（不是设备 ID）、veneer 表缺 Thumb 位；`veneer-slot` 修正后 **0 undefined、1 SVC、0 abort**。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) |
+> | 2026-11-09 | **三条无输入验证 + 三轮跟进**：静态调用链、12 种 flash 布局、M-core 启动 → 完整 20 MiB b1010 验证镜像内 `0x201E2200` 是可用 TTBR0（页表 `0x201E0000`）→ `0x80000000` 是 `{pointer,count}` 工作队列槽、veneer 表缺 Thumb 位（`veneer-slot` 修正后 **0 undefined、1 SVC、0 abort**）→ 反推出 loader 的 4 条 `(dest,src,size)` 段表（`loader-copies`）。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) |
 > | 2026-11-08 | **M1 实跑 + v0.2.0**：桩 → `0x1002CB8C`（Thumb，`args=0/0/2/0/1`，`LR=0x9025D754`），首条 MMIO `wr 0xE000E180 ← 0x00100000`；MPCore 基址修正为 **`0xE000E000`**；发现 a1010 是 M-profile 镜像，M1 记为“到目标未闭合”；Linux x86-64 二进制已作为 [Release v0.2.0](https://github.com/LuoStickmin/D750-QEMU/releases/tag/v0.2.0) 发布。详见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 > | 2026-11-07 | **静态定位**：a1010 基址 `0x10018000`、入口文件偏移 `0x14B8C`、Thumb 位、config 槽 `0x100F48C0/C4/C8`；原始材料在 `update_1107.zip` |
 > | 2026-11-06 | **v0.1.1**：M0 通过、strict/halt 证据修复、LCD dump 管线、64/60 Mbps 改表；见 [CHANGELOG.md](CHANGELOG.md) |

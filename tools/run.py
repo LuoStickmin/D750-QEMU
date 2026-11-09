@@ -219,6 +219,8 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += ",vector-fix=on"
     if args.veneer_slot is not None:
         machine += f",veneer-slot=0x{args.veneer_slot:x}"
+    if args.loader_copies:
+        machine += ",loader-copies=on"
     if args.strict:
         machine += ",strict=on"
     if args.lcd_base is not None:
@@ -356,6 +358,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--veneer-slot", type=lambda s: int(s, 0),
                         help="payload offset of one ldr-pc veneer target to "
                              "mark as Thumb (e.g. 0x14e494)")
+    parser.add_argument("--loader-copies", action="store_true", default=False,
+                        help="apply the descriptor-table flash-to-RAM copies to "
+                             "the in-memory payload before boot")
     parser.add_argument("--trace", action="append", default=[],
                         help="extra -d item, e.g. --trace in_asm (repeatable)")
     parser.add_argument("--strict", action="store_true",

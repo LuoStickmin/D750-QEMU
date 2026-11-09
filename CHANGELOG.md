@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.3 — 2026-11-09
+
+反推 loader 段表并加入可复现的搬运开关；新二进制作为 Release v0.2.3 发布。
+
+### 发行
+
+- Linux x86-64 二进制：100,631,632 字节，SHA-256
+  `a8d63f43df43a9b5ed908f235821689c508c9265b2d6ca1e72aea510d4cec721`；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+
+### 机器
+
+- 新增 `loader-copies=on`：按 b1010 `0x25D760..0x25D7B8` 的 4 条
+  `(dest, src, size)` 记录，把 flash 段搬进内存 payload；C 段越界时先补零
+  扩展缓冲。`tools/run.py` 同步 `--loader-copies`。
+
+### 发现
+
+- 段表链式关系完全自洽：A.dest+A.size=B.dest、A.src+A.size=B.src、
+  B.src+B.size=`0x1003FD16`（表项 `0x25D7D0` 的值）、
+  C.src+C.size=`0x100F48CC`（越过 config 槽）。
+- A 是 ARM `ldr pc` 跳转表，D 是 `movs r0,#0; bx lr` 默认回调；C 的目标区
+  在镜像里是 0 占位。
+- 应用 4 条拷贝后完整布局路径未变（没有 PC 进入 `0x91xxxxxx`），说明这些段
+  在当前 b1010 路径上尚未被调用；段表和搬运机制已可复现。
+
 ## v0.2.2 — 2026-11-09
 
 继续推进 SVC 返回与 veneer 重定位；新二进制作为 GitHub Release v0.2.2 发布。

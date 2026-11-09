@@ -40,6 +40,7 @@ to decide what the A-core's `0x1002CB8C` actually belongs to.
 | `aux-ram-size=<size>` | `0` | add a RAM bank at `0x20000000` (e.g. `4M`) |
 | `vector-fix=on\|off` | `off` | install a minimal ARM vector table at `0x90020000` (SVC returns with the Thumb bit restored, IRQ/FIQ return, faults spin) |
 | `veneer-slot=<offset>` | `0` | mark one `ldr pc,[pc,#-4]` veneer target as Thumb (+1); applies to both payload and flash |
+| `loader-copies=on\|off` | `off` | apply the four `(dest,src,size)` records at b1010 `0x25D760..0x25D7B8` to the in-memory payload |
 | `mpcore-base=<addr>` | `0xE000E000` | A9 MPCore (GIC/timers/watchdog) base; set `0x1E000000` to reproduce the "unmapped" observation |
 
 In `boot-mode=stub` the initial PC is the internal trampoline `0x1000` (not

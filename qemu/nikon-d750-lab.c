@@ -93,6 +93,7 @@ typedef struct NikonD750MachineState {
     bool thumb_fix;             /* patch the bx literal to Thumb state     */
     bool vector_fix;            /* install a minimal ARM vector table      */
     uint64_t veneer_slot;       /* payload offset of one veneer to patch   */
+    bool loader_copies;         /* apply the descriptor-table copy records */
     bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
     uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
@@ -733,6 +734,21 @@ static void nikon_d750_set_veneer_slot(Object *obj, Visitor *v,
     s->veneer_slot = value;
 }
 
+static bool nikon_d750_get_loader_copies(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return s->loader_copies;
+}
+
+static void nikon_d750_set_loader_copies(Object *obj, bool value,
+                                         Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    s->loader_copies = value;
+}
+
 static void nikon_d750_get_lcd_base(Object *obj, Visitor *v,
                                     const char *name, void *opaque,
                                     Error **errp)
@@ -930,6 +946,64 @@ static void d750_apply_veneer_slot(NikonD750MachineState *s, uint8_t *data,
 }
 
 /*
+ * The descriptor table at b1010 0x25D760..0x25D7B8 contains four
+ * (dest, src, size) copy records.  The chains are exact:
+ *   dest A + size A = dest B,  src A + size A = src B,
+ *   src B + size B  = 0x1003FD16 (the value stored at 0x25D7D0),
+ *   src C + size C  = 0x100F48CC (just past the config slots).
+ * The destinations are zero-filled in the RAM image, so the boot ROM must
+ * apply these copies before entering the payload.  `loader-copies=on`
+ * reproduces them in the in-memory payload; because copy C runs past the
+ * 20 MiB file image, the buffer is extended with zeros first.
+ */
+static const struct D750LoaderCopy {
+    uint64_t dest;
+    uint64_t src;
+    uint32_t size;
+} d750_loader_copies[] = {
+    { 0x9128DB64, 0x10000000, 0x030344 },   /* A: jump table + code        */
+    { 0x912BDEA8, 0x10030344, 0x00F9D2 },   /* B: continuation of A        */
+    { 0x9132EC00, 0x100A1480, 0x05344C },   /* C: data block before config */
+    { 0x9132EBF4, 0x100A1094, 0x000004 },   /* D: Thumb stub "movs r0,#0; bx lr" */
+};
+
+static void d750_apply_loader_copies(gchar **data, gsize *size)
+{
+    gsize need = *size;
+    int i;
+
+    for (i = 0; i < (int)ARRAY_SIZE(d750_loader_copies); i++) {
+        uint64_t end = d750_loader_copies[i].dest
+                       + d750_loader_copies[i].size - D750_RAM_BASE;
+        if (end > need) {
+            need = end;
+        }
+    }
+    if (need > *size) {
+        *data = g_realloc(*data, need);
+        memset(*data + *size, 0, need - *size);
+        *size = need;
+    }
+    for (i = 0; i < (int)ARRAY_SIZE(d750_loader_copies); i++) {
+        uint64_t dest = d750_loader_copies[i].dest;
+        uint64_t src = d750_loader_copies[i].src;
+        uint32_t len = d750_loader_copies[i].size;
+        uint64_t doff = dest - D750_RAM_BASE;
+        uint64_t soff = src - D750_FLASH_BASE;
+
+        if (soff + len > *size || doff + len > *size) {
+            warn_report("nikon-d750: loader copy 0x%08" PRIx64
+                        " -> 0x%08" PRIx64 " does not fit the payload",
+                        src, dest);
+            continue;
+        }
+        memcpy(*data + doff, *data + soff, len);
+        info_report("nikon-d750: loader copy 0x%08" PRIx64 " -> 0x%08"
+                    PRIx64 " (%" PRIu32 " bytes)", src, dest, len);
+    }
+}
+
+/*
  * The measured hand-off is `bx ip` at 0x9025D750 with ip = 0x1002CB8C,
  * while file 0x14B8C is Thumb-2 code.  The payload is read into a host
  * buffer, the 32-bit literal at b1010 file offset 0x25D7F8 is corrected
@@ -961,6 +1035,10 @@ static void d750_load_payload(NikonD750MachineState *s, const char *path,
                      path, size, max_size);
         g_free(data);
         exit(1);
+    }
+
+    if (s->loader_copies) {
+        d750_apply_loader_copies(&data, &size);
     }
 
     if (!strcmp(s->boot, "stub") && s->thumb_fix &&
@@ -1318,7 +1396,7 @@ static void nikon_d750_init(MachineState *machine)
     info_report("nikon-d750: boot=%s, payload=%s @ 0x%08" PRIx64
                 ", a1010=%s @ 0x%08" PRIx64
                 ", start=0x%08" PRIx64 ", ram=%" PRIu64 " MiB, cpus=%u"
-                "%s%s%s%s%s%s%s",
+                "%s%s%s%s%s%s%s%s",
                 s->boot, payload, (uint64_t)D750_RAM_BASE,
                 flash ? flash : "(none)", s->a1010_base,
                 start,
@@ -1327,6 +1405,7 @@ static void nikon_d750_init(MachineState *machine)
                 s->thumb_fix ? ", thumb-fix" : "",
                 s->vector_fix ? ", vector-fix" : "",
                 s->veneer_slot ? ", veneer-slot" : "",
+                s->loader_copies ? ", loader-copies" : "",
                 s->flash_size != D750_FLASH_SIZE ? ", custom-flash" : "",
                 s->auxram_size ? ", aux-ram" : "",
                 s->mmu_table ? ", mmu-table" : "");
@@ -1343,6 +1422,7 @@ static void nikon_d750_instance_init(Object *obj)
     s->thumb_fix = true;
     s->vector_fix = false;
     s->veneer_slot = 0;
+    s->loader_copies = false;
     s->mmu_bringup = true;
     s->mmu_table = 0;
     s->auxram_size = 0;
@@ -1448,6 +1528,12 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
                               nikon_d750_set_veneer_slot, NULL, NULL);
     object_class_property_set_description(oc, "veneer-slot",
         "Payload offset of one ldr-pc veneer target to mark as Thumb (0 = off)");
+    object_class_property_add_bool(oc, "loader-copies",
+                                   nikon_d750_get_loader_copies,
+                                   nikon_d750_set_loader_copies);
+    object_class_property_set_description(oc, "loader-copies",
+        "Apply the four descriptor-table (dest,src,size) flash-to-RAM copies "
+        "to the in-memory payload before boot");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,
