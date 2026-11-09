@@ -6,7 +6,7 @@
 >
 > | 日期 | 进展 |
 > | --- | --- |
-> | 2026-11-09 | **三条无输入验证 + 五轮跟进**：静态调用链、12 种 flash 布局、M-core 启动 → TTBR0 验证 → 工作队列槽/veneer 重定位（**0 undefined、1 SVC、0 abort**）→ loader 段表 → Nikon-Patch IDA 真实基址 **`0x90020000`**（reset `0x9027D524`、`0xA3400000` 外设块）→ **D3300 固件同密钥解密并在同一机器上跑通**，`io-stub` 越过 `0xAE00060C` 轮询。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) |
+> | 2026-11-09 | **三条无输入验证 + 六轮跟进**：静态调用链、12 种 flash 布局、M-core 启动 → TTBR0 验证 → 工作队列槽/veneer 重定位（**0 undefined、1 SVC、0 abort**）→ loader 段表 → Nikon-Patch IDA 真实基址 **`0x90020000`** → **D3300/D850/D780 固件同密钥解密**（E6→E5→E4 版图：D780 头部+branch、D850 reset `0x1037CBA8`/handler `0x4002xxxx`、D750 `0x90020000`），`io-stub` 越过 `0xAE00060C`。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) |
 > | 2026-11-08 | **M1 实跑 + v0.2.0**：桩 → `0x1002CB8C`（Thumb，`args=0/0/2/0/1`，`LR=0x9025D754`），首条 MMIO `wr 0xE000E180 ← 0x00100000`；MPCore 基址修正为 **`0xE000E000`**；发现 a1010 是 M-profile 镜像，M1 记为“到目标未闭合”；Linux x86-64 二进制已作为 [Release v0.2.0](https://github.com/LuoStickmin/D750-QEMU/releases/tag/v0.2.0) 发布。详见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 > | 2026-11-07 | **静态定位**：a1010 基址 `0x10018000`、入口文件偏移 `0x14B8C`、Thumb 位、config 槽 `0x100F48C0/C4/C8`；原始材料在 `update_1107.zip` |
 > | 2026-11-06 | **v0.1.1**：M0 通过、strict/halt 证据修复、LCD dump 管线、64/60 Mbps 改表；见 [CHANGELOG.md](CHANGELOG.md) |

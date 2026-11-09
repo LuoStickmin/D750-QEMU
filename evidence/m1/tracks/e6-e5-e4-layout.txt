@@ -1,0 +1,68 @@
+Nikon DSLR generations: E6 (D780), E5 (D850), E4 (D750) - module and boot layout
+====================================================================================
+
+Containers were decrypted with the same key set (key_all.json, T1/T2/T3):
+
+  D850_0131.bin  scheme B (0x20-byte header, 32-space label at 0x20)
+    a1330_010303.bin  0x100002  (1 MiB)   M-core firmware (Cortex-M vectors)
+    _wma_ver01.11.00  0x0D792B
+    _tpj00_0150.bin   0x00E002
+    b1330_131.bin     0x187B6F6 (25.7 MiB) main
+
+  D780_0121.bin  scheme B (0x20-byte header, 32-space label at 0x20)
+    ex1510_0100c0.bi  0x200002  (2 MiB)
+    _tpj02_0110.bin   0x00E002
+    eg1510_012100.bi  0x21EDA7A (35.6 MiB) main
+
+E5 (D850) boot image
+--------------------
+b1330_131.bin starts with the classic ARM vector table:
+
+  0000 e59ff018 e59ff018 e59ff018 e59ff018 e59ff018 e320f000 ea00000d e59ff018
+  0020 1037cba8 4002dfc0 4002e070 4002e0e8 4002e0f8 00000000 00000000 4002e12c
+
+  reset      = 0x1037CBA8
+  undef      = 0x4002DFC0
+  SVC        = 0x4002E070
+  prefetch   = 0x4002E0E8
+  data abort = 0x4002E0F8
+  FIQ        = 0x4002E12C
+
+The reset target is inside the image if the image base is 0x10000000
+(0x1037CBA8 - 0x10000000 = 0x37CBA8), while the exception handlers point at
+0x4002xxxx - a separate region, most likely the E5 boot ROM / handler bank.
+
+a1330_010303.bin is still a Cortex-M image: SP 0x2000FA30, reset 0x0000C20D
+(the same reset address as the D750 a1010 module).
+
+E6 (D780) boot image
+--------------------
+eg1510_012100.bi does NOT start with a vector table:
+
+  0000 EA002F20          ARM "b" over the header
+  0004 00000000 ... 0000001C zero
+  0020 "Ver.01.20.00."  version string
+  ...
+
+The first instruction is a branch over a metadata header; there is no reset
+vector at offset 0.  ex1510_0100c0.bi has an M-profile vector table with
+SP 0x20004878 and reset 0x0800053D (a 0x08000000-range image, unlike the
+0x0000C20D M-core firmware of E5/E4).
+
+This matches the Z6/Z7 QEMU approach: E6 firmware is not started from a fixed
+reset vector, so the host maps MAIN at a modeled base (Z6/Z7: 0x10020000),
+sets the initial PC itself and drives the boot through original init routines.
+
+Generational chain
+------------------
+E4 (D750): ROM image starts with a vector table at base 0x90020000,
+           reset 0x9027D524, handlers inside the same image.
+E5 (D850): image base likely 0x10000000, reset 0x1037CBA8, handlers at
+           0x4002xxxx (separate boot ROM / handler bank).
+E6 (D780): header + branch image, no vector table at base; Z6/Z7-style
+           assisted startup with a modeled MAIN base and host-set PC.
+
+The reusable part across generations is the Z6/Z7/Z8/Z9 method: model the
+CPU cluster and RAM windows, map the original MAIN, supply explicit fixtures
+for power/straps/storage/MCU/GPIO, and drive the original init callbacks from
+the host - not a recovered boot ROM.

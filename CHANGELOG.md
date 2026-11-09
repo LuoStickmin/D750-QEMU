@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — 2026-11-09
+
+Z 系列 QEMU 引导方式调研与 E6→E5→E4 版图（仅文档/证据，无机器改动）：
+
+- Z6/Z7/Z8/Z9 QEMU 均不还原 boot ROM：用户提供**提取后的 MAIN**，映射到
+  建模基址（Z6/Z7 `0x10020000`、Z7II MAS Cortex-A7、Z8/Z9 四核 AArch64），
+  用显式 fixture/virtual ROM/guest loader 补早期环境，主机侧 assisted
+  startup 调用原始初始化函数并投递电源/MCU/按键输入。
+- D850 (E5) 与 D780 (E6) 官方固件用同一套密钥解密成功：
+  D850 `b1330` reset `0x1037CBA8`、异常向量 `0x4002xxxx`（单独 boot ROM）；
+  D780 `eg1510` 以 `EA002F20` 分支 + 版本头开始，无基址向量表，
+  `ex1510` reset `0x0800053D`。
+- 形成 E6→E5→E4 反推链：E6 按 Z6/Z7 的 assisted startup 处理，E5 增加
+  `0x10000000`/`0x40000000` 窗口，E4 维持 `0x90020000`。
+- 详见 docs §2.7 与 `evidence/m1/tracks/e6-e5-e4-layout.txt`。
+
 ## v0.2.5 — 2026-11-09
 
 D3300 跨机型固件与 EXPEED 寄存器块 stub；新二进制作为 Release v0.2.5 发布。

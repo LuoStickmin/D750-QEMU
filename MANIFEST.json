@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-09T18:13:39+08:00",
+  "generated": "2026-11-09T20:43:01+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -215,8 +215,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 13061,
-      "sha256": "90750cff640aaad82f343ebb36a2469e495fb10c4309d5f7a07f326a7ff7fb0d"
+      "size": 14011,
+      "sha256": "40b0c75425499eb07f20210d094531873fa202dbb642f7fb0943a7631baf29a6"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -290,13 +290,13 @@
     },
     {
       "path": "docs/m1-tracks-2026-11-09.en.md",
-      "size": 17967,
-      "sha256": "0195e0f200c1b9f1c889c07d07516137cfc40690e204cfe2541138354b1fab55"
+      "size": 19895,
+      "sha256": "3a0d303c6c0af4017e772341d69b8bb2d17236e0f65c2c41550dbf4287271a28"
     },
     {
       "path": "docs/m1-tracks-2026-11-09.md",
-      "size": 17441,
-      "sha256": "fc336ee3255446f3dd8b541b61fe6081d0913c7fa6d41df8309bbbc067ac2b67"
+      "size": 19241,
+      "sha256": "92f7badc1027e9ad0f0b68c62b69fae06769602200c671d779f6ade38b12bb60"
     },
     {
       "path": "docs/validation.en.md",
@@ -434,6 +434,11 @@
       "sha256": "f1b58a1709b590ca18bf8b618ab80f7b90c7e7425f8b8814bfa10b76c645e7c6"
     },
     {
+      "path": "evidence/m1/tracks/e6-e5-e4-layout.txt",
+      "size": 2876,
+      "sha256": "bb04307fadf47d81d5a6de56352cd5c7aceacf608ccd0065318edde550e3a4c5"
+    },
+    {
       "path": "evidence/m1/tracks/expeed-io-run.log",
       "size": 3130,
       "sha256": "6c519fd42883054c007bd427d18144398786302fe17c8b7bf99abcc703bde97d"
@@ -490,13 +495,13 @@
     },
     {
       "path": "evidence/README.en.md",
-      "size": 3300,
-      "sha256": "b556137018f94a49a66299cd3fc2bda774aea69d0ea3e5e80a84a727cf51ac80"
+      "size": 3349,
+      "sha256": "5eda331dcfd434e2ff4748ffd09cc8ea1a3ba514929fb40c1a9dade42bcd7e50"
     },
     {
       "path": "evidence/README.md",
-      "size": 3050,
-      "sha256": "d6f0da8a501a5644ea0c56270da9176c9d17c6bda9976932bd9de5479379e80e"
+      "size": 3107,
+      "sha256": "fc27ba89b2be4d60c1d899344b0717a65624e242c2a5670721f170d8b102c6d4"
     },
     {
       "path": "LICENSE",
@@ -540,13 +545,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 21791,
-      "sha256": "207470482c8724c597e70401e94ba241016705c3d410eda77e6c3a0a19247326"
+      "size": 21836,
+      "sha256": "3a93e09c23eab35dc1c2e0b97ec99fe78614a692e382af90476991c04740f8d4"
     },
     {
       "path": "README.md",
-      "size": 20846,
-      "sha256": "d3424f9120cda2deaed0b8398f36216a689825fe7ac198a69525ea563c79d388"
+      "size": 20887,
+      "sha256": "0964e4babeee762120f5a81b802ff16259ddf9d23d9a2593711e4a0ecfb140f4"
     },
     {
       "path": "Run-D750.ps1",
