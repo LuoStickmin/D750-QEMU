@@ -69,9 +69,10 @@ enum {
     D750_CPU_VFIQ,
 };
 
+struct D750IoStub;
+
 typedef struct NikonD750MachineState {
     MachineState parent;
-
     MemoryRegion lowram;        /* vectors / boot globals at 0x0          */
     MemoryRegion halt;          /* return trampoline: fetch = clean exit   */
     MemoryRegion flash;         /* RAM-backed, read/write in this prototype */
@@ -96,6 +97,8 @@ typedef struct NikonD750MachineState {
     uint64_t veneer_slot;       /* payload offset of one veneer to patch   */
     bool loader_copies;         /* apply the descriptor-table copy records */
     bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
+    bool io_stub;               /* map A2/AD/AE/A340 register-block stubs  */
+    struct D750IoStub *io_blocks[4];
     uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
     uint32_t uart_status;
@@ -233,6 +236,55 @@ static const MemoryRegionOps d750_probe_ops = {
     .valid.max_access_size = 8,
     .impl.min_access_size = 1,
     .impl.max_access_size = 8,
+};
+
+/* ------------------------------------------------------------------ */
+/* EXPEED 4 register-block stub (diagnostic)                            */
+/* ------------------------------------------------------------------ */
+/*
+ * The real D750 reset handler (and the D3300 one) touches A2/AD/AE/A340
+ * blocks that are not documented yet.  `io-stub=on` maps them as simple
+ * register files and reports 0xAE00060C as ready, which is the bit the D750
+ * handler polls 8048 times.  This is scaffolding for tracing, not a model of
+ * the hardware.
+ */
+typedef struct D750IoStub {
+    MemoryRegion mr;
+    uint64_t base;
+    uint32_t size;
+    uint32_t *regs;
+} D750IoStub;
+
+static uint64_t d750_io_stub_read(void *opaque, hwaddr addr, unsigned size)
+{
+    D750IoStub *s = opaque;
+
+    if (s->base + addr == D750_IO_AE_READY) {
+        return 1;
+    }
+    if (addr + size > s->size) {
+        return 0;
+    }
+    return s->regs[addr >> 2];
+}
+
+static void d750_io_stub_write(void *opaque, hwaddr addr, uint64_t value,
+                               unsigned size)
+{
+    D750IoStub *s = opaque;
+
+    if (addr + size > s->size) {
+        return;
+    }
+    s->regs[addr >> 2] = (uint32_t)value;
+}
+
+static const MemoryRegionOps d750_io_stub_ops = {
+    .read = d750_io_stub_read,
+    .write = d750_io_stub_write,
+    .endianness = DEVICE_LITTLE_ENDIAN,
+    .valid.min_access_size = 1,
+    .valid.max_access_size = 4,
 };
 
 /* ------------------------------------------------------------------ */
@@ -771,6 +823,20 @@ static void nikon_d750_set_loader_copies(Object *obj, bool value,
     NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
 
     s->loader_copies = value;
+}
+
+static bool nikon_d750_get_io_stub(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return s->io_stub;
+}
+
+static void nikon_d750_set_io_stub(Object *obj, bool value, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    s->io_stub = value;
 }
 
 static void nikon_d750_get_lcd_base(Object *obj, Visitor *v,
@@ -1322,6 +1388,35 @@ static void nikon_d750_init(MachineState *machine)
         memory_region_add_subregion(sysmem, D750_AUXRAM_BASE, &s->auxram);
     }
 
+    /* EXPEED 4 register-block stubs: A2/AD/AE/A340. */
+    if (s->io_stub) {
+        static const struct {
+            uint64_t base;
+            uint32_t size;
+            const char *name;
+        } blocks[4] = {
+            { D750_IO_A2_BASE, D750_IO_A2_SIZE, "a2" },
+            { D750_IO_AD_BASE, D750_IO_AD_SIZE, "ad" },
+            { D750_IO_AE_BASE, D750_IO_AE_SIZE, "ae" },
+            { D750_IO_A340_BASE, D750_IO_A340_SIZE, "a340" },
+        };
+        int b;
+
+        for (b = 0; b < 4; b++) {
+            struct D750IoStub *st = g_new0(struct D750IoStub, 1);
+
+            st->base = blocks[b].base;
+            st->size = blocks[b].size;
+            st->regs = g_new0(uint32_t, blocks[b].size / 4);
+            memory_region_init_io(&st->mr, OBJECT(s), &d750_io_stub_ops, st,
+                                  g_strdup_printf("nikon-d750.io-%s",
+                                                  blocks[b].name),
+                                  blocks[b].size);
+            memory_region_add_subregion(sysmem, blocks[b].base, &st->mr);
+            s->io_blocks[b] = st;
+        }
+    }
+
     /* Catch-all diagnostics.  The window is always present: strict mode
      * changes the contract from "log and continue" to "log and stop", so
      * the first missing access still leaves an address in qemu.log. */
@@ -1427,7 +1522,7 @@ static void nikon_d750_init(MachineState *machine)
     info_report("nikon-d750: boot=%s, payload=%s @ 0x%08" PRIx64
                 ", a1010=%s @ 0x%08" PRIx64
                 ", start=0x%08" PRIx64 ", ram=%" PRIu64 " MiB, cpus=%u"
-                "%s%s%s%s%s%s%s%s",
+                "%s%s%s%s%s%s%s%s%s",
                 s->boot, payload, s->payload_base,
                 flash ? flash : "(none)", s->a1010_base,
                 start,
@@ -1437,6 +1532,7 @@ static void nikon_d750_init(MachineState *machine)
                 s->vector_fix ? ", vector-fix" : "",
                 s->veneer_slot ? ", veneer-slot" : "",
                 s->loader_copies ? ", loader-copies" : "",
+                s->io_stub ? ", io-stub" : "",
                 s->flash_size != D750_FLASH_SIZE ? ", custom-flash" : "",
                 s->auxram_size ? ", aux-ram" : "",
                 s->mmu_table ? ", mmu-table" : "");
@@ -1455,6 +1551,7 @@ static void nikon_d750_instance_init(Object *obj)
     s->vector_fix = false;
     s->veneer_slot = 0;
     s->loader_copies = false;
+    s->io_stub = false;
     s->mmu_bringup = true;
     s->mmu_table = 0;
     s->auxram_size = 0;
@@ -1572,6 +1669,12 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
     object_class_property_set_description(oc, "loader-copies",
         "Apply the four descriptor-table (dest,src,size) flash-to-RAM copies "
         "to the in-memory payload before boot");
+    object_class_property_add_bool(oc, "io-stub",
+                                   nikon_d750_get_io_stub,
+                                   nikon_d750_set_io_stub);
+    object_class_property_set_description(oc, "io-stub",
+        "Map the A2/AD/AE/A340 register blocks as a register file and report "
+        "0xAE00060C as ready (diagnostic)");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,

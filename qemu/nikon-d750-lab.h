@@ -107,6 +107,22 @@
 #define D750_UART_BASE         0x80005000ULL
 #define D750_UART_SIZE         0x100
 
+/* EXPEED 4 register blocks touched by the real reset handler (2026-11-09):
+ *   A2:   small control block (0xA200000C/10/18/20/24/2C/94)
+ *   AD:   0xAD000020/24
+ *   AE:   0xAE000600/608/60C (60C is written 1 by D3300 and polled by D750)
+ *   A340: channel block, one 0x1000 group per channel, first register +0x400
+ * `io-stub=on` maps them as a register file and makes 0xAE00060C read 1. */
+#define D750_IO_A2_BASE        0xA2000000ULL
+#define D750_IO_A2_SIZE        0x10000
+#define D750_IO_AD_BASE        0xAD000000ULL
+#define D750_IO_AD_SIZE        0x100000
+#define D750_IO_AE_BASE        0xAE000000ULL
+#define D750_IO_AE_SIZE        0x10000
+#define D750_IO_A340_BASE      0xA3400000ULL
+#define D750_IO_A340_SIZE      0x100000
+#define D750_IO_AE_READY       0xAE00060CULL
+
 /* Catch-all diagnostic window used when strict=off.  Priority -1000 keeps
  * every real region (RAM, flash, MPCore, UART) in front of it. */
 #define D750_PROBE_PRIORITY    (-1000)

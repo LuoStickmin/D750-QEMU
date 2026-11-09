@@ -223,6 +223,8 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += f",veneer-slot=0x{args.veneer_slot:x}"
     if args.loader_copies:
         machine += ",loader-copies=on"
+    if args.io_stub:
+        machine += ",io-stub=on"
     if args.strict:
         machine += ",strict=on"
     if args.lcd_base is not None:
@@ -366,6 +368,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--loader-copies", action="store_true", default=False,
                         help="apply the descriptor-table flash-to-RAM copies to "
                              "the in-memory payload before boot")
+    parser.add_argument("--io-stub", action="store_true", default=False,
+                        help="map the A2/AD/AE/A340 register blocks as a "
+                             "register file and report 0xAE00060C ready")
     parser.add_argument("--trace", action="append", default=[],
                         help="extra -d item, e.g. --trace in_asm (repeatable)")
     parser.add_argument("--strict", action="store_true",

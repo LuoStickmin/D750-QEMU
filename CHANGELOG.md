@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.2.5 — 2026-11-09
+
+D3300 跨机型固件与 EXPEED 寄存器块 stub；新二进制作为 Release v0.2.5 发布。
+
+### 发行
+
+- Linux x86-64 二进制：100,645,120 字节，SHA-256
+  `398909e06fb15272fbdb8ca4555c46197e4d1301ebc39863921ce48fbcabcc90`；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+
+### 机器
+
+- 新增 `io-stub=on`：把 `0xA2000000`、`0xAD000000`、`0xAE000000`、
+  `0xA3400000` 映射成寄存器堆，并让 `0xAE00060C` 读回 1；
+  `tools/run.py` 同步 `--io-stub`。
+
+### 跨机型
+
+- `davidgfb/NikonHacker` 的 `D3300_0102.bin`（24.6 MB）用**同一套 D750 密钥**
+  解密，得到 `a860_010101.bin`（768 KiB）与 `b860_102.bin`（23.8 MiB）。
+- b860 的向量表与 b1010 前 0x20 字节相同，reset = `0x90352FE0`；在
+  `payload-base=0x90020000`、`entry=0x90352FE8` 下 0 异常运行，访问同一组
+  `A2/AD/AE` 外设块；D3300 写 `0xAE00060C=1`，D750 轮询它。
+- D750 加 `io-stub` 后越过该轮询，继续到 `0x9027E5xx`（ARM 代码）后进入
+  下一个等待。
+- 结论：Nikon-Patch / NikonHacker **没有 flash dump 或 boot ROM**；可复用的
+  是跨机型固件、同一套密钥、同一加载基址和同一组外设块。
+
 ## v0.2.4 — 2026-11-09
 
 Nikon-Patch IDA 布局给出真实装入基址；新二进制作为 Release v0.2.4 发布。

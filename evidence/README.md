@@ -10,7 +10,7 @@
 | `m0-gdb/` | 同上，含 RSP 快照 | `entry_pc=0x9027d52c`、`entry_ok=true`、CPSR `0x400001d3`；guest 自行退出后 RSP 断开 |
 | `lcd/` | 同上 + `lcd.ppm` | 8×8 ARGB8888 从 `0x92000000` dump；证明扫描/dump 链路 |
 | `m1/` | `command.json`、`session.json`、`qemu.log`、`uart.log` + `gdb-entry.json` | M1：桩 → `0x1002CB8C`（Thumb，参数 0/0/2/0/1）；第一条 MMIO `0xe000e180←0x00100000`；随后在 `0x100240AC` 撞 M-profile 指令 |
-| `m1/tracks/` | `layout-matrix.md`、`b1010-flash-svc.log`、`ttbr0-run.log`、`veneer-reloc-run.log`、`veneer-scan.txt`、`loader-segments.txt`、`ida-layout.txt`、`ida-layout-run.log`、`m0-entry-fullflash.log`、`mcore-boot.log`/`.md` | 12 种布局；TTBR0 验证；`veneer-slot` 后 0 undefined、1 SVC、0 abort；loader 段表；Nikon-Patch IDA 布局（基址 `0x90020000`、reset `0x9027D524`、`0xA3400000` 外设块、`0xAE00060C` 轮询）；a1010 卡在 `0x00300F40` |
+| `m1/tracks/` | `layout-matrix.md`、`b1010-flash-svc.log`、`ttbr0-run.log`、`veneer-reloc-run.log`、`veneer-scan.txt`、`loader-segments.txt`、`ida-layout.txt`、`ida-layout-run.log`、`cross-model-d3300.txt`、`expeed-io-run.log`、`m0-entry-fullflash.log`、`mcore-boot.log`/`.md` | 12 种布局；TTBR0 验证；`veneer-slot` 后 0 undefined、1 SVC、0 abort；loader 段表；Nikon-Patch IDA 布局（基址 `0x90020000`、reset `0x9027D524`）；D3300 跨机型对比；`io-stub` 越过 `0xAE00060C` 轮询；a1010 卡在 `0x00300F40` |
 | `boot-scan.txt` | 10 个候选入口的扫描输出 | 全部 0 MMIO；`0x9025d700` 2 s 未返回；下一阶段不在 `b1010` 内 |
 
 ## 怎么读

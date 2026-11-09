@@ -15,7 +15,7 @@
 | 主机 | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | 编译器 | gcc 15.2.0 |
 | QEMU | 11.1.0（overlay 构建） |
-| 二进制 | GitHub Release v0.2.4 附件（Linux x86-64，100,633,336 字节） |
+| 二进制 | GitHub Release v0.2.5 附件（Linux x86-64，100,645,120 字节） |
 | 主机侧测试 | 27 passed（QEMU）+ 9 passed（bitrate/menu，需本地模块；无模块时 9 skipped） |
 
 ## 2. 已验证的事实
