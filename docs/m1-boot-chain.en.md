@@ -39,6 +39,7 @@ to decide what the A-core's `0x1002CB8C` actually belongs to.
 | `mmu-table=<addr>` | `0` (auto) | place the identity table at this address and **do not override** the config slot (use the image value); the 2026-11-09 check used it to verify `0x201E2200` is a valid TTBR0 |
 | `flash-size=<size>` | 8 MiB | flash window size (max 64 MiB), so the full 20 MiB b1010 can be mapped |
 | `aux-ram-size=<size>` | `0` | add a RAM bank at `0x20000000` (e.g. `4M`) |
+| `aux2-base=<addr>`/`aux2-size=<size>` | `0` | add RAM anywhere; E5 D850 uses `0x40000000` for its handler bank |
 | `vector-fix=on\|off` | `off` | install a minimal ARM vector table at `0x90020000` (SVC returns with the Thumb bit restored, IRQ/FIQ return, faults spin) |
 | `veneer-slot=<offset>` | `0` | mark one `ldr pc,[pc,#-4]` veneer target as Thumb (+1); applies to both payload and flash |
 | `loader-copies=on\|off` | `off` | apply the four `(dest,src,size)` records at b1010 `0x25D760..0x25D7B8` to the in-memory payload |

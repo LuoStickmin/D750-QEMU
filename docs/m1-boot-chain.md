@@ -37,6 +37,7 @@ Thumb 位修正）。本文只记录**在 QEMU 里真实跑出来**的结果，�
 | `mmu-table=<addr>` | `0`（自动） | 把 identity 表放到指定地址，并**不再覆盖** config 槽（用镜像内的值）；2026-11-09 用它验证了 `0x201E2200` 是有效 TTBR0 |
 | `flash-size=<size>` | 8 MiB | flash 窗口大小（最大 64 MiB），用于完整映射 20 MiB b1010 |
 | `aux-ram-size=<size>` | `0` | 在 `0x20000000` 加一块 RAM（如 `4M`） |
+| `aux2-base=<addr>`/`aux2-size=<size>` | `0` | 在任意地址加 RAM；E5 D850 的 handler bank 用 `0x40000000` |
 | `vector-fix=on\|off` | `off` | 在 payload 的 `0x90020000` 写最小 ARM 向量表（SVC 返回并恢复 Thumb 位、IRQ/FIQ 返回、fault 自旋） |
 | `veneer-slot=<offset>` | `0` | 把某个 `ldr pc,[pc,#-4]` veneer 的目标标记为 Thumb（+1）；对 payload 和 flash 同时生效 |
 | `loader-copies=on\|off` | `off` | 按 b1010 `0x25D760..0x25D7B8` 的 4 条 `(dest,src,size)` 记录把 flash 段搬进内存 payload |

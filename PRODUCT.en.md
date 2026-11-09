@@ -17,7 +17,7 @@ absolute paths.
 | Host | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | Compiler | gcc 15.2.0 |
 | QEMU | 11.1.0 (overlay build) |
-| Binary | GitHub Release v0.2.5 asset (Linux x86-64, 100,645,120 bytes) |
+| Binary | GitHub Release v0.2.6 asset (Linux x86-64, 100,648,336 bytes) |
 | Host-side tests | 27 passed (QEMU) + 9 passed (bitrate/menu; needs a local module, 9 skipped without one) |
 
 ## 2. Verified Facts

@@ -77,6 +77,7 @@ typedef struct NikonD750MachineState {
     MemoryRegion halt;          /* return trampoline: fetch = clean exit   */
     MemoryRegion flash;         /* RAM-backed, read/write in this prototype */
     MemoryRegion auxram;        /* optional second RAM bank at 0x20000000  */
+    MemoryRegion aux2;          /* optional handler RAM (E5: 0x40000000)  */
     MemoryRegion probe;         /* catch-all diagnostic window             */
     MemoryRegion uart;          /* candidate byte-register serial block    */
 
@@ -91,6 +92,8 @@ typedef struct NikonD750MachineState {
     uint32_t a1010_size;        /* bytes actually loaded, 0 = none         */
     uint64_t flash_size;        /* flash window size (default 8 MiB)       */
     uint64_t auxram_size;       /* 0 = no bank at 0x20000000               */
+    uint64_t aux2_base;         /* optional handler RAM base (0 = off)     */
+    uint64_t aux2_size;         /* optional handler RAM size               */
     uint64_t mmu_table;         /* explicit identity-table address (0=auto)*/
     bool thumb_fix;             /* patch the bx literal to Thumb state     */
     bool vector_fix;            /* install a minimal ARM vector table      */
@@ -750,6 +753,52 @@ static void nikon_d750_set_auxram_size(Object *obj, Visitor *v,
     s->auxram_size = value;
 }
 
+static void nikon_d750_get_aux2_base(Object *obj, Visitor *v,
+                                     const char *name, void *opaque,
+                                     Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value = s->aux2_base;
+
+    visit_type_uint64(v, name, &value, errp);
+}
+
+static void nikon_d750_set_aux2_base(Object *obj, Visitor *v,
+                                     const char *name, void *opaque,
+                                     Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value;
+
+    if (!visit_type_uint64(v, name, &value, errp)) {
+        return;
+    }
+    s->aux2_base = value;
+}
+
+static void nikon_d750_get_aux2_size(Object *obj, Visitor *v,
+                                     const char *name, void *opaque,
+                                     Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value = s->aux2_size;
+
+    visit_type_uint64(v, name, &value, errp);
+}
+
+static void nikon_d750_set_aux2_size(Object *obj, Visitor *v,
+                                     const char *name, void *opaque,
+                                     Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value;
+
+    if (!visit_type_uint64(v, name, &value, errp)) {
+        return;
+    }
+    s->aux2_size = value;
+}
+
 static void nikon_d750_get_mmu_table(Object *obj, Visitor *v,
                                      const char *name, void *opaque,
                                      Error **errp)
@@ -1352,10 +1401,18 @@ static void nikon_d750_init(MachineState *machine)
                      "up to 64 MiB");
         exit(1);
     }
-    if (s->payload_base < D750_RAM_BASE ||
-        s->payload_base >= D750_RAM_BASE + machine->ram_size) {
+    if (s->aux2_size > 64 * MiB || (s->aux2_size & 0xFFFF) || !s->aux2_base) {
+        error_report("nikon-d750: aux2-base and a 64 KiB-multiple aux2-size "
+                     "(up to 64 MiB) are required together");
+        exit(1);
+    }
+    if (!((s->payload_base >= D750_RAM_BASE &&
+           s->payload_base < D750_RAM_BASE + machine->ram_size) ||
+          (s->payload_base >= D750_FLASH_BASE &&
+           s->payload_base < D750_FLASH_BASE + s->flash_size))) {
         error_report("nikon-d750: payload-base 0x%08" PRIx64
-                     " is outside the RAM window", s->payload_base);
+                     " is outside both the RAM and flash windows",
+                     s->payload_base);
         exit(1);
     }
 
@@ -1386,6 +1443,13 @@ static void nikon_d750_init(MachineState *machine)
         memory_region_init_ram(&s->auxram, NULL, "nikon-d750.auxram",
                                s->auxram_size, &error_fatal);
         memory_region_add_subregion(sysmem, D750_AUXRAM_BASE, &s->auxram);
+    }
+
+    /* Optional handler RAM (E5 D850 vectors point at 0x4002xxxx). */
+    if (s->aux2_size) {
+        memory_region_init_ram(&s->aux2, NULL, "nikon-d750.aux2",
+                               s->aux2_size, &error_fatal);
+        memory_region_add_subregion(sysmem, s->aux2_base, &s->aux2);
     }
 
     /* EXPEED 4 register-block stubs: A2/AD/AE/A340. */
@@ -1473,8 +1537,10 @@ static void nikon_d750_init(MachineState *machine)
     }
 
     /* Payload goes in last, after the RAM window exists. */
-    d750_load_payload(s, payload, s->payload_base, machine->ram_size
-                      - (s->payload_base - D750_RAM_BASE));
+    d750_load_payload(s, payload, s->payload_base,
+                      s->payload_base >= D750_RAM_BASE
+                      ? machine->ram_size - (s->payload_base - D750_RAM_BASE)
+                      : s->flash_size - (s->payload_base - D750_FLASH_BASE));
 
     entry = s->entry == UINT64_MAX ? D750_RAM_BASE + D750_ENTRY_OFFSET
                                    : s->entry;
@@ -1555,6 +1621,8 @@ static void nikon_d750_instance_init(Object *obj)
     s->mmu_bringup = true;
     s->mmu_table = 0;
     s->auxram_size = 0;
+    s->aux2_base = 0;
+    s->aux2_size = 0;
     s->mpcore_base = D750_MPCORE_BASE;
     s->uart_status = 0x03;
     s->lcd_width = 640;
@@ -1646,6 +1714,16 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
     object_class_property_set_description(oc, "aux-ram-size",
         "Optional RAM bank at 0x20000000 (0 = disabled); e.g. 4M for the "
         "0x201E2000 page-table experiment");
+    object_class_property_add(oc, "aux2-base", "uint64",
+                              nikon_d750_get_aux2_base,
+                              nikon_d750_set_aux2_base, NULL, NULL);
+    object_class_property_set_description(oc, "aux2-base",
+        "Optional handler-RAM base (E5 D850 vectors point at 0x40000000)");
+    object_class_property_add(oc, "aux2-size", "uint64",
+                              nikon_d750_get_aux2_size,
+                              nikon_d750_set_aux2_size, NULL, NULL);
+    object_class_property_set_description(oc, "aux2-size",
+        "Optional handler-RAM size (64 KiB multiple, up to 64 MiB)");
     object_class_property_add(oc, "mmu-table", "uint64",
                               nikon_d750_get_mmu_table,
                               nikon_d750_set_mmu_table, NULL, NULL);

@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.6 — 2026-11-10
+
+E5（D850）实跑准备：payload 可装在 flash 窗口、新增 handler RAM；发布新二进制。
+
+### 发行
+
+- Linux x86-64 二进制：100,648,336 字节，SHA-256
+  `ca72bf8d3acdb1dcb9ab2fbe74f1c287034668a990d0fe98617dda7fb03fa5e3`；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+
+### 机器
+
+- `payload-base` 现在允许落在 flash 窗口（`0x10000000` 起），用于 E5 的
+  `0x10000000` 装载基址；`flash-size` 需覆盖镜像（D850 用 32M）。
+- 新增 `aux2-base`/`aux2-size`：在任意地址加一块 RAM（E5 的 handler bank
+  `0x40000000`）；`tools/run.py` 同步 `--aux2-base`/`--aux2-size`。
+
+### E5 实跑
+
+- `D850_b1330_131.bin` 装到 `0x10000000`，从 reset `0x1037CBA8` 起跑：
+  **0 异常**，执行到 `0x1037CBC4` 后 `pop {r4,pc}` 从我们的零栈弹出 PC=0，
+  随后在低内存滑到 halt；没有 MMIO。
+- 该 reset 目标是一小段 `b/ldrb/str/pop` 桩，说明它依赖 boot ROM/loader
+  预先设置的 r0/r4/栈；与 D750 的 `LR=0` 同类问题。E5 的 handler bank
+  `0x40000000` 已可映射，但还没有内容。
+
 ## Unreleased — 2026-11-09
 
 Z 系列 QEMU 引导方式调研与 E6→E5→E4 版图（仅文档/证据，无机器改动）：

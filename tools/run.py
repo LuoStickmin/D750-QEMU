@@ -215,6 +215,9 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += f",flash-size=0x{args.flash_size:x}"
     if args.aux_ram_size:
         machine += f",aux-ram-size=0x{args.aux_ram_size:x}"
+    if args.aux2_size:
+        machine += (f",aux2-base=0x{args.aux2_base:x}"
+                    f",aux2-size=0x{args.aux2_size:x}")
     if args.mmu_table is not None:
         machine += f",mmu-table=0x{args.mmu_table:x}"
     if args.vector_fix:
@@ -357,6 +360,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                              "default is the machine's 8M")
     parser.add_argument("--aux-ram-size", type=parse_size, default=0,
                         help="add a RAM bank at 0x20000000 (e.g. 4M; default 0)")
+    parser.add_argument("--aux2-base", type=lambda s: int(s, 0),
+                        default=0x40000000,
+                        help="handler-RAM base for --aux2-size (default 0x40000000)")
+    parser.add_argument("--aux2-size", type=parse_size, default=0,
+                        help="add a handler RAM bank at --aux2-base (e.g. 2M)")
     parser.add_argument("--mmu-table", type=lambda s: int(s, 0),
                         help="place the identity table at this address and leave "
                              "config slot 0x100F48C0 to the flash image")
