@@ -42,6 +42,7 @@ Thumb 位修正）。本文只记录**在 QEMU 里真实跑出来**的结果，�
 | `veneer-slot=<offset>` | `0` | 把某个 `ldr pc,[pc,#-4]` veneer 的目标标记为 Thumb（+1）；对 payload 和 flash 同时生效 |
 | `loader-copies=on\|off` | `off` | 按 b1010 `0x25D760..0x25D7B8` 的 4 条 `(dest,src,size)` 记录把 flash 段搬进内存 payload |
 | `io-stub=on\|off` | `off` | 把 A2/AD/AE/A340 映射成寄存器堆，并让 `0xAE00060C` 读回 1（诊断） |
+| `e6-prep=on\|off` | `off` | D780 准备：把 payload+`0x10000` 的页表补成 identity section，映射 `0x04000000`/`0xC0000000`，预置 `0x20022300` |
 | `mpcore-base=<addr>` | `0xE000E000` | A9 MPCore（GIC/定时器/看门狗）基址；诊断时可改回 `0x1E000000` 复现“未映射”观测 |
 
 `boot-mode=stub` 时初始 PC 是内部垫片 `0x1000`（不是 `0x9025D700`）；

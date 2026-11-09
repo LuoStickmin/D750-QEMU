@@ -170,7 +170,7 @@ display surface。测试卡的生成/验证见 `docs/gui-cmos.md` §3.2。
 - 机器属性：`payload`、`flash`、`entry`、`boot-mode`、`payload-base`、
   `a1010-base`、`thumb-fix`、`mmu-bringup`、`mmu-table`、`flash-size`、
   `aux-ram-size`、`aux2-base`、`aux2-size`、`vector-fix`、`veneer-slot`、
-  `loader-copies`、`io-stub`、`mpcore-base`、`strict`、`lcd-*`。
+  `loader-copies`、`io-stub`、`e6-prep`、`mpcore-base`、`strict`、`lcd-*`。
 - 日志前缀：`d750-probe:` / `d750-uart:` / `d750-a1010-io:`，`run.py` 按前缀解析。
 
 ## 8. 已知限制

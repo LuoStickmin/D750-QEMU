@@ -1,0 +1,49 @@
+E5 (D850) loader / entry candidates
+====================================
+Image: b1330_131.bin, base 0x10000000, size 0x187B6F6.
+
+Vector table at 0x10000000:
+  reset      0x1037CBA8
+  undef      0x4002DFC0
+  SVC        0x4002E070
+  prefetch   0x4002E0E8
+  data abort 0x4002E0F8
+  FIQ        0x4002E12C
+
+The reset target 0x1037CBA8 is not a conventional prologue.  It is a small
+stub inside a table of stubs:
+
+  1037cba8  b     0x1037cbb8
+  1037cbac  ldrb  r0, [r0, #0xd2]
+  1037cbb0  b     0x1037cbb8
+  1037cbb4  ldrb  r0, [r0, #0x111]
+  1037cbb8  str   r0, [r4]
+  1037cbbc  b     0x1037cbc4
+  1037cbc0  mvn   r1, #0
+  1037cbc4  mov   r0, r1
+  1037cbc8  pop   {r4, r5, r6, pc}
+  1037cbcc  pop   {r4, r5, r6, lr}
+  1037cbd0  mov   r0, r3
+  1037cbd4  b     0x1037c518
+  1037cbd8  pop   {r4, r5, r6, lr}
+  1037cbdc  mov   r0, r3
+  1037cbe0  b     0x1037c8c8
+  1037cbe4  mvn   r0, #0
+  1037cbe8  pop   {r4, r5, r6, pc}
+
+Candidates tested on the current machine (base 0x10000000):
+
+  entry 0x1037CBA8  -> 0 exceptions, reaches 0x1037CBC4, pop {r4,pc} takes
+                       PC=0 from the zero stack, then slides through low RAM.
+  entry 0x1037C518  -> 0 exceptions, calls 0x1037E108, returns to LR.
+  entry 0x1037C8C8  -> 0 exceptions, calls 0x1037E138, returns to LR.
+
+So 0x1037C518 / 0x1037C8C8 are ordinary functions, not the loader entry.
+The reset target expects boot-ROM register/stack context; the real E5 loader
+entry is most likely in the separate 0x40000000 handler/boot-ROM region, which
+we have mapped (aux2) but not populated yet.
+
+Follow-up options:
+  - fill 0x40000000 with a minimal SVC/IRQ return stub and retry the reset;
+  - look for a relocation table in b1330 (byte-copy stubs at 0x1037CBA8 look
+    like primitives a loader would call).

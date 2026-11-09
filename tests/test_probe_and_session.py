@@ -194,7 +194,7 @@ class CommandTests(unittest.TestCase):
             "--aux-ram-size", "4M", "--mmu-table", "0x201e0000",
             "--vector-fix", "--veneer-slot", "0x14e494", "--loader-copies",
             "--payload-base", "0x90020000", "--io-stub",
-            "--aux2-size", "2M",
+            "--aux2-size", "2M", "--e6-prep",
         ])
         cmd = run_mod.build_command(Path("qemu-system-arm"), args,
                                     Path("run"), None)
@@ -209,6 +209,7 @@ class CommandTests(unittest.TestCase):
         self.assertIn("io-stub=on", machine)
         self.assertIn("aux2-base=0x40000000", machine)
         self.assertIn("aux2-size=0x200000", machine)
+        self.assertIn("e6-prep=on", machine)
 
 
 STOCK_QEMU = Path(r"C:\Program Files\qemu\qemu-system-arm.exe")

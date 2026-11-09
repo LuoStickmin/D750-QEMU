@@ -44,6 +44,7 @@ to decide what the A-core's `0x1002CB8C` actually belongs to.
 | `veneer-slot=<offset>` | `0` | mark one `ldr pc,[pc,#-4]` veneer target as Thumb (+1); applies to both payload and flash |
 | `loader-copies=on\|off` | `off` | apply the four `(dest,src,size)` records at b1010 `0x25D760..0x25D7B8` to the in-memory payload |
 | `io-stub=on\|off` | `off` | map A2/AD/AE/A340 as register files and report `0xAE00060C` as ready (diagnostic) |
+| `e6-prep=on\|off` | `off` | D780 prep: identity-section the page table at payload+`0x10000`, map `0x04000000`/`0xC0000000`, preset `0x20022300` |
 | `mpcore-base=<addr>` | `0xE000E000` | A9 MPCore (GIC/timers/watchdog) base; set `0x1E000000` to reproduce the "unmapped" observation |
 
 In `boot-mode=stub` the initial PC is the internal trampoline `0x1000` (not

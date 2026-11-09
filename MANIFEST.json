@@ -1,16 +1,16 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-10T07:02:58+08:00",
+  "generated": "2026-11-10T07:10:43+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
-    "release": "v0.2.6",
-    "size": 100648336,
-    "sha256": "ca72bf8d3acdb1dcb9ab2fbe74f1c287034668a990d0fe98617dda7fb03fa5e3",
+    "release": "v0.2.7",
+    "size": 100651184,
+    "sha256": "c92876f841a3476fed059514aa2198974bba2a590a745ef51bb2f30cfc0a74dd",
     "external": true,
     "url": "https://github.com/LuoStickmin/D750-QEMU/releases/latest/download/qemu-system-arm",
-    "note": "Not committed to Git; published as a GitHub Release asset (v0.2.6, E5 flash payload base and aux2 handler RAM)."
+    "note": "Not committed to Git; published as a GitHub Release asset (v0.2.7, e6-prep and D780 peripheral run)."
   },
   "tests": {
     "qemu": "26 passed",
@@ -166,17 +166,17 @@
     {
       "path": "binary/qemu-system-arm.sha256",
       "size": 82,
-      "sha256": "e75a2f2bca55509474f6aa8b0595d2bda2d3a2985575efd4b4b9fa944400d7ea"
+      "sha256": "81574bf3def8c6741084f89d540642c6a1f3b73bce75ddd5e70f250a9a98402e"
     },
     {
       "path": "binary/README.en.md",
       "size": 2020,
-      "sha256": "077b50a8feeed7ae96352790904e7d54f4ff51a01e29445dae44407e88dede1a"
+      "sha256": "ea926d4153943f42293037152a8f26e090534efbfd6c5e27c88e8e0a2a8ff3a7"
     },
     {
       "path": "binary/README.md",
       "size": 1959,
-      "sha256": "8eff4056a51157f24a463b6a290a82734eb196058e76e222d4bb9897f3fb2da3"
+      "sha256": "1cf0e53d0595f1878ece44ace0094176ab801e38c148d5b8cacf40cf4b8376a3"
     },
     {
       "path": "bitrate/d750_bitrate_patch.py",
@@ -215,8 +215,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 15152,
-      "sha256": "b09e184c0ff50642691db5bdbb20764211eaa0aa6e811a81502130dc00c7af94"
+      "size": 16233,
+      "sha256": "6703d6d14fd2d2ef27c00208c79dbeb4aa9226388e84545f15107d9174451530"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -230,13 +230,13 @@
     },
     {
       "path": "docs/architecture.en.md",
-      "size": 10907,
-      "sha256": "5c10c8307e6f3850e26dc2f3ff349547fbcfc214ee661ca4a233d04e089f01a6"
+      "size": 10918,
+      "sha256": "9f4d709cefa94839df96229dc28a5ac409067c2180f8d00f5ea92557b97ee053"
     },
     {
       "path": "docs/architecture.md",
-      "size": 9956,
-      "sha256": "837c654565af53e81314b9b6028402d05f449c7816d561ef20b368b54bb43ccc"
+      "size": 9968,
+      "sha256": "82678e8a865372bf7c70ce4a2f06e247b8b497708da3a8b5b1a545cc88da3c6d"
     },
     {
       "path": "docs/build.en.md",
@@ -280,23 +280,23 @@
     },
     {
       "path": "docs/m1-boot-chain.en.md",
-      "size": 10897,
-      "sha256": "fe3293fb848040400f789cd0fe6e8c383f3c6b4adecce47318fca285a2bd6f84"
+      "size": 11045,
+      "sha256": "6ba31b7da992388e0e8212abebfc18a66f8c6305355ab04c23e0516edcf666bc"
     },
     {
       "path": "docs/m1-boot-chain.md",
-      "size": 10700,
-      "sha256": "dcdf05c55af0775f3a67cf29ba15ea50546c3ea5e4faa39bb1c3bd49bcad15b6"
+      "size": 10858,
+      "sha256": "2f9978b0a023419624b7459fc0e81b1e844b51ff989df95508b8e583b7f7d534"
     },
     {
       "path": "docs/m1-tracks-2026-11-09.en.md",
-      "size": 20579,
-      "sha256": "fd5a59d3dd25107a0279e79b6d6c1822d78b7921e6453bb51ddc8a3ddda63a97"
+      "size": 21798,
+      "sha256": "5c0914199ca9cfa145a014c24ec361a6cc6dea0813670c786cfc2b13436178a5"
     },
     {
       "path": "docs/m1-tracks-2026-11-09.md",
-      "size": 19891,
-      "sha256": "deebc01c103be4c36010d751e87890adce8cae5bc38cbb1033d5bb3d834bac64"
+      "size": 21096,
+      "sha256": "7fd62f9b3e69a7d5a237b990b32acd3d4c9dfce6ac3f3b911a1f1336093343d0"
     },
     {
       "path": "docs/validation.en.md",
@@ -434,6 +434,11 @@
       "sha256": "f1b58a1709b590ca18bf8b618ab80f7b90c7e7425f8b8814bfa10b76c645e7c6"
     },
     {
+      "path": "evidence/m1/tracks/e5-loader-candidates.txt",
+      "size": 1759,
+      "sha256": "adb5b6f0f495b7f12353e2777213a242039e9a6bd43b95c6ff6cf77a4046a003"
+    },
+    {
       "path": "evidence/m1/tracks/e5-run.log",
       "size": 22590,
       "sha256": "84db652b7e236f4c0d922995b90fa632422138d551b8975773544642e654afb9"
@@ -442,6 +447,11 @@
       "path": "evidence/m1/tracks/e6-e5-e4-layout.txt",
       "size": 2876,
       "sha256": "bb04307fadf47d81d5a6de56352cd5c7aceacf608ccd0065318edde550e3a4c5"
+    },
+    {
+      "path": "evidence/m1/tracks/e6-run.log",
+      "size": 16955,
+      "sha256": "a80b40ff667da8070658cfdcbc7be32af4d2795ed145fb7e9ebb78e962454369"
     },
     {
       "path": "evidence/m1/tracks/expeed-io-run.log",
@@ -500,13 +510,13 @@
     },
     {
       "path": "evidence/README.en.md",
-      "size": 3338,
-      "sha256": "eabc8a354fb2a6446b6ac9e0f6e17588b8884f0156e1374df584c42e0091e804"
+      "size": 3449,
+      "sha256": "c3085bf14f85ea9963054ed42350d3b59d65a9d3556f6aa9c1e4784b4209a0d1"
     },
     {
       "path": "evidence/README.md",
-      "size": 3081,
-      "sha256": "1192dd34cfb775f471994b3d954ba9110874bb3521274810a1d1aeb651dbd7c6"
+      "size": 3170,
+      "sha256": "10083affddae453f4a42959f9bc3dc7a47fe7724a4907a1c2ae824225664f4b0"
     },
     {
       "path": "LICENSE",
@@ -526,17 +536,17 @@
     {
       "path": "PRODUCT.en.md",
       "size": 7660,
-      "sha256": "ac8d42237387accc64cc195ffe2279e0afb25a9a209c5edd56dcc5570b17c0bd"
+      "sha256": "bb015fd68a232aaec28f0a6259add675b0b64dd14e23a8af6666ae0fd227dc5f"
     },
     {
       "path": "PRODUCT.md",
       "size": 7297,
-      "sha256": "82c74d9aaa04c589157c123aee9c79fe5aa94f8d5e0b88fab128807de7219900"
+      "sha256": "74d514edd47404089d2db72c4cb0498766b5826237b2273e865a3d976e9afff7"
     },
     {
       "path": "qemu/nikon-d750-lab.c",
-      "size": 67660,
-      "sha256": "f09492e86886cf71ac96a89fef8bc817411de09f51e51698b932ad92a3190b97"
+      "size": 70217,
+      "sha256": "79ab186f2dcf00b5fed1f0e8ea545ec46431feb980862920681aedac802ebace"
     },
     {
       "path": "qemu/nikon-d750-lab.h",
@@ -595,8 +605,8 @@
     },
     {
       "path": "tests/test_probe_and_session.py",
-      "size": 10359,
-      "sha256": "cda1db9e5db830ad531a24482b29c4acdb231d6b4730f6253c2ad5ba79aa7519"
+      "size": 10417,
+      "sha256": "e39a9c5e66d00b57d110de9dcd24d5c52bfaa349777d7ba7c8e61d8bb19c0a0b"
     },
     {
       "path": "tests/tmputil.py",
@@ -630,8 +640,8 @@
     },
     {
       "path": "tools/run.py",
-      "size": 24084,
-      "sha256": "486bbb34d346e94e9ba4d339110e90dae6aaae5d15ea42a496d4b4a196c6538f"
+      "size": 24362,
+      "sha256": "1982110ee80fbb1a886d83af0b3b21e02eec869a38ee9d0d31c9d1af90256c22"
     },
     {
       "path": "tools/stub_trace.py",
@@ -644,5 +654,5 @@
       "sha256": "ec44063f065a82a52b63d0e97a1c1c2d0e0c61c170e70ddf460bc1039e61b967"
     }
   ],
-  "source_version": "v0.2.6"
+  "source_version": "v0.2.7"
 }

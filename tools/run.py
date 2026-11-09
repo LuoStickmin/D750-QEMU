@@ -228,6 +228,8 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += ",loader-copies=on"
     if args.io_stub:
         machine += ",io-stub=on"
+    if args.e6_prep:
+        machine += ",e6-prep=on"
     if args.strict:
         machine += ",strict=on"
     if args.lcd_base is not None:
@@ -379,6 +381,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--io-stub", action="store_true", default=False,
                         help="map the A2/AD/AE/A340 register blocks as a "
                              "register file and report 0xAE00060C ready")
+    parser.add_argument("--e6-prep", action="store_true", default=False,
+                        help="D780 prep: identity-section the page table at "
+                             "payload+0x10000 and map boot SRAM/stacks")
     parser.add_argument("--trace", action="append", default=[],
                         help="extra -d item, e.g. --trace in_asm (repeatable)")
     parser.add_argument("--strict", action="store_true",

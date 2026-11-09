@@ -78,6 +78,8 @@ typedef struct NikonD750MachineState {
     MemoryRegion flash;         /* RAM-backed, read/write in this prototype */
     MemoryRegion auxram;        /* optional second RAM bank at 0x20000000  */
     MemoryRegion aux2;          /* optional handler RAM (E5: 0x40000000)  */
+    MemoryRegion e6sram;        /* E6 boot SRAM at 0x04000000              */
+    MemoryRegion e6stack;       /* E6 stacks at 0xC0000000                 */
     MemoryRegion probe;         /* catch-all diagnostic window             */
     MemoryRegion uart;          /* candidate byte-register serial block    */
 
@@ -101,6 +103,7 @@ typedef struct NikonD750MachineState {
     bool loader_copies;         /* apply the descriptor-table copy records */
     bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
     bool io_stub;               /* map A2/AD/AE/A340 register-block stubs  */
+    bool e6_prep;               /* patch the D780 page table + map stacks  */
     struct D750IoStub *io_blocks[4];
     uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
@@ -888,6 +891,20 @@ static void nikon_d750_set_io_stub(Object *obj, bool value, Error **errp)
     s->io_stub = value;
 }
 
+static bool nikon_d750_get_e6_prep(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return s->e6_prep;
+}
+
+static void nikon_d750_set_e6_prep(Object *obj, bool value, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    s->e6_prep = value;
+}
+
 static void nikon_d750_get_lcd_base(Object *obj, Visitor *v,
                                     const char *name, void *opaque,
                                     Error **errp)
@@ -1180,6 +1197,25 @@ static void d750_load_payload(NikonD750MachineState *s, const char *path,
         d750_apply_loader_copies(&data, &size);
     }
 
+    if (s->e6_prep && size >= 0x14000) {
+        int i;
+        uint32_t patched = 0;
+
+        /* D780 startup uses the table at payload+0x10000 (0x10030000);
+         * the image stores bare 1 MiB physical addresses there, so turn
+         * each into an identity section descriptor (AP=rw, C/B on). */
+        for (i = 0; i < 4096; i++) {
+            uint32_t w = ldl_le_p((uint8_t *)data + 0x10000 + i * 4);
+
+            if ((w & 3) == 0) {
+                stl_le_p((uint8_t *)data + 0x10000 + i * 4, w | 0x0C0E);
+                patched++;
+            }
+        }
+        info_report("nikon-d750: E6 page table patched at +0x10000: "
+                    "%" PRIu32 " sections", patched);
+    }
+
     if (!strcmp(s->boot, "stub") && s->thumb_fix &&
         size >= D750_BX_LITERAL_OFF + sizeof(uint32_t)) {
         uint32_t word = ldl_le_p(data + D750_BX_LITERAL_OFF);
@@ -1452,6 +1488,26 @@ static void nikon_d750_init(MachineState *machine)
         memory_region_add_subregion(sysmem, s->aux2_base, &s->aux2);
     }
 
+    /* D780 boot SRAM, high stacks and the 0x20022300 poll word. */
+    if (s->e6_prep) {
+        uint8_t ready[4];
+
+        memory_region_init_ram(&s->e6sram, NULL, "nikon-d750.e6sram",
+                               0x10000, &error_fatal);
+        memory_region_add_subregion(sysmem, 0x04000000, &s->e6sram);
+        memory_region_init_ram(&s->e6stack, NULL, "nikon-d750.e6stack",
+                               0x4000000, &error_fatal);
+        memory_region_add_subregion(sysmem, 0xC0000000, &s->e6stack);
+        if (!s->auxram_size) {
+            memory_region_init_ram(&s->auxram, NULL, "nikon-d750.e6ram",
+                                   4 * MiB, &error_fatal);
+            memory_region_add_subregion(sysmem, D750_AUXRAM_BASE,
+                                        &s->auxram);
+        }
+        stl_le_p(ready, 1);
+        rom_add_blob_fixed("d750.e6-ready", ready, sizeof(ready), 0x20022300);
+    }
+
     /* EXPEED 4 register-block stubs: A2/AD/AE/A340. */
     if (s->io_stub) {
         static const struct {
@@ -1618,6 +1674,7 @@ static void nikon_d750_instance_init(Object *obj)
     s->veneer_slot = 0;
     s->loader_copies = false;
     s->io_stub = false;
+    s->e6_prep = false;
     s->mmu_bringup = true;
     s->mmu_table = 0;
     s->auxram_size = 0;
@@ -1753,6 +1810,12 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
     object_class_property_set_description(oc, "io-stub",
         "Map the A2/AD/AE/A340 register blocks as a register file and report "
         "0xAE00060C as ready (diagnostic)");
+    object_class_property_add_bool(oc, "e6-prep",
+                                   nikon_d750_get_e6_prep,
+                                   nikon_d750_set_e6_prep);
+    object_class_property_set_description(oc, "e6-prep",
+        "D780 prep: turn the page table at payload+0x10000 into identity "
+        "sections and map boot SRAM 0x04000000 plus stacks at 0xC0000000");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,
