@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-09T10:18:35+08:00",
+  "generated": "2026-11-09T10:48:01+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -290,13 +290,13 @@
     },
     {
       "path": "docs/m1-tracks-2026-11-09.en.md",
-      "size": 12683,
-      "sha256": "1b2b5e62c12f65ee3118b82fda7642b2d7f331d1031648fb575d70f8c67566d1"
+      "size": 13746,
+      "sha256": "3c4cd2088d884440888b4c77bd3e91bdf78a5b612ab3521d8226ba733ee9ba96"
     },
     {
       "path": "docs/m1-tracks-2026-11-09.md",
-      "size": 12267,
-      "sha256": "f2fbe6a59c90b0ea6b44519eaf1f17c4bc47d16f3efee190d3875ac930f85f3d"
+      "size": 13276,
+      "sha256": "d9607be06efca70003cc9a5e1e39da110c9f7babf066b319e2e3ee68cbff4de3"
     },
     {
       "path": "docs/validation.en.md",
@@ -434,6 +434,11 @@
       "sha256": "8583ea2b0ad888c1b9473a60703865b48bbf3fe918712ca2bd9271730606b3b6"
     },
     {
+      "path": "evidence/m1/tracks/m0-entry-fullflash.log",
+      "size": 1877,
+      "sha256": "d5a2adbea15e002cec9b1c7b05b6e35485db5ddc40ea6bfce5e12bc0c71ba4e1"
+    },
+    {
       "path": "evidence/m1/tracks/mcore-boot.log",
       "size": 616,
       "sha256": "5e5bd7836947546e46964bda8de295a5cdc1613fa746ea98ed3e85ef7cbacef2"
@@ -454,14 +459,19 @@
       "sha256": "b5837b3cc25d3fe0eb4d961fecf960ca29170d70d1233de99e7675251f0982d8"
     },
     {
+      "path": "evidence/m1/tracks/veneer-scan.txt",
+      "size": 1092,
+      "sha256": "e5f39e6c505f612ecfbe6a9a3ca5e7c598c9b6494fb2754366b9bc9deb24def2"
+    },
+    {
       "path": "evidence/README.en.md",
-      "size": 3077,
-      "sha256": "b0987d2f6329be69c937576c146908655a85ec4ae52b377eb6adbf955ee6ac5d"
+      "size": 3186,
+      "sha256": "105781abcdff389e2da26d35cfff6d2de007d2da86ddbf6e3cf4358059ced3e5"
     },
     {
       "path": "evidence/README.md",
-      "size": 2817,
-      "sha256": "fc20cb9f9ebb2f560566f421844181e91b595e69d758fb8d9d7e024fa8454f01"
+      "size": 2936,
+      "sha256": "3154b72cb5f5d1fa6613bbe96355f7a5c06510502aad043afec11227973e3df0"
     },
     {
       "path": "LICENSE",
