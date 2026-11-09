@@ -48,6 +48,7 @@
 #include "hw/core/qdev-properties.h"
 #include "hw/core/sysbus.h"
 #include "hw/cpu/a9mpcore.h"
+#include "hw/intc/arm_gic.h"
 #include "qom/object.h"
 #include "system/cpus.h"
 #include "system/memory.h"
@@ -1437,7 +1438,8 @@ static void nikon_d750_init(MachineState *machine)
                      "up to 64 MiB");
         exit(1);
     }
-    if (s->aux2_size > 64 * MiB || (s->aux2_size & 0xFFFF) || !s->aux2_base) {
+    if ((s->aux2_size && !s->aux2_base) || s->aux2_size > 64 * MiB ||
+        (s->aux2_size & 0xFFFF)) {
         error_report("nikon-d750: aux2-base and a 64 KiB-multiple aux2-size "
                      "(up to 64 MiB) are required together");
         exit(1);
@@ -1506,6 +1508,7 @@ static void nikon_d750_init(MachineState *machine)
         }
         stl_le_p(ready, 1);
         rom_add_blob_fixed("d750.e6-ready", ready, sizeof(ready), 0x20022300);
+        rom_add_blob_fixed("d750.e6-ready2", ready, sizeof(ready), 0x20070008);
     }
 
     /* EXPEED 4 register-block stubs: A2/AD/AE/A340. */
@@ -1564,24 +1567,45 @@ static void nikon_d750_init(MachineState *machine)
         qdev_realize(DEVICE(cpuobj), NULL, &error_fatal);
     }
 
-    /* Cortex-A9 MPCore private block (GIC + timers + watchdog). */
-    mpcore = qdev_new(TYPE_A9MPCORE_PRIV);
-    qdev_prop_set_uint32(mpcore, "num-cpu", machine->smp.cpus);
-    qdev_prop_set_uint32(mpcore, "num-irq", D750_GIC_NUM_IRQ);
-    busdev = SYS_BUS_DEVICE(mpcore);
-    sysbus_realize_and_unref(busdev, &error_fatal);
-    sysbus_mmio_map(busdev, 0, s->mpcore_base);
-    for (i = 0; i < machine->smp.cpus; i++) {
-        DeviceState *cpudev = DEVICE(qemu_get_cpu(i));
+    /* Cortex-A9 MPCore private block (GIC + timers + watchdog).  A non-A9
+     * CPU (D780/E6 uses Cortex-A15-class cores with UDIV) gets a generic
+     * GIC at the same distributor/CPU-interface offsets instead. */
+    if (!strcmp(machine->cpu_type, ARM_CPU_TYPE_NAME("cortex-a9"))) {
+        mpcore = qdev_new(TYPE_A9MPCORE_PRIV);
+        qdev_prop_set_uint32(mpcore, "num-cpu", machine->smp.cpus);
+        qdev_prop_set_uint32(mpcore, "num-irq", D750_GIC_NUM_IRQ);
+        busdev = SYS_BUS_DEVICE(mpcore);
+        sysbus_realize_and_unref(busdev, &error_fatal);
+        sysbus_mmio_map(busdev, 0, s->mpcore_base);
+        for (i = 0; i < machine->smp.cpus; i++) {
+            DeviceState *cpudev = DEVICE(qemu_get_cpu(i));
 
-        sysbus_connect_irq(busdev, i,
-                           qdev_get_gpio_in(cpudev, D750_CPU_IRQ));
-        sysbus_connect_irq(busdev, i + machine->smp.cpus,
-                           qdev_get_gpio_in(cpudev, D750_CPU_FIQ));
-        sysbus_connect_irq(busdev, i + 2 * machine->smp.cpus,
-                           qdev_get_gpio_in(cpudev, D750_CPU_VIRQ));
-        sysbus_connect_irq(busdev, i + 3 * machine->smp.cpus,
-                           qdev_get_gpio_in(cpudev, D750_CPU_VFIQ));
+            sysbus_connect_irq(busdev, i,
+                               qdev_get_gpio_in(cpudev, D750_CPU_IRQ));
+            sysbus_connect_irq(busdev, i + machine->smp.cpus,
+                               qdev_get_gpio_in(cpudev, D750_CPU_FIQ));
+            sysbus_connect_irq(busdev, i + 2 * machine->smp.cpus,
+                               qdev_get_gpio_in(cpudev, D750_CPU_VIRQ));
+            sysbus_connect_irq(busdev, i + 3 * machine->smp.cpus,
+                               qdev_get_gpio_in(cpudev, D750_CPU_VFIQ));
+        }
+    } else {
+        DeviceState *gic = qdev_new(TYPE_ARM_GIC);
+
+        qdev_prop_set_uint32(gic, "num-cpu", machine->smp.cpus);
+        qdev_prop_set_uint32(gic, "num-irq", D750_GIC_NUM_IRQ);
+        busdev = SYS_BUS_DEVICE(gic);
+        sysbus_realize_and_unref(busdev, &error_fatal);
+        sysbus_mmio_map(busdev, 0, s->mpcore_base + 0x1000);
+        sysbus_mmio_map(busdev, 1, s->mpcore_base + 0x2000);
+        for (i = 0; i < machine->smp.cpus; i++) {
+            DeviceState *cpudev = DEVICE(qemu_get_cpu(i));
+
+            sysbus_connect_irq(busdev, i,
+                               qdev_get_gpio_in(cpudev, D750_CPU_IRQ));
+            sysbus_connect_irq(busdev, i + machine->smp.cpus,
+                               qdev_get_gpio_in(cpudev, D750_CPU_FIQ));
+        }
     }
 
     /* Candidate serial block. */
@@ -1693,6 +1717,8 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
     MachineClass *mc = MACHINE_CLASS(oc);
     static const char *const valid_cpu_types[] = {
         ARM_CPU_TYPE_NAME("cortex-a9"),
+        ARM_CPU_TYPE_NAME("cortex-a7"),
+        ARM_CPU_TYPE_NAME("cortex-a15"),
         NULL
     };
 

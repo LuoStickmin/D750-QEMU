@@ -11,10 +11,10 @@ Nikon `nikon-d750` overlay 的已构建 QEMU 二进制。
 | 项目 | 值 |
 | --- | --- |
 | QEMU 版本 | 11.1.0 |
-| 发布版本 | v0.2.7（M1 + `flash-size`/`aux-ram-size`/`mmu-table`/`vector-fix`/`veneer-slot`/`loader-copies`） |
+| 发布版本 | v0.2.8（M1 + `flash-size`/`aux-ram-size`/`mmu-table`/`vector-fix`/`veneer-slot`/`loader-copies`） |
 | 平台 | Linux x86-64（WSL2 Ubuntu 26.04） |
-| 大小 | 100,651,184 字节 |
-| SHA-256 | `c92876f841a3476fed059514aa2198974bba2a590a745ef51bb2f30cfc0a74dd` |
+| 大小 | 100,785,112 字节 |
+| SHA-256 | `eb3083aa02f73e530489c34d178fed0d894f60dfbdf5a4fd90bed13393d420b0` |
 | 许可 | GPLv2；见同目录 `COPYING` |
 
 ## 获取与运行

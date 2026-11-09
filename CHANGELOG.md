@@ -1,5 +1,40 @@
 # Changelog
 
+## v0.2.8 — 2026-11-10
+
+E6（D780）A15 路径与默认运行修复；发布新二进制。
+
+### 发行
+
+- Linux x86-64 二进制：100,785,112 字节，SHA-256
+  `eb3083aa02f73e530489c34d178fed0d894f60dfbdf5a4fd90bed13393d420b0`
+  （包含 `nikon-d750` 与 `nikon-d780` 两个机器）；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+
+### 修复
+
+- `aux2-base`/`aux2-size` 的校验不再在两者都为 0（默认）时误报
+  “required together”，默认机器可以正常启动。
+
+### 机器
+
+- 允许 `cortex-a7`/`cortex-a15`；非 A9 CPU 使用通用 GIC
+  （`0xE0001000` distributor、`0xE0002000` CPU interface）。
+- `e6-prep` 增加 `0x20070008 = 1`（bit 1）的 ready word。
+
+### E6 实跑
+
+- D780 `0x10125EA0` 有 `udiv`，A9 会 undef；换 `cortex-a15` 后
+  **0 undefined、2 次 SVC**；
+- 进入 `0x04266000` 定时器块（`0x02DC6C00` = 48 MHz），
+  当前在 `0x1011C000` 附近循环。
+
+### 新仓库
+
+- 独立的 **D780-QEMU** 已创建：
+  <https://github.com/LuoStickmin/D780-QEMU>
+  （`nikon-d780` 机器、E6 状态文档与运行工具；不含固件）。
+
 ## v0.2.7 — 2026-11-10
 
 D780（E6）实跑准备与首个真实外设路径；发布新二进制。
