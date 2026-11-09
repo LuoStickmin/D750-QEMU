@@ -173,9 +173,10 @@ discipline are inherited.
 - `d750_halt_read()`: entry return point; the optional LCD dump is also triggered here.
 - `d750_halt_state_is_clean()`: checks CPSR mode, LR and SP to tell a real return from a fault.
 - `d750_lcd_dump()`: guest RAM → PPM.
-- Machine properties: `payload`, `flash`, `entry`, `boot-mode`, `a1010-base`,
-  `thumb-fix`, `mmu-bringup`, `mmu-table`, `flash-size`, `aux-ram-size`,
-  `vector-fix`, `veneer-slot`, `loader-copies`, `mpcore-base`, `strict`, `lcd-*`.
+- Machine properties: `payload`, `flash`, `entry`, `boot-mode`, `payload-base`,
+  `a1010-base`, `thumb-fix`, `mmu-bringup`, `mmu-table`, `flash-size`,
+  `aux-ram-size`, `vector-fix`, `veneer-slot`, `loader-copies`, `mpcore-base`,
+  `strict`, `lcd-*`.
 - Log prefixes: `d750-probe:` / `d750-strict:` / `d750-uart:` /
   `d750-a1010-io:`; `run.py` parses by prefix.
 

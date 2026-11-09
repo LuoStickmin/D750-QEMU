@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.2.4 — 2026-11-09
+
+Nikon-Patch IDA 布局给出真实装入基址；新二进制作为 Release v0.2.4 发布。
+
+### 发行
+
+- Linux x86-64 二进制：100,633,336 字节，SHA-256
+  `90fbeddb79e67bbb849434b5b4bb76169f48028ce07da3036cfec7400027daef`；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+
+### 机器
+
+- 新增 `payload-base=<addr>`：b1010 装入基址，默认 `0x90000000`；
+  Nikon-Patch 的 `D750_Setup_RAM_1.10.idc` 使用 **`0x90020000`**。
+  `tools/run.py` 同步 `--payload-base`。
+
+### 发现
+
+- Nikon-Patch / NikonHacker 仓库**没有 flash dump 或 boot ROM**；
+  `davidgfb/NikonHacker` 有 D3200/D3300 的官方加密固件（非 dump）。
+- `D750_Setup_RAM_1.10.idc`/`1.02.idc` 给出了真实加载布局：
+  ROM 基址 `0x90020000`、reset `0x9027D524`、flash 来自文件内嵌 overlay、
+  另有 16 KiB 拷到 `0x10500000`；此前 `0x90000000` 的装法整体错位 `0x20000`。
+- 用 `payload-base=0x90020000` + 真实 reset `0x9027D52C` 重跑：0 异常，
+  初始化 **`0xA3400000`** 外设块（通道每 `0x1000`、首寄存器 `+0x400`），
+  然后轮询 `0xAE00060C` 8048 次而挂住。
+
 ## v0.2.3 — 2026-11-09
 
 反推 loader 段表并加入可复现的搬运开关；新二进制作为 Release v0.2.3 发布。

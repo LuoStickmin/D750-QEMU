@@ -32,6 +32,7 @@ to decide what the A-core's `0x1002CB8C` actually belongs to.
 | Option | Default | Purpose |
 |---|---|---|
 | `boot-mode=stub\|entry` | `stub` | `stub`: enter the b1010 boot chain; `entry`: assisted M0 entry |
+| `payload-base=<addr>` | `0x90000000` | where b1010 is loaded; the Nikon-Patch IDA scripts use **`0x90020000`** (real reset `0x9027D524`) |
 | `a1010-base=<addr>` | `0x10018000` | where the a1010 image is loaded inside the flash window |
 | `thumb-fix=on\|off` | `on` | patch the **in-memory copy** of the `0x25D7F8` literal from `0x1002CB8C` to `0x1002CB8D`; the file is never modified |
 | `mmu-bringup=on\|off` | `on` | emulate the missing boot ROM: install a 4 GiB identity table, write DACR/TTBR0/TTBCR, and put the table base into the config slot |

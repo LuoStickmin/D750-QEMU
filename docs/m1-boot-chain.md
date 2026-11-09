@@ -30,6 +30,7 @@ Thumb 位修正）。本文只记录**在 QEMU 里真实跑出来**的结果，�
 | 选项 | 默认 | 作用 |
 |---|---|---|
 | `boot-mode=stub\|entry` | `stub` | `stub`：从 b1010 启动桩进链；`entry`：M0 的辅助入口 |
+| `payload-base=<addr>` | `0x90000000` | b1010 的装入基址；Nikon-Patch 的 IDA 脚本用 **`0x90020000`**（真实 reset `0x9027D524`） |
 | `a1010-base=<addr>` | `0x10018000` | a1010 镜像在 flash 窗口内的装入地址 |
 | `thumb-fix=on\|off` | `on` | 在**内存副本**里把 `0x25D7F8` 的字面量 `0x1002CB8C` 改成 `0x1002CB8D`，不改固件文件 |
 | `mmu-bringup=on\|off` | `on` | 模拟缺失的 boot ROM：铺 4 GiB identity 页表、写 DACR/TTBR0/TTBCR，再把 config 槽填成页表基址 |

@@ -85,6 +85,7 @@ typedef struct NikonD750MachineState {
     char *flash_path;
     char *boot;                 /* "entry" (M0) or "stub" (M1)             */
     uint64_t entry;             /* UINT64_MAX means "use the inferred one" */
+    uint64_t payload_base;      /* where the payload image is loaded        */
     uint64_t a1010_base;        /* where the a1010 module is mapped        */
     uint32_t a1010_size;        /* bytes actually loaded, 0 = none         */
     uint64_t flash_size;        /* flash window size (default 8 MiB)       */
@@ -523,6 +524,29 @@ static void nikon_d750_set_entry(Object *obj, Visitor *v, const char *name,
         return;
     }
     s->entry = value;
+}
+
+static void nikon_d750_get_payload_base(Object *obj, Visitor *v,
+                                        const char *name, void *opaque,
+                                        Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value = s->payload_base;
+
+    visit_type_uint64(v, name, &value, errp);
+}
+
+static void nikon_d750_set_payload_base(Object *obj, Visitor *v,
+                                        const char *name, void *opaque,
+                                        Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value;
+
+    if (!visit_type_uint64(v, name, &value, errp)) {
+        return;
+    }
+    s->payload_base = value;
 }
 
 static bool nikon_d750_get_strict(Object *obj, Error **errp)
@@ -1262,6 +1286,12 @@ static void nikon_d750_init(MachineState *machine)
                      "up to 64 MiB");
         exit(1);
     }
+    if (s->payload_base < D750_RAM_BASE ||
+        s->payload_base >= D750_RAM_BASE + machine->ram_size) {
+        error_report("nikon-d750: payload-base 0x%08" PRIx64
+                     " is outside the RAM window", s->payload_base);
+        exit(1);
+    }
 
     /* Main DRAM window. */
     memory_region_add_subregion(sysmem, D750_RAM_BASE, machine->ram);
@@ -1348,7 +1378,8 @@ static void nikon_d750_init(MachineState *machine)
     }
 
     /* Payload goes in last, after the RAM window exists. */
-    d750_load_payload(s, payload, D750_RAM_BASE, machine->ram_size);
+    d750_load_payload(s, payload, s->payload_base, machine->ram_size
+                      - (s->payload_base - D750_RAM_BASE));
 
     entry = s->entry == UINT64_MAX ? D750_RAM_BASE + D750_ENTRY_OFFSET
                                    : s->entry;
@@ -1397,7 +1428,7 @@ static void nikon_d750_init(MachineState *machine)
                 ", a1010=%s @ 0x%08" PRIx64
                 ", start=0x%08" PRIx64 ", ram=%" PRIu64 " MiB, cpus=%u"
                 "%s%s%s%s%s%s%s%s",
-                s->boot, payload, (uint64_t)D750_RAM_BASE,
+                s->boot, payload, s->payload_base,
                 flash ? flash : "(none)", s->a1010_base,
                 start,
                 machine->ram_size / MiB, machine->smp.cpus,
@@ -1416,6 +1447,7 @@ static void nikon_d750_instance_init(Object *obj)
     NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
 
     s->entry = UINT64_MAX;
+    s->payload_base = D750_RAM_BASE;
     s->boot = g_strdup("stub");
     s->a1010_base = D750_A1010_BASE;
     s->flash_size = D750_FLASH_SIZE;
@@ -1466,6 +1498,12 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
                               NULL, NULL);
     object_class_property_set_description(oc, "entry",
         "Initial PC; default is the inferred payload entry (0x9027D52C)");
+    object_class_property_add(oc, "payload-base", "uint64",
+                              nikon_d750_get_payload_base,
+                              nikon_d750_set_payload_base, NULL, NULL);
+    object_class_property_set_description(oc, "payload-base",
+        "Address the b1010 image is loaded at; the NikonHacker IDA setup "
+        "scripts use 0x90020000 (default 0x90000000)");
     object_class_property_add_bool(oc, "strict",
                                    nikon_d750_get_strict,
                                    nikon_d750_set_strict);

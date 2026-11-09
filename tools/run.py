@@ -203,6 +203,8 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += f",entry=0x{args.entry:x}"
     if args.a1010_base is not None:
         machine += f",a1010-base=0x{args.a1010_base:x}"
+    if args.payload_base is not None:
+        machine += f",payload-base=0x{args.payload_base:x}"
     if not args.thumb_fix:
         machine += ",thumb-fix=off"
     if not args.mmu_bringup:
@@ -327,6 +329,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         default=DEFAULT_A1010_BASE,
                         help="address the a1010 module is mapped at "
                              f"(default 0x{DEFAULT_A1010_BASE:x})")
+    parser.add_argument("--payload-base", type=lambda s: int(s, 0),
+                        help="address the b1010 image is loaded at; the "
+                             "NikonHacker IDA scripts use 0x90020000")
     parser.add_argument("--thumb-fix", dest="thumb_fix", action="store_true",
                         default=True,
                         help="patch the bx literal to 0x1002CB8D (default)")

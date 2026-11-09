@@ -1,0 +1,60 @@
+Nikon-Patch / NikonHacker D750 IDA layout (source: simeonpilgrim/nikon-firmware-tools)
+=====================================================================================
+
+Files:
+  IDA_files/D750/D750_Setup_RAM_1.10.idc
+  IDA_files/D750/D750_Setup_RAM_1.02.idc
+  IDA_files/D750/D750_Known_func_1.10.idc
+  IDA_files/D750/D750_Services_1.10.idc
+
+1.10 layout (b1010_110d.bin)
+----------------------------
+IDA segment "ROM":   0x90020000 .. 0x913B3062
+IDA segment "RAM0":  0x10000000 .. 0x11FFFFFF  (flash window modelled as RAM)
+
+load_file_chunk(filename, 0x90020000, 0x90020000, 0x90020000, 0x0129EC08);
+load_file_chunk(filename, 0x90020000, 0x912BEC08, 0x10000000, 0x30344);
+load_file_chunk(filename, 0x90020000, 0x912EEF4C, 0x10030344, 0xF95A);
+load_file_chunk(filename, 0x90020000, 0x9135FC34, 0x100A1014, 0x4);
+load_file_chunk(filename, 0x90020000, 0x9135FC40, 0x100A1400, 0x5340C);
+load_file_chunk(filename, 0x90020000, 0x90280000, 0x10500000, 0x4000);
+
+  -> main ROM image is loaded at 0x90020000 (NOT 0x90000000)
+  -> file offset = address - 0x90020000
+  -> the flash image at 0x10000000 is built from an overlay stored at
+     file 0x12BEC08 .. ; there is also a 16 KiB block copied to 0x10500000
+     from file 0x280000.
+
+1.02 layout (b1010_102.bin)
+---------------------------
+load_file_chunk(filename, 0x90020000, 0x90020000, 0x90020000, 0x012967E0);
+load_file_chunk(filename, 0x90020000, 0x912B67E0, 0x10000000, 0x30344);
+load_file_chunk(filename, 0x90020000, 0x912E6B24, 0x10030344, 0xF94A);
+load_file_chunk(filename, 0x90020000, 0x91357800, 0x100A1400, 0x532CC);
+
+  -> same structure: ROM at 0x90020000, overlay at main_size + 0x20000.
+
+Our 1.15 image (b1010_115a.bin, 0x1362060 bytes)
+------------------------------------------------
+Vector table at file 0 (address 0x90020000):
+  0x00 ldr pc,[pc,#0x18] -> 0x9027D524   (reset)
+  0x04                   -> 0x90291C80   (undefined)
+  0x08                   -> 0x90291D30   (SVC)
+  0x0c                   -> 0x90291DA8   (prefetch abort)
+  0x10                   -> 0x90291DB8   (data abort)
+  0x14 e320f000          (NOP, reserved)
+  0x18 ea00000d          (IRQ branch)
+  0x1c                   -> 0x90291DEC   (FIQ)
+
+Consequence: the ARM code we previously ran at 0x9025D700 (file 0x25D700)
+is really at 0x9027D700.  The true 0x9025D700 (file 0x23D700) is Thumb code.
+The real entry is the reset target 0x9027D524.
+
+Run with payload-base=0x90020000, entry 0x9027D52C:
+  - executes the real reset handler (0x9027D52C -> 0x9027D8E0 -> ...);
+  - initialises a peripheral block at 0xA3400000 (channels at +0x1000 steps,
+    first register +0x400, values 0x40,0x75,0xE3,0x90,0xA7,0xFF,...);
+  - touches 0xA2000020, 0xAE000208, 0xAE000608;
+  - then polls 0xAE00060C 8048 times (our model returns 0, so it hangs).
+
+Evidence: ida-layout-run.log (m1/tracks).
