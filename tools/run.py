@@ -217,6 +217,8 @@ def build_command(qemu: Path, args: argparse.Namespace, run_dir: Path,
         machine += f",mmu-table=0x{args.mmu_table:x}"
     if args.vector_fix:
         machine += ",vector-fix=on"
+    if args.veneer_slot is not None:
+        machine += f",veneer-slot=0x{args.veneer_slot:x}"
     if args.strict:
         machine += ",strict=on"
     if args.lcd_base is not None:
@@ -351,6 +353,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                              "config slot 0x100F48C0 to the flash image")
     parser.add_argument("--vector-fix", action="store_true", default=False,
                         help="install a minimal ARM vector table at 0x90020000")
+    parser.add_argument("--veneer-slot", type=lambda s: int(s, 0),
+                        help="payload offset of one ldr-pc veneer target to "
+                             "mark as Thumb (e.g. 0x14e494)")
     parser.add_argument("--trace", action="append", default=[],
                         help="extra -d item, e.g. --trace in_asm (repeatable)")
     parser.add_argument("--strict", action="store_true",

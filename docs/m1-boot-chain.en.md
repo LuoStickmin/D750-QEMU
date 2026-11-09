@@ -38,7 +38,8 @@ to decide what the A-core's `0x1002CB8C` actually belongs to.
 | `mmu-table=<addr>` | `0` (auto) | place the identity table at this address and **do not override** the config slot (use the image value); the 2026-11-09 check used it to verify `0x201E2200` is a valid TTBR0 |
 | `flash-size=<size>` | 8 MiB | flash window size (max 64 MiB), so the full 20 MiB b1010 can be mapped |
 | `aux-ram-size=<size>` | `0` | add a RAM bank at `0x20000000` (e.g. `4M`) |
-| `vector-fix=on\|off` | `off` | install a minimal ARM vector table at `0x90020000` (SVC/IRQ/FIQ return, faults spin) |
+| `vector-fix=on\|off` | `off` | install a minimal ARM vector table at `0x90020000` (SVC returns with the Thumb bit restored, IRQ/FIQ return, faults spin) |
+| `veneer-slot=<offset>` | `0` | mark one `ldr pc,[pc,#-4]` veneer target as Thumb (+1); applies to both payload and flash |
 | `mpcore-base=<addr>` | `0xE000E000` | A9 MPCore (GIC/timers/watchdog) base; set `0x1E000000` to reproduce the "unmapped" observation |
 
 In `boot-mode=stub` the initial PC is the internal trampoline `0x1000` (not

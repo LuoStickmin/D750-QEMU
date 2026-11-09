@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.2.2 — 2026-11-09
+
+继续推进 SVC 返回与 veneer 重定位；新二进制作为 GitHub Release v0.2.2 发布。
+
+### 发行
+
+- Linux x86-64 二进制：100,628,416 字节，SHA-256
+  `5f5b5a4d9db2063580e6cd69aba0dd903814565fa944521e8c3192c5f4584875`；
+  `MANIFEST.json.binary` 与 `binary/qemu-system-arm.sha256` 已同步。
+
+### 机器
+
+- `vector-fix` 的 SVC handler 现在会恢复 SPSR.T（`mrs/orr/msr/movs`），
+  使 `swi` 返回后按 Thumb 继续，而不是把 Thumb 字节当 ARM 执行。
+- flash 镜像改为与 payload 共用补丁管线（直接读入宿主缓冲后注册 ROM blob），
+  因此 `veneer-slot` 对 payload 和 flash 同时生效。
+- 新增 `veneer-slot=<payload offset>`：把某个 `ldr pc,[pc,#-4]` veneer 的
+  目标标记为 Thumb（+1）；`tools/run.py` 同步 `--veneer-slot`。
+
+### 发现
+
+- `0x80000000` 不是设备 ID，而是 `{pointer, count}` 工作队列槽；
+  `0x10066490` 经 ARM `swi #0xE8BD` veneer 把它交给内核处理。
+- b1010 flash 镜像里的 veneer 表**未重定位**（目标缺 Thumb 位）；用
+  `veneer-slot=0x14e494` 修正后，完整 20 MiB b1010 + TTBR0 (`0x201E0000`)
+  + `vector-fix` 的运行达到 **0 undefined、1 SVC、0 abort**，并继续深入约
+  130 万条 TB，最终仍因 `LR=0` 在低内存滑到 halt。
+- 结论：下一步的关键是 loader 的重定位表/SVC 服务语义，而不是继续加设备。
+
 ## v0.2.1 — 2026-11-09
 
 三条无输入验证 + 后续 TTBR0 实验；新二进制作为 GitHub Release v0.2.1 发布。

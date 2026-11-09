@@ -192,7 +192,7 @@ class CommandTests(unittest.TestCase):
         args = run_mod.parse_args([
             "--payload", "b1010.bin", "--flash-size", "20M",
             "--aux-ram-size", "4M", "--mmu-table", "0x201e0000",
-            "--vector-fix",
+            "--vector-fix", "--veneer-slot", "0x14e494",
         ])
         cmd = run_mod.build_command(Path("qemu-system-arm"), args,
                                     Path("run"), None)
@@ -201,6 +201,7 @@ class CommandTests(unittest.TestCase):
         self.assertIn("aux-ram-size=0x400000", machine)
         self.assertIn("mmu-table=0x201e0000", machine)
         self.assertIn("vector-fix=on", machine)
+        self.assertIn("veneer-slot=0x14e494", machine)
 
 
 STOCK_QEMU = Path(r"C:\Program Files\qemu\qemu-system-arm.exe")

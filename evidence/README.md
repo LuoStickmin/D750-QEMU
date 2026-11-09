@@ -10,7 +10,7 @@
 | `m0-gdb/` | 同上，含 RSP 快照 | `entry_pc=0x9027d52c`、`entry_ok=true`、CPSR `0x400001d3`；guest 自行退出后 RSP 断开 |
 | `lcd/` | 同上 + `lcd.ppm` | 8×8 ARGB8888 从 `0x92000000` dump；证明扫描/dump 链路 |
 | `m1/` | `command.json`、`session.json`、`qemu.log`、`uart.log` + `gdb-entry.json` | M1：桩 → `0x1002CB8C`（Thumb，参数 0/0/2/0/1）；第一条 MMIO `0xe000e180←0x00100000`；随后在 `0x100240AC` 撞 M-profile 指令 |
-| `m1/tracks/` | `layout-matrix.md`、`b1010-flash-svc.log`、`ttbr0-run.log`、`mcore-boot.log`/`.md` | 12 种布局的对比；b1010-在-flash 轨迹；完整 20 MiB + `mmu-table=0x201E0000` + `vector-fix` 的 TTBR0 验证（0 undefined、1 SVC、0 abort，`0x80000000/4` 探测）；a1010 在 Cortex-M3 上零异常启动并卡在 `0x00300F40` |
+| `m1/tracks/` | `layout-matrix.md`、`b1010-flash-svc.log`、`ttbr0-run.log`、`veneer-reloc-run.log`、`mcore-boot.log`/`.md` | 12 种布局；b1010-在-flash 轨迹；TTBR0 验证；`veneer-slot=0x14e494` 重定位后 0 undefined、1 SVC、0 abort；a1010 在 Cortex-M3 上零异常启动并卡在 `0x00300F40` |
 | `boot-scan.txt` | 10 个候选入口的扫描输出 | 全部 0 MMIO；`0x9025d700` 2 s 未返回；下一阶段不在 `b1010` 内 |
 
 ## 怎么读

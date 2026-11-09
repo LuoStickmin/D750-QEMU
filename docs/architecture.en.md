@@ -175,7 +175,7 @@ discipline are inherited.
 - `d750_lcd_dump()`: guest RAM → PPM.
 - Machine properties: `payload`, `flash`, `entry`, `boot-mode`, `a1010-base`,
   `thumb-fix`, `mmu-bringup`, `mmu-table`, `flash-size`, `aux-ram-size`,
-  `vector-fix`, `mpcore-base`, `strict`, `lcd-*`.
+  `vector-fix`, `veneer-slot`, `mpcore-base`, `strict`, `lcd-*`.
 - Log prefixes: `d750-probe:` / `d750-strict:` / `d750-uart:` /
   `d750-a1010-io:`; `run.py` parses by prefix.
 

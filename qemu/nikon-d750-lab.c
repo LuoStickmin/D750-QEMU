@@ -92,6 +92,7 @@ typedef struct NikonD750MachineState {
     uint64_t mmu_table;         /* explicit identity-table address (0=auto)*/
     bool thumb_fix;             /* patch the bx literal to Thumb state     */
     bool vector_fix;            /* install a minimal ARM vector table      */
+    uint64_t veneer_slot;       /* payload offset of one veneer to patch   */
     bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
     uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
@@ -709,6 +710,29 @@ static void nikon_d750_set_vector_fix(Object *obj, bool value, Error **errp)
     s->vector_fix = value;
 }
 
+static void nikon_d750_get_veneer_slot(Object *obj, Visitor *v,
+                                       const char *name, void *opaque,
+                                       Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value = s->veneer_slot;
+
+    visit_type_uint64(v, name, &value, errp);
+}
+
+static void nikon_d750_set_veneer_slot(Object *obj, Visitor *v,
+                                       const char *name, void *opaque,
+                                       Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+    uint64_t value;
+
+    if (!visit_type_uint64(v, name, &value, errp)) {
+        return;
+    }
+    s->veneer_slot = value;
+}
+
 static void nikon_d750_get_lcd_base(Object *obj, Visitor *v,
                                     const char *name, void *opaque,
                                     Error **errp)
@@ -848,10 +872,10 @@ static void d750_apply_vector_fix(uint8_t *data, gsize size)
     static const uint32_t handlers[8] = {
         0xEAFFFFFE,             /* reset:        b .                    */
         0xEAFFFFFE,             /* undefined:    b .                    */
-        0xE1B0F00E,             /* SVC:          movs pc, lr            */
-        0xEAFFFFFE,             /* prefetch:     b .                    */
-        0xEAFFFFFE,             /* data abort:   b .                    */
-        0xEAFFFFFE,             /* reserved:     b .                    */
+        0xE14F1000,             /* SVC:          mrs r1, spsr           */
+        0xE3811020,             /*               orr r1, r1, #0x20      */
+        0xE16FF001,             /*               msr spsr_cxsf, r1      */
+        0xE1B0F00E,             /*               movs pc, lr            */
         0xE25EF004,             /* IRQ:          subs pc, lr, #4        */
         0xE25EF004,             /* FIQ:          subs pc, lr, #4        */
     };
@@ -869,6 +893,40 @@ static void d750_apply_vector_fix(uint8_t *data, gsize size)
     memset(data + D750_VECTOR_OFF + 0x20, 0, 0x20);
     info_report("nikon-d750: minimal ARM vector table at 0x%08" PRIx64,
                 (uint64_t)(D750_RAM_BASE + D750_VECTOR_OFF));
+}
+
+/*
+ * The b1010 flash image contains veneer tables of the form
+ *     04 f0 1f e5   ldr pc, [pc, #-4]
+ *     <target>
+ * where <target> is a flash address.  On real hardware the loader relocates
+ * these slots and sets bit0 for Thumb functions; raw image targets are even,
+ * so QEMU enters ARM state and executes Thumb bytes as garbage.  A blanket
+ * scan is too broad (it also hits data and ARM entries), so the diagnostic
+ * option takes one explicit file offset and sets bit0 there.
+ */
+static void d750_apply_veneer_slot(NikonD750MachineState *s, uint8_t *data,
+                                   gsize size)
+{
+    uint64_t off = s->veneer_slot;
+    uint32_t target;
+
+    if (off + 4 > size) {
+        warn_report("nikon-d750: veneer-slot 0x%08" PRIx64
+                    " is outside the payload", off);
+        return;
+    }
+    target = ldl_le_p(data + off);
+    if (target < D750_FLASH_BASE || target >= D750_FLASH_BASE + size ||
+        (target & 1)) {
+        warn_report("nikon-d750: veneer-slot 0x%08" PRIx64 " is 0x%08"
+                    PRIx32 " (not an even flash pointer); skipped",
+                    off, target);
+        return;
+    }
+    stl_le_p(data + off, target | 1);
+    info_report("nikon-d750: veneer slot 0x%08" PRIx64 ": 0x%08" PRIx32
+                " -> 0x%08" PRIx32, off, target, target | 1);
 }
 
 /*
@@ -925,12 +983,49 @@ static void d750_load_payload(NikonD750MachineState *s, const char *path,
         }
     }
 
+    if (s->veneer_slot) {
+        d750_apply_veneer_slot(s, (uint8_t *)data, size);
+    }
     if (s->vector_fix) {
         d750_apply_vector_fix((uint8_t *)data, size);
     }
 
     rom_add_blob_fixed(path, data, size, addr);
     g_free(data);
+}
+
+/*
+ * Load the flash-window image through the same patch pipeline as the payload
+ * (currently `veneer-slot`), so flash-resident code sees the same relocation.
+ * Registers a ROM blob, like load_image_targphys did, and records the size for
+ * the `d750-a1010-io` range check.
+ */
+static void d750_load_flash(NikonD750MachineState *s, const char *path,
+                            uint64_t addr, uint64_t max_size)
+{
+    gchar *data = NULL;
+    gsize size = 0;
+    GError *err = NULL;
+
+    if (!g_file_get_contents(path, &data, &size, &err)) {
+        error_report("nikon-d750: cannot load flash image '%s': %s", path,
+                     err ? err->message : "unknown error");
+        g_clear_error(&err);
+        exit(1);
+    }
+    if (size > max_size) {
+        error_report("nikon-d750: flash image '%s' (%" G_GSIZE_FORMAT
+                     " bytes) does not fit in the window (%" PRIu64
+                     " bytes)", path, size, max_size);
+        g_free(data);
+        exit(1);
+    }
+    if (s->veneer_slot) {
+        d750_apply_veneer_slot(s, (uint8_t *)data, size);
+    }
+    rom_add_blob_fixed(path, data, size, addr);
+    g_free(data);
+    s->a1010_size = (uint32_t)size;
 }
 
 static bool d750_addr_in_ram(NikonD750MachineState *s, MachineState *machine,
@@ -1100,7 +1195,6 @@ static void nikon_d750_init(MachineState *machine)
     memory_region_add_subregion(sysmem, D750_FLASH_BASE, &s->flash);
     if (flash) {
         uint64_t limit = D750_FLASH_BASE + s->flash_size;
-        ssize_t loaded;
 
         if (s->a1010_base < D750_FLASH_BASE || s->a1010_base >= limit) {
             error_report("nikon-d750: a1010-base 0x%08" PRIx64
@@ -1109,13 +1203,7 @@ static void nikon_d750_init(MachineState *machine)
                          s->a1010_base, (uint64_t)D750_FLASH_BASE, limit);
             exit(1);
         }
-        loaded = load_image_targphys(flash, s->a1010_base,
-                                     limit - s->a1010_base, &error_fatal);
-        if (loaded < 0) {
-            error_report("nikon-d750: cannot load flash image '%s'", flash);
-            exit(1);
-        }
-        s->a1010_size = (uint32_t)loaded;
+        d750_load_flash(s, flash, s->a1010_base, limit - s->a1010_base);
     }
 
     /* Optional second RAM bank at 0x20000000 (the M-core's SRAM window and
@@ -1230,7 +1318,7 @@ static void nikon_d750_init(MachineState *machine)
     info_report("nikon-d750: boot=%s, payload=%s @ 0x%08" PRIx64
                 ", a1010=%s @ 0x%08" PRIx64
                 ", start=0x%08" PRIx64 ", ram=%" PRIu64 " MiB, cpus=%u"
-                "%s%s%s%s%s%s",
+                "%s%s%s%s%s%s%s",
                 s->boot, payload, (uint64_t)D750_RAM_BASE,
                 flash ? flash : "(none)", s->a1010_base,
                 start,
@@ -1238,6 +1326,7 @@ static void nikon_d750_init(MachineState *machine)
                 s->strict ? ", strict" : "",
                 s->thumb_fix ? ", thumb-fix" : "",
                 s->vector_fix ? ", vector-fix" : "",
+                s->veneer_slot ? ", veneer-slot" : "",
                 s->flash_size != D750_FLASH_SIZE ? ", custom-flash" : "",
                 s->auxram_size ? ", aux-ram" : "",
                 s->mmu_table ? ", mmu-table" : "");
@@ -1253,6 +1342,7 @@ static void nikon_d750_instance_init(Object *obj)
     s->flash_size = D750_FLASH_SIZE;
     s->thumb_fix = true;
     s->vector_fix = false;
+    s->veneer_slot = 0;
     s->mmu_bringup = true;
     s->mmu_table = 0;
     s->auxram_size = 0;
@@ -1351,8 +1441,13 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
                                    nikon_d750_get_vector_fix,
                                    nikon_d750_set_vector_fix);
     object_class_property_set_description(oc, "vector-fix",
-        "Install a minimal ARM vector table at 0x90020000 (SVC returns, "
-        "IRQ/FIQ return, faults spin)");
+        "Install a minimal ARM vector table at 0x90020000 (SVC returns "
+        "with the Thumb bit restored, IRQ/FIQ return, faults spin)");
+    object_class_property_add(oc, "veneer-slot", "uint64",
+                              nikon_d750_get_veneer_slot,
+                              nikon_d750_set_veneer_slot, NULL, NULL);
+    object_class_property_set_description(oc, "veneer-slot",
+        "Payload offset of one ldr-pc veneer target to mark as Thumb (0 = off)");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,
