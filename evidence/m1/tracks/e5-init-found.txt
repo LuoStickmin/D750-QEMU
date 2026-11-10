@@ -1,0 +1,49 @@
+D850 (E5) in-image MMU/init code located
+==========================================
+
+CP15 write scan of b1330 (base 0x10000000) finds 15 writes, including:
+
+  0x1035D3D4  SCTLR
+  0x1035D3F0  DACR
+  0x1035D41C  SCTLR
+  0x1035D428  SCTLR
+  0x1035D5D0  SCTLR (0x1005)
+  0x1035D5E0  VBAR        <-- in-image VBAR installation
+  0x1035D5F0  SCTLR (or 0x2000)
+  0x1035D628  DACR
+  0x1035D668  SCTLR
+  0x1036B004  VBAR        (second path)
+  0x1036B01C  SCTLR
+  0x1036B1A8  SCTLR
+
+BL call-site scan for the VBAR setter 0x1035D5D8 finds:
+
+  0x1035CFA4  bl 0x1035D5D8
+  0x1035D014  bl 0x1035D5D8
+  0x1035CF9C  bl 0x1035D424   (SCTLR/TTBR helper)
+
+Around 0x1035CE30..0x1035D040 the image builds its own page tables:
+
+  ldrd r6,r7,[r0] ; orr r6,r6,r1 ; orr r7,r7,r2 ; strd r6,r7,[r0]
+  ...
+  mov r4,#0x40000000        ; 0x1035CE44 and 0x1035CEAC
+  adds r0,r0,#0x40000000    ; 0x1035CF94
+  bl 0x1035D424             ; SCTLR/TTBR setup
+  bl 0x1035D5D8             ; VBAR = literal
+  bl 0x1035D5F8 / 0x1035D6F0 / 0x1035D6C0 / 0x1035D694 ...
+
+then at 0x1035D030..0x1035D040:
+
+  mov lr, pc ; bx ip        ; jump through a pointer loaded from a global
+  wfi ; b .
+
+So the E5 image DOES contain a full init path (page tables, TTBR, SCTLR, VBAR)
+that references 0x40000000; what is missing is the boot ROM's call context
+(where to enter, what stack/globals to provide).
+
+Host-assisted plan (Z-style):
+1. find the real function start for the 0x1035CE30 block (scan backward for the
+   prologue or for callers of 0x1035D424/0x1035D5D8);
+2. add a machine option to set PC to that start with a fabricated stack and
+   pre-initialised globals;
+3. run and model whatever MMIO/globals it touches next.

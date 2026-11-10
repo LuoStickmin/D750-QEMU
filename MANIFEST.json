@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, 1080p 64/60 Mbps bitrate patcher, host tools, evidence",
-  "generated": "2026-11-10T14:56:59+08:00",
+  "generated": "2026-11-10T15:48:07+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -290,13 +290,13 @@
     },
     {
       "path": "docs/m1-tracks-2026-11-09.en.md",
-      "size": 24973,
-      "sha256": "b9c1c15bab67abf7b186be42628a6c9c30ba360af8a4c4f0f15ce05f92a8cc4c"
+      "size": 25523,
+      "sha256": "cdbe9bb448ad217fb392211f10a8bea59253e50d3caa31e4bfecdc927e754c9d"
     },
     {
       "path": "docs/m1-tracks-2026-11-09.md",
-      "size": 24149,
-      "sha256": "ac1ad5842b2371d61822c9a4008aa33c00338eacbcdad198ac1f79bed13b0a32"
+      "size": 24636,
+      "sha256": "a8ef0607f5e848eb6a27fcf4fa3e6a28ec622625c773f31d1ec3fddba83645b2"
     },
     {
       "path": "docs/validation.en.md",
@@ -447,6 +447,11 @@
       "path": "evidence/m1/tracks/e5-40000000-reloc.txt",
       "size": 2916,
       "sha256": "9f734df1a6552d27352278f417225141555eaf1031e3e9520d75a19fefc71bd9"
+    },
+    {
+      "path": "evidence/m1/tracks/e5-init-found.txt",
+      "size": 1676,
+      "sha256": "5eef55797467bfe6e49145e7884ade66323cc8f2ec6b0f2d6621e101fef51d46"
     },
     {
       "path": "evidence/m1/tracks/e5-loader-candidates.txt",
