@@ -1,0 +1,79 @@
+0x40000000 relocation reverse-check (E5 D850/D5 vs E6 D780)
+=============================================================
+
+Question: is there code in the update images that relocates/copies handlers or
+data to the 0x40000000 region, or is that done by the external boot ROM?
+
+1. E5 vector table (D850 b1330, D5 b870)
+----------------------------------------
+D850 b1330, file offset 0 (base 0x10000000):
+
+  0000 e59ff018  ldr pc,[pc,#0x18]
+  0004 e59ff018
+  0008 e59ff018
+  000c e59ff018
+  0010 e59ff018
+  0014 e320f000  nop
+  0018 ea00000d  b +0x3c
+  001c e59ff018
+  0020 102fe368 / 1037cba8   reset (per model)
+  0024 4002dfc0  undef
+  0028 4002e070 / 4002e050   svc
+  002c 4002e0e8  prefetch abort
+  0030 4002e0f8  data abort
+  003c 4002e12c / 4002e10c   fiq
+
+Every handler word (0x4002DFC0 etc.) appears exactly ONCE in the whole image:
+in the vector table.  There is no other literal/reference to them, so the image
+does not carry or copy those handlers.
+
+2. D850 reset target is a boot-service dispatcher, not a loader
+---------------------------------------------------------------
+  1037cba8  b 0x1037cbb8
+  1037cbb8  str r0,[r4]
+  1037cbbc  b 0x1037cbc4
+  ...
+  1037cbec  mov r3,r0
+  1037cbf0  and r0,r0,#0xff00
+  ...
+  1037cc00  cmp r0,#0x18
+  1037cc04  and r4,r2,#0xff
+  1037cc08  addlo pc,pc,r0,lsl #2     ; 0x18-entry command switch
+
+It reads a byte (`ldrb r0,[r0]`, `[r0,#0xd1]`, `[r0,#0xd2]`, `[r0,#0x111]`)
+and stores it to `[r4]`.  This is a boot-ROM service/command table entry, not a
+relocation loop.
+
+3. No copy table targeting 0x40000000
+-------------------------------------
+Scanned both images for records of the form
+(dest in 0x40000000..0x4003FFFF, src in flash/file, size):
+
+  D850 b1330: 114 candidate triples, no repeated 12-byte records;
+  D780 eg1510: 1070 candidates, no repeated records;
+  all are code/data false positives (ARM/Thumb instruction words that happen
+  to fall in the range).
+
+4. Contrast: E6 (D780) does not use 0x40000000 at all
+------------------------------------------------------
+D780 VBAR = 0x10100000 is inside the image and contains real branches:
+
+  10100000 e59ff018  ldr pc,[pc,#0x18]
+  10100004 ea0003da  b 0x10100f74
+  10100008 e59ff014
+  1010000c ea0003fe  b 0x1010100c
+  ...
+
+All D780 runs show probe=0, i.e. zero accesses to 0x40000000.  E6 installs its
+vectors in-image, while E5 depends on the external 0x40000000 handlers.
+
+Conclusion
+----------
+The 0x40000000 relocation/installation is performed by the E5 boot ROM outside
+the update image; the D850/D5 images only contain a vector table pointing at
+those addresses plus boot-service dispatch stubs.  This matches the E3 lesson:
+the first stage was recovered from RAM/boot-ROM dumps, not from the update file.
+
+Next options: (a) obtain a D850/D5 RAM dump around 0x40000000, or (b) build a
+virtual boot-ROM fixture that places return-stubs at 0x4002DFC0/0x4002E070...
+and see how far the image gets.
