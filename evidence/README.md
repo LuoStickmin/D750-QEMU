@@ -10,7 +10,7 @@
 | `m0-gdb/` | 同上，含 RSP 快照 | `entry_pc=0x9027d52c`、`entry_ok=true`、CPSR `0x400001d3`；guest 自行退出后 RSP 断开 |
 | `lcd/` | 同上 + `lcd.ppm` | 8×8 ARGB8888 从 `0x92000000` dump；证明扫描/dump 链路 |
 | `m1/` | `command.json`、`session.json`、`qemu.log`、`uart.log` + `gdb-entry.json` | M1：桩 → `0x1002CB8C`（Thumb，参数 0/0/2/0/1）；第一条 MMIO `0xe000e180←0x00100000`；随后在 `0x100240AC` 撞 M-profile 指令 |
-| `m1/tracks/` | `layout-matrix.md`、`b1010-flash-svc.log`、`ttbr0-run.log`、`veneer-reloc-run.log`、`veneer-scan.txt`、`loader-segments.txt`、`ida-layout.txt`、`ida-layout-run.log`、`cross-model-d3300.txt`、`e6-e5-e4-layout.txt`、`e5-run.log`、`e5-loader-candidates.txt`、`d5-modules.txt`、`e6-run.log`、`expeed-io-run.log`、`m0-entry-fullflash.log`、`mcore-boot.log`/`.md` | 12 种布局；TTBR0 验证；`veneer-slot` 后 0 undefined、1 SVC、0 abort；loader 段表；Nikon-Patch IDA 布局；D3300 跨机型；E6/E5/E4 版图；E5 入口候选；D5（E5）模块表：无 boot 模块、异常向量 `0x4002xxxx`；E6 D780 修页表后 0 异常跑到 `0x0426/0x0428` 外设块；`io-stub` 越过 `0xAE00060C` |
+| `m1/tracks/` | `layout-matrix.md`、`b1010-flash-svc.log`、`ttbr0-run.log`、`veneer-reloc-run.log`、`veneer-scan.txt`、`loader-segments.txt`、`ida-layout.txt`、`ida-layout-run.log`、`cross-model-d3300.txt`、`e6-e5-e4-layout.txt`、`e5-run.log`、`e5-loader-candidates.txt`、`d5-modules.txt`、`e3-boot-lessons.txt`、`e6-run.log`、`expeed-io-run.log`、`m0-entry-fullflash.log`、`mcore-boot.log`/`.md` | 12 种布局；TTBR0 验证；`veneer-slot` 后 0 undefined、1 SVC、0 abort；loader 段表；Nikon-Patch IDA 布局；D3300 跨机型；E6/E5/E4 版图；E5 入口候选；D5（E5）模块表；E3 boot 参考（`0xE0000` RAM dump、`0x8008xxxx` 拷贝、BFT 表）；E6 D780 修页表后 0 异常跑到 `0x0426/0x0428` 外设块；`io-stub` 越过 `0xAE00060C` |
 | `boot-scan.txt` | 10 个候选入口的扫描输出 | 全部 0 MMIO；`0x9025d700` 2 s 未返回；下一阶段不在 `b1010` 内 |
 
 ## 怎么读

@@ -1,0 +1,55 @@
+E3 (D5100/D7000/D800) boot lessons from the Nikon-Patch IDA scripts
+====================================================================
+
+Source: simeonpilgrim/nikon-firmware-tools, IDA_files/
+
+1. D5100 boot/loader (D5100_Load_ROM.idc, D5100_Load_EF_ROM.idc)
+---------------------------------------------------------------
+The scripts reconstruct the boot state from *hardware RAM dumps*, not from the
+firmware update file:
+
+  loadfile(mem_0_0e0000.bin, 0xE4, 0xE0100, 0xFF00)
+  loadfile(mem_0_0f0000.bin, 0xE4, 0xF0100, 0xFF00)
+
+i.e. the first-stage boot code lives at physical 0x000E0000-0x000FFFFF and was
+captured by dumping camera RAM.  It is not part of the firmware image.
+
+The same scripts then copy firmware-image segments into RAM 0x80080000+:
+
+  0xE066C -> 0x80080000  size 0x00E0
+  0xE074C -> 0x800800E0  size 0x12F0
+  0xE1A3C -> 0x8008C8A4  size 0x056A
+  0xE1FA8 -> 0x800813D0  size 0xB4D2
+  0xFFC00 -> 0x8008CE10  size 0x0400
+
+RAM window: 0x80000000-0x800FFFFF.  D5100_Load_ROM.idc also maps the image
+around 0x86FF8E..0x8AFF8E.
+
+2. D7000 / D800 boot function tables (BFT)
+-------------------------------------------
+D7000_BFT.idc:  entries of 0x2C bytes at RAM 0x8F9BF0E8..0x8F9C4470,
+                with function pointers at +4..+0x24 (9 entries).
+D800_BFT.idc:   entries of 0x30 bytes at RAM 0x84F245F8..0x84F2C158,
+                with function pointers at +4..+0x28 (10 entries).
+
+"BFT" is a boot/base function table installed in RAM by the boot stage; the
+scripts rename its handler pointers BFTxx_s1..s9/s10.  This is a second
+structure to look for in E5/E6 images.
+
+3. D5300 (E4, same generation as D750) video patch
+--------------------------------------------------
+Nikon-Patch has real D5300 patch arrays, e.g. changes at file offsets
+0x12B5D50/0x12B5D60/0x12B5D70 replacing 8-byte video bitrate constants
+(0x02C00E16 / 0x01362D00 -> 0x03D09000 / 0x01938700).  These are data-table
+patches, not boot code, but they show the D5300 image is a normal E4 container
+and give a usable cross-check sample for E4 layout.
+
+Takeaways for E5/E6
+-------------------
+- Nikon's first stage is a small blob at low physical addresses (E3:
+  0xE0000-0xFFFFF), recovered from RAM dumps, not from the update image.
+- The boot stage copies image segments into RAM (0x8008xxxx on E3) and
+  installs function tables (BFT) there.
+- For D850/D5/D780 the equivalent RAM/SRAM dump (or a service-mode read) is
+  the most promising way to obtain the first stage; the update images
+  themselves only carry the main application plus M-core/config modules.
