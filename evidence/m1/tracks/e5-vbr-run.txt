@@ -1,0 +1,33 @@
+D850 virtual boot-ROM (vbr) experiment
+=======================================
+
+Machine option (nikon-d750): virtual-boot-rom=on
+
+- maps 0x40000000..0x4003FFFF as RAM;
+- writes a `bx lr` stub (bytes 1e ff 2f e1) at each E5 exception-vector
+  target: 0x4002DFA0, 0x4002DFC0, 0x4002E050, 0x4002E070, 0x4002E0C8,
+  0x4002E0D8, 0x4002E0E8, 0x4002E0F8, 0x4002E108, 0x4002E10C, 0x4002E12C.
+
+Run:
+  -M nikon-d750,boot-mode=entry,entry=0x1037CBA8,payload-base=0x10000000,
+     flash-size=0x2000000,virtual-boot-rom=on -cpu cortex-a15
+
+Result (3 s):
+  PC sequence: 0x1037CBA8 -> 0x1037CBB8 -> 0x1037CBC4 -> 0x00000000 ->
+  0x000001E8 -> ... -> 0x00001000 (zero-filled low RAM NOP slide)
+  exceptions: 0 undef / 0 svc / 0 prefetch / 0 data abort
+  probe events: 0
+  no access to 0x4002xxxx ever observed
+
+Interpretation
+--------------
+The reset word 0x1037CBA8 is a boot-ROM *service* stub, not a startup entry:
+it does `str r0,[r4]` and then `pop {r4,r5,r6,pc}`.  With the assisted entry
+(SP = RAM top - 0x100, zeros on the stack) the pop returns to PC=0, so the run
+just slides through zero-filled low RAM.  The virtual 0x4002xxxx stubs are
+never called on this path.
+
+Conclusion: stubs alone are not enough; the missing piece is the boot ROM's
+*entry contract* (the stack/LR/r4 it prepares before calling into the image).
+This again points to a RAM dump or boot-ROM image as the only way to recover
+the real entry.

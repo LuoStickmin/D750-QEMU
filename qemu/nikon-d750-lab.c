@@ -82,6 +82,7 @@ typedef struct NikonD750MachineState {
     MemoryRegion e6sram;        /* E6 boot SRAM at 0x04000000              */
     MemoryRegion e6stack;       /* E6 stacks at 0xC0000000                 */
     MemoryRegion probe;         /* catch-all diagnostic window             */
+    MemoryRegion vbr;           /* virtual 0x40000000 boot-ROM window      */
     MemoryRegion uart;          /* candidate byte-register serial block    */
 
     CharFrontend chr;
@@ -105,6 +106,7 @@ typedef struct NikonD750MachineState {
     bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
     bool io_stub;               /* map A2/AD/AE/A340 register-block stubs  */
     bool e6_prep;               /* patch the D780 page table + map stacks  */
+    bool vbr_on;                /* virtual 0x40000000 boot-ROM stubs       */
     struct D750IoStub *io_blocks[4];
     uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
@@ -892,6 +894,20 @@ static void nikon_d750_set_io_stub(Object *obj, bool value, Error **errp)
     s->io_stub = value;
 }
 
+static bool nikon_d750_get_vbr(Object *obj, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    return s->vbr_on;
+}
+
+static void nikon_d750_set_vbr(Object *obj, bool value, Error **errp)
+{
+    NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
+
+    s->vbr_on = value;
+}
+
 static bool nikon_d750_get_e6_prep(Object *obj, Error **errp)
 {
     NikonD750MachineState *s = NIKON_D750_MACHINE(obj);
@@ -1548,6 +1564,26 @@ static void nikon_d750_init(MachineState *machine)
     memory_region_add_subregion_overlap(sysmem, 0, &s->probe,
                                         D750_PROBE_PRIORITY);
 
+    /* Virtual 0x40000000 boot ROM: map handler RAM and place "bx lr" stubs
+     * at the D850/D5 exception-vector targets so the image can run without the
+     * real boot ROM. */
+    if (s->vbr_on) {
+        static const uint32_t stubs[] = {
+            0x4002DFA0, 0x4002DFC0, 0x4002E050, 0x4002E070, 0x4002E0C8,
+            0x4002E0D8, 0x4002E0E8, 0x4002E0F8, 0x4002E108, 0x4002E10C,
+            0x4002E12C,
+        };
+        static const uint8_t bx_lr[4] = { 0x1e, 0xff, 0x2f, 0xe1 };
+        unsigned n;
+
+        memory_region_init_ram(&s->vbr, NULL, "nikon-d750.vbr",
+                               0x40000, &error_fatal);
+        memory_region_add_subregion(sysmem, 0x40000000, &s->vbr);
+        for (n = 0; n < ARRAY_SIZE(stubs); n++) {
+            rom_add_blob_fixed("d750.vbr", bx_lr, sizeof(bx_lr), stubs[n]);
+        }
+    }
+
     /* Low memory: the entry stores a word at address 0 and reads it back,
      * so the first 64 KiB must be writable RAM.  A four-byte halt window
      * sits at the assisted return address: fetching it ends the run. */
@@ -1699,6 +1735,7 @@ static void nikon_d750_instance_init(Object *obj)
     s->loader_copies = false;
     s->io_stub = false;
     s->e6_prep = false;
+    s->vbr_on = false;
     s->mmu_bringup = true;
     s->mmu_table = 0;
     s->auxram_size = 0;
@@ -1842,6 +1879,12 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
     object_class_property_set_description(oc, "e6-prep",
         "D780 prep: turn the page table at payload+0x10000 into identity "
         "sections and map boot SRAM 0x04000000 plus stacks at 0xC0000000");
+    object_class_property_add_bool(oc, "virtual-boot-rom",
+                                   nikon_d750_get_vbr,
+                                   nikon_d750_set_vbr);
+    object_class_property_set_description(oc, "virtual-boot-rom",
+        "Map 0x40000000 as RAM and place bx lr stubs at the E5 handler "
+        "addresses (diagnostic)");
 
     object_class_property_add(oc, "lcd-base", "uint64",
                               nikon_d750_get_lcd_base,
