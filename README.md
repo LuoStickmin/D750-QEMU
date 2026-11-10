@@ -399,4 +399,22 @@ python tools/run.py --payload ... --flash ... `
 - 没有签名、没有重打包、没有升级容器处理；固件文件全程只读。
 - 另见 [NOTICE.md](NOTICE.md) 与 [docs/validation.md](docs/validation.md)。
 
+## 8. 还需要什么（输入需求）
+
+三套目标（E4 D750、E5 D850/D5、E6 D780）都缺同一类输入：**第一级 boot**。
+按优先级：
+
+1. **整片 SPI flash dump**（D750/D850/D5/D780 任意一台）——最直接，可能包含
+   boot 分区或第一级 loader；可用 CH341A/测试夹读取，或从维修渠道获取。
+2. **Nikon 服务软件/维修固件里的 recovery/boot 镜像**（如 Tornado NKN 等）。
+3. **其他机型整片 dump**（D5100/D7000/D800）——用于理解 Nikon 的 boot 分区结构。
+4. **硬件 UART 启动日志**——确认 boot ROM 之后第一段代码的加载地址与大小。
+5. **Z6/Z7 QEMU 社区关于 `0x40000000` 区域填充者的信息**（可选）。
+
+已经具备、无需再提供：D750/D850/D5/D780 的解密镜像、E4/E5/E6 机器、
+`io-stub`/`early_control` 等模型，以及各代向量/加载基址结论。
+
+没有新输入时仍可做：在现有镜像里反查写 `0x40000000` 的 relocation 循环，
+判断 boot 是否其实在镜像内；继续 E5/E6 的寄存器与代码路径建模。
+
 许可：overlay 与工具为 **GPL-2.0-or-later**；上游 QEMU 保留其自身许可。

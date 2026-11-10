@@ -361,4 +361,27 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 
 See [NOTICE.md](NOTICE.md) and [docs/validation.md](docs/validation.md).
 
+## 8. What We Need (Inputs)
+
+All three targets (E4 D750, E5 D850/D5, E6 D780) are missing the same input:
+the **first-stage boot**. In priority order:
+
+1. **A full SPI flash dump** from any D750/D850/D5/D780 — the most direct
+   source; it may contain the boot partition or first-stage loader. Read it
+   with a CH341A/clip or obtain it through a repair channel.
+2. **A recovery/boot image from Nikon service software** (e.g. Tornado NKN).
+3. **Full dumps of other models** (D5100/D7000/D800) to understand Nikon's
+   boot-partition layout.
+4. **A hardware UART boot log** — to confirm the load address and size of the
+   first code after the boot ROM.
+5. **Z6/Z7 QEMU community knowledge about who fills `0x40000000`** (optional).
+
+Already available, no need to provide: decrypted D750/D850/D5/D780 images,
+the E4/E5/E6 machines, the `io-stub`/`early_control` models, and the
+per-generation vector/load-base findings.
+
+What can still be done without new inputs: search the current images for the
+relocation loop that writes `0x40000000` (to decide whether the boot stage is
+inside the image), and continue modelling the E5/E6 register and code paths.
+
 License: overlay and tools are **GPL-2.0-or-later**; upstream QEMU retains its own license.
