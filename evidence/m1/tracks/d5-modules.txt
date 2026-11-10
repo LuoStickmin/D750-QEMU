@@ -1,0 +1,56 @@
+D5 (D5__0150) module inventory and boot check
+==============================================
+
+Local unpacked modules: C:\Users\23795\Downloads\DSLR\D5__0150.bin.modules
+
+  a870_013000.bin    0x100000  (1 MiB)   M-core firmware
+  b870_150.bin       0x16CB5D4 (23.9 MiB) main application
+  _tpcy_0009.bin     0x00EA62  (60 KiB)  configuration/data
+  _wt5160_.bin       0x1617A6E (23.2 MiB) WT-5160 wireless firmware
+
+a870_013000.bin (M-core)
+-------------------------
+  SP    0x2000F870
+  reset 0x0000C20D
+Same Cortex-M reset address as the D750 a1010 and D850 a1330 modules.
+
+b870_150.bin (main)
+-------------------
+Vector table at file offset 0 (base 0x10000000):
+
+  0000 e59ff018 x5, e320f000 (nop), ea00000d, e59ff018
+  0020 102FE368   reset
+  0024 4002DFA0   undef
+  0028 4002E050   SVC
+  002C 4002E0C8   prefetch abort
+  0030 4002E0D8   data abort
+  003C 4002E10C   FIQ
+
+The reset target 0x102FE368 (file 0x2FE368) is itself a branch table:
+
+  102fe368  b 0x102fe654
+  102fe36c  b 0x102fe67c   (x6)
+  102fe384  b 0x102fe6a4   (x5)
+
+The exception vectors point at 0x4002xxxx, i.e. the same separate
+0x40000000 boot-ROM / handler bank seen in the D850 (E5) image.
+
+b870 contains 7178 occurrences of the literal 0x40000000.
+
+"Boot" strings in b870 are runtime power/reboot command names, not boot code:
+
+  eSyscController_BootShutDown
+  eSyscCommandId_PowerOnBoot
+  eSyscCommandId_InitializeFastBoot
+  "SYSTEM REBOOT"
+  SYS_BOOT_BUS_CLK / SYS_BOOT_BTSQ_CLK
+
+No "bootloader"/"bootstrap"/"mask rom" strings, and no small module with a
+second-stage boot image.
+
+Conclusion
+----------
+The D5 firmware image does NOT contain a boot ROM or a bootloader module.
+Like D750 (E4), D850 (E5) and D780 (E6), it ships the M-core firmware plus the
+main application (and wireless/config modules); the A-core boot/first-stage
+code is expected to live in the separate 0x40000000 boot-ROM region.
