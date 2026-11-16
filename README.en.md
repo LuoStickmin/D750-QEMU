@@ -6,22 +6,20 @@
 >
 > | Date | Progress |
 > | --- | --- |
+> | 2026-11-10 | **E5/E6 runs + v0.2.8**: D850 reset `0x1037CBA8` confirmed as a boot-service stub; a virtual `0x40000000` boot ROM with only `bx lr` stubs still lacks the entry context; located the E5 in-image init (`0x1035CE30..0x1035D040`, builds page tables and sets TTBR/SCTLR/VBAR); D780 with `e6-prep` runs with **0 exceptions** into the `0x0426/0x0428` peripheral block, and under A15 into the `0x04266000` timer block. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) and `evidence/m1/tracks/e5-*` |
 > | 2026-11-09 | **Three no-input checks + six follow-ups**: static call chain, 12 flash layouts, M-core boot → TTBR0 check → work-queue slot / veneer relocation (**0 undefined, 1 SVC, 0 aborts**) → loader segment table → the Nikon-Patch IDA base **`0x90020000`** → **D3300/D850/D780 firmware decrypted with the same keys** (E6→E5→E4 map: D780 header+branch, D850 reset `0x1037CBA8`/handlers `0x4002xxxx`, D750 `0x90020000`), with `io-stub` passing the `0xAE00060C` poll. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) |
 > | 2026-11-08 | **M1 run + v0.2.0**: stub → `0x1002CB8C` (Thumb, `args=0/0/2/0/1`, `LR=0x9025D754`), first MMIO `wr 0xE000E180 ← 0x00100000`; MPCore base corrected to **`0xE000E000`**; a1010 found to be M-profile firmware, so M1 is recorded as "reached target, not closed"; the Linux x86-64 binary is published as [Release v0.2.0](https://github.com/LuoStickmin/D750-QEMU/releases/tag/v0.2.0). Details: [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 > | 2026-11-07 | **Static resolution**: a1010 base `0x10018000`, entry file offset `0x14B8C`, Thumb bit, config slots `0x100F48C0/C4/C8`; raw material in `update_1107.zip` |
-> | 2026-11-06 | **v0.1.1**: M0 passed, strict/halt evidence fixes, LCD dump pipeline, 64/60 Mbps bitrate patch; see [CHANGELOG.md](CHANGELOG.md) |
+> | 2026-11-06 | **v0.1.1**: M0 passed, strict/halt evidence fixes, LCD dump pipeline; see [CHANGELOG.md](CHANGELOG.md) |
 > | 2026-11-05 | **v0.1.0**: first public snapshot (M0, LCD dump, bilingual docs) |
 >
 > Full changes and compatibility notes: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-> **This repository has two workstreams**: the QEMU validation prototype
-> (this file) and a D750 1080p high-bitrate modification (five HQ rows from
-> 42/35 and 24/20 to 64/60 Mbps). Combined overview:
-> [SUMMARY.md](SUMMARY.en.md); bitrate details:
-> [bitrate/README.md](bitrate/README.md); legal/contribution boundaries:
-> [CONTRIBUTING.md](CONTRIBUTING.en.md).
+> **This repository now contains the QEMU validation prototype only.** Overview:
+> [SUMMARY.en.md](SUMMARY.en.md); legal/contribution boundaries:
+> [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
 ---
 
@@ -38,8 +36,7 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
 ---
 
 ## Table of Contents
-- [Project overview (both workstreams)](SUMMARY.en.md)
-- [High-bitrate modification](bitrate/README.en.md)
+- [Project overview](SUMMARY.en.md)
 - [Contributing & legal boundaries](CONTRIBUTING.en.md)
 - [1. Current Status & Roadmap](#1-current-status--roadmap)
 - [2. Quick Start](#2-quick-start)
@@ -67,26 +64,17 @@ Currently **completed and verified**:
 | Board source code `nikon-d750-lab.c/.h` | ✅ Written (QEMU 11.1 API; 10.2.4 is text-adapted by the prepare script but has not been built here) |
 | Overlay install script `qemu/prepare_source.py` | ✅ Idempotent, unit tests cover 11.1 / 10.2 / unknown version rejection |
 | `fwscan` / `run` / `probe` / `build` tools | ✅ Written; `probe` tested with real RSP against stock QEMU `-M virt` |
-| Host-side tests | ✅ `python3 tests/run_tests.py` → 27 passed |
+| Host-side tests | ✅ `python3 tests/run_tests.py` → 27 cases (1 depends on a local stock QEMU and fails when absent) |
 | Board C code compilation | ✅ Compiled on WSL Ubuntu 26.04 (gcc 15.2) + QEMU 11.1.0 |
 | `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.39s |
 | M1 boot-chain run | ⚠️ **Reached the target, not closed**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; then hits an M-profile instruction at `0x100240AC`, so the target module is not A-core code. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 | M1 machine options | ✅ `boot-mode=stub`, `a1010-base`, `thumb-fix`, `mmu-bringup`, `mpcore-base`; firmware files untouched |
+| E5 (D850) run | ⚠️ **Boot-ROM entry context missing**: `0x1037CBA8` is a boot-service stub; a virtual `0x40000000` with only return stubs still `pop`s to PC=0. The in-image init `0x1035CE30..0x1035D040` is located; next is a host-assisted entry. See `docs/m1-tracks-2026-11-09.en.md` and `evidence/m1/tracks/e5-*.txt` |
+| E6 (D780) run | ✅ **Reached real peripheral init**: after the `e6-prep` page-table fix, 0 exceptions to the `0x0426/0x0428` block; under `cortex-a15`, 0 undefined and 2 SVCs, entering the `0x04266000` timer block and looping near `0x1011C000`. See `docs/m1-tracks-2026-11-09.en.md` |
+| E5/E6 machine options | ✅ `flash-size`, `aux2-base`/`aux2-size`, `virtual-boot-rom`, `e6-prep`, `cortex-a7/a15`; evidence in `evidence/m1/tracks/` |
 | LCD scanout/dump pipeline | ✅ Configurable framebuffer → PPM; test card verified; firmware image still absent |
-| Container repack / patched-image reproduction | ✅ Byte-for-byte reproducible with the author's toolchain (no-edit round trip is bit-identical; the patched image `9c88f3cc…` can be rebuilt exactly), see [docs/hardware-test.md](docs/hardware-test.md) |
-| Real hardware | ⚠️ **Unverified**: updater acceptance, encoder behaviour, card/heat/playback have no hardware record yet |
 | M2 (UART) / M3 (Devices) | ⏳ Not started: still no serial output (`uart=0B`); the GIC is now connected and the next unmodelled access is the open lead |
 | Full camera UI / ISP / CMOS / Storage | ❌ Out of scope |
-
-> **Second workstream (1080p high bitrate)**: the five HQ rows of the D750
-> bitrate table were raised from `42/35` and `24/20` to `64/60` Mbps.
-> Container-level verification passed, and the patched image is **reproducible
-> byte for byte** from stock + the patched module (`repack_firmware.py`'s no-edit
-> round trip is bit-identical). The QEMU M0 regression matches stock, but
-> **camera capture is unverified**. Overview: [SUMMARY.md](SUMMARY.en.md);
-> details: [bitrate/README.md](bitrate/README.md); hardware preconditions:
-> [docs/hardware-test.md](docs/hardware-test.md). The repository ships only the
-> table patcher, not firmware, keys, or patched images.
 
 ### ⚠️ Warning Regarding Stock QEMU
 If you have the official default QEMU installed (e.g., `C:\Program Files\qemu` on Windows), it usually only has `qemu-system-arm` / `qemu-system-aarch64` targets, and **no `nikon-*` machine** in `-M help`. QEMU machines are registered at compile-time and cannot be loaded at runtime like plugins. 
@@ -190,7 +178,7 @@ d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
 - Entry `0x9027D52C` is a **called function**, not a reset handler. Without assistance, it pushes `{r4,r5,r6,lr}` to `0xFFFFFFF0..0xFFFFFFFC` (SP=0), executes `pop` returning LR=0, and PC runs away to 0 — the most important finding from the first run.
 - The machine thus adds **assisted boot**: low 64 KiB RAM, SP=top of RAM, LR pointing to halt window at `0xFF0`, r0=0. After function returns, halt device records registers and requests QEMU exit cleanly.
 - This fragment accesses **0 MMIO** (`mmio_events=0`) and produces **no UART output** (`uart=0B`). So the next step for M1/M2 is **finding the caller of this init function or the next stage entry**; `-machine entry=...` allows trying other hypotheses directly.
-- Scanned 10 candidate entries in image: all `0 MMIO`. `0x9025D700` enters a no-MMIO wait loop. Conclusion: **the next stage is not in `b1010`**, likely from boot ROM or flash outside `a1010`. See [findings §11.4](docs/findings.md#114-candidate-entry-scan-negative-results).
+- Scanned 10 candidate entries in image: all `0 MMIO`. `0x9025D700` enters a no-MMIO wait loop. **Its caller is not in `b1010`**; the later layout enumeration indicates the flash window is a copy of `b1010`, and what is really missing is a first-stage boot ROM (see §2.5 and [findings §11.4](docs/findings.md#114-candidate-entry-scan-negative-results)).
 
 ### 2.5 M1 Run (Boot Stub → a1010 Target)
 
@@ -236,13 +224,14 @@ Under GDB (`-S -gdb tcp::12345` + `tools/probe.py`) the entry state is
 
 | Item | Value | Evidence Strength |
 | --- | --- | --- |
-| CPU | 1× Cortex-A9 (`-smp 2` can try) | Medium: ARMv7 Thumb-2 + VFP/NEON + T-Kernel strings |
+| CPU | 1× Cortex-A9 (`-smp 2` can try); E6 can switch to `cortex-a7`/`cortex-a15` | Medium: ARMv7 Thumb-2 + VFP/NEON + T-Kernel strings |
 | Main RAM | `0x90000000`, default 128 MiB | High: `0x90020000` page table literal, `0x9027D52C` pointers |
-| Main image loaded | `b1010_115a.bin` @ `0x90000000` | High |
-| Initial PC | `0x9025D700` in `boot-mode=stub` (via internal `0x1000` trampoline); `0x9027D52C` in `boot-mode=entry` | Runtime evidence: both modes have run |
+| Main image loaded | E4 D750 `b1010` @ `0x90000000`; E5 D850 @ `0x10000000`; E6 D780 @ `0x10020000` | High: run evidence per model |
+| Initial PC | D750: `0x9025D700` in `boot-mode=stub`, `0x9027D52C` in `entry`; E5: `entry=0x1037CBA8`; E6: header branch `0x1002BC88` | Runtime evidence: all models have run |
 | Low memory | `0x0..0xFFFF` RAM; `0xFF0` halt window, `0x1000` M1 MMU trampoline | Runtime evidence: entry writes vector words to `0x0` |
 | Assisted boot | SP=top of RAM, LR=`0xFF0`, r0=0 (entry mode) | Runtime evidence: entry returns after `push`/`pop` |
-| Flash window | `0x10000000`, 8 MiB; `-bios` image loaded at `a1010-base` (default `0x10018000`) | Medium: the `bx` target lands on a Thumb prologue there, but the image is M-profile (see M1 doc) |
+| Flash window | `0x10000000`, default 8 MiB; E5 D850 uses `flash-size=0x2000000` (32 MiB); `-bios` image loaded at `a1010-base` (default `0x10018000`) | Medium: the `bx` target lands on a Thumb prologue there, but the image is M-profile (see M1 doc) |
+| E5 handler / E6 prep | `aux2-base`/`aux2-size` map `0x40000000` as RAM; `e6-prep` turns the D780 page table into identity sections and pre-sets `0x20022300` | Runtime evidence: E5 virtual boot ROM, E6 0-exception startup |
 | MMU shim | `mmu-bringup=on`: 16 KiB identity table at top of DRAM + `DACR/TTBR0/TTBCR` prologue; config slot `0x100F48C0` filled with the table base | Runtime evidence: without it, `SCTLR=0x1C05` immediately prefetch-aborts |
 | UART candidate | `0x80005010..0x80005014` byte registers | Medium: driver fragment `0x27CC00..0x27D304` |
 | GIC/timer | `a9mpcore_priv` @ **`0xE000E000`** (override with `mpcore-base=`) | High: first a1010 MMIO is `0xE000E180 ← 0x00100000` |
@@ -306,16 +295,15 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 │   ├── m1_analyze.py           M1 static-analysis quartet (Nov 7 tool; disasm needs capstone)
 │   ├── manifest.py             Regenerate/verify SHA256SUMS and MANIFEST.json
 │   └── build.py                Download/unpack/overlay/build/record
-├── tests/                      26 host-side tests (no QEMU build required)
-├── bitrate/                    D750 1080p 64/60 Mbps patcher, test, report
+├── tests/                      27 host-side tests (no QEMU build required)
 ├── analysis/
 │   ├── d750-0115.json          Real image scan results
 │   ├── lcd-testcard.png        LCD pipeline test card (host-written)
 │   └── ...                     Other firmware analysis artifacts already in repo (see below)
 ├── binary/                     COPYING + notes (binary published via GitHub Release)
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan run evidence
-├── docs/                       findings / m1-boot-chain / architecture / validation / build / gui-cmos / hardware-test (+ .en.md)
-├── SUMMARY.md / SUMMARY.en.md  Combined overview of both workstreams
+├── docs/                       findings / m1-boot-chain / architecture / validation / build / gui-cmos (+ .en.md)
+├── SUMMARY.md / SUMMARY.en.md  QEMU prototype overview
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original
 ├── PRODUCT.md  MANIFEST.json  SHA256SUMS
@@ -325,7 +313,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 └── .build/ .local/ runs/       Local generated artifacts (Git ignored)
 ```
 
-`analysis/` only contains `d750-0115.json` and `lcd-testcard.png` generated by this QEMU product; the rest (movie bitrate, TIFF, patch, etc.) are existing firmware analysis artifacts in the same repo, kept for context but out of QEMU product acceptance scope.
+`analysis/` only contains `d750-0115.json` and `lcd-testcard.png` generated by this QEMU product; the rest (TIFF, patch, etc.) are existing firmware analysis artifacts in the same repo, kept for context but out of QEMU product acceptance scope.
 
 > **Large binary**: `binary/qemu-system-arm` is ~96 MiB, so it is **not**
 > committed to Git history. It is attached to GitHub Releases:
@@ -346,16 +334,20 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 
 - This is an **assisted verification prototype**: entry chosen by host, SP/LR given by host, not equal to natural power-on boot.
 - Compiled and ran on WSL: M0 is clean, M1 reaches the 1107 target and the first
-  MMIO but does not close the A-core chain (the target image is M-profile).
-  The MPCore base is now measured (`0xE000E000`); UART register semantics and
-  the exact CPU model are still assumptions.
-- No signing, no repacking, no update container processing; firmware files strictly read-only.
+  MMIO but does not close the D750 A-core chain (the target image is M-profile).
+  The E5/E6 cross-model results also use assisted entry/page-table fixes, not a
+  natural power-on. The MPCore base is now measured (`0xE000E000`); UART
+  register semantics and the exact CPU model are still assumptions.
+- This repository provides no signing, repacking tool, or update-container
+  processing; container-level reproduction uses the author's external toolchain.
+  Firmware files are strictly read-only.
 
 **Roadmap (M1-M3)**:
 - **[M1] MMIO Capture**: The 1107 target now runs and the first MMIO is captured
-  (`0xE000E180`, GIC). Still open: the target module is M-profile firmware, so
-  the A-core's real next stage (and its module) must be identified from a full
-  flash / module offset table.
+  (`0xE000E180`, GIC). Still open: the target module is M-profile firmware; the
+  later layout work indicates the flash window is a copy of `b1010` and what is
+  missing is a first-stage boot ROM. Cross-model: E5's in-image init is located,
+  E6 runs into real peripherals.
 - **[M2] UART Output**: Confirm `0x80005010` is FIFO data register. Once confirmed, implement device model to see T-Kernel boot strings in `uart.log`.
 - **[M3] Missing Device Enumeration**: When M1 hits unknown device access, machine halts. By iteratively running and observing `qemu.log`, add minimal "dummy devices" one by one to push firmware further.
 
@@ -363,25 +355,32 @@ See [NOTICE.md](NOTICE.md) and [docs/validation.md](docs/validation.md).
 
 ## 8. What We Need (Inputs)
 
-All three targets (E4 D750, E5 D850/D5, E6 D780) are missing the same input:
-the **first-stage boot**. In priority order:
+The three targets are at different stages: **E6 D780** now reaches real
+peripheral init (`0x0426/0x0428`), so the next step is modelling that block;
+**E5 D850/D5** has its in-image init located but lacks the boot ROM's entry
+context (stack/LR/r4); **E4 D750** still lacks a first-stage boot. The shared
+missing input is still a full dump:
 
-1. **A full SPI flash dump** from any D750/D850/D5/D780 — the most direct
-   source; it may contain the boot partition or first-stage loader. Read it
-   with a CH341A/clip or obtain it through a repair channel.
+1. **A full SPI flash dump** from any D750/D850/D5 — the most direct source; it
+   may contain the boot partition or first-stage loader. Read it with a
+   CH341A/clip or obtain it through a repair channel.
 2. **A recovery/boot image from Nikon service software** (e.g. Tornado NKN).
-3. **Full dumps of other models** (D5100/D7000/D800) to understand Nikon's
+3. **The E5 boot ROM itself, or a RAM dump around `0x40000000`** — the virtual
+   `bx lr` stubs proved insufficient to supply the entry contract (see
+   `evidence/m1/tracks/e5-vbr-run.txt`).
+4. **Full dumps of other models** (D5100/D7000/D800) to understand Nikon's
    boot-partition layout.
-4. **A hardware UART boot log** — to confirm the load address and size of the
+5. **A hardware UART boot log** — to confirm the load address and size of the
    first code after the boot ROM.
-5. **Z6/Z7 QEMU community knowledge about who fills `0x40000000`** (optional).
 
-Already available, no need to provide: decrypted D750/D850/D5/D780 images,
-the E4/E5/E6 machines, the `io-stub`/`early_control` models, and the
-per-generation vector/load-base findings.
+Already available: decrypted D750/D850/D5/D780 images, the E4/E5/E6 machines,
+the `io-stub`/`early_control` models, the E5 in-image init address, and the
+per-generation vector/load-base findings. The `0x40000000` relocation
+reverse-check is also done (no copy loop in the image; see
+`evidence/m1/tracks/e5-40000000-reloc.txt`).
 
-What can still be done without new inputs: search the current images for the
-relocation loop that writes `0x40000000` (to decide whether the boot stage is
-inside the image), and continue modelling the E5/E6 register and code paths.
+What can still be done without new inputs: enter E5's init at `0x1035CE30`
+via a host-assisted path; model the E6 `0x0426/0x0428` block; keep looking for
+the D750 relocation table / SVC semantics.
 
 License: overlay and tools are **GPL-2.0-or-later**; upstream QEMU retains its own license.

@@ -2,14 +2,13 @@
 
 # analysis/
 
-本目录只保留**可公开的事实性产物**，不包含固件、密钥、解密镜像或改后镜像。
+本目录只保留**可公开的事实性产物**，不包含固件、密钥或解密镜像。
 
 | 文件 | 内容 |
 | --- | --- |
 | `d750-0115.json` | `fwscan` 对真实镜像的 profile 核对结果：大小、SHA-256、向量/字面量、MMU 站点、指针分布。 |
 | `lcd-testcard.png` | `nikon-d750` LCD dump 管线的合成测试卡（主机写入，不是固件 UI）。 |
 | `tiff-feasibility.md` / `.en.md` | D750 菜单加入 TIF 的可行性分析：只读静态结论与证据。 |
-| `menu-bitrate-feasibility.md` | D750 Movie quality 新增第三项码率的可行性分析（中文正文 + 文末英文版）：当前卡点与最小替代方案。 |
 | `tiff_scan.py` | 上述分析的只读扫描器；`--module` 可指定本地模块。 |
 
 ## 未公开的探索性材料
@@ -20,8 +19,8 @@
 - Nikon Hacker 的补丁数据库（`nikon_patches.c`、`nikon_patches.h`、
   `nikon_patch_main.c`）及其解析脚本——第三方 GPL 代码，且包含大量补丁字节；
 - 固件 ASCII 字符串 dump（`strings_movie.txt`）——含固件文本，可能涉及版权；
-- 一次性探索脚本（`scan_bitrate_*.py`、`dump_*.py`、`search_bitrate.py` 等）
-  ——硬编码了本机路径，且已被结论/工具取代。
+- 一次性探索脚本（`scan_*.py`、`dump_*.py` 等）——硬编码了本机路径，且已被
+  结论/工具取代。
 
 需要复现某一步时，按文档里的偏移/哈希重新写一个最小脚本即可；不要把固件、
 密钥或第三方补丁表提交到 issue/PR。

@@ -36,10 +36,10 @@ D800_BFT.idc:   entries of 0x30 bytes at RAM 0x84F245F8..0x84F2C158,
 scripts rename its handler pointers BFTxx_s1..s9/s10.  This is a second
 structure to look for in E5/E6 images.
 
-3. D5300 (E4, same generation as D750) video patch
+3. D5300 (E4, same generation as D750) data patch
 --------------------------------------------------
 Nikon-Patch has real D5300 patch arrays, e.g. changes at file offsets
-0x12B5D50/0x12B5D60/0x12B5D70 replacing 8-byte video bitrate constants
+0x12B5D50/0x12B5D60/0x12B5D70 replacing 8-byte data constants
 (0x02C00E16 / 0x01362D00 -> 0x03D09000 / 0x01938700).  These are data-table
 patches, not boot code, but they show the D5300 image is a normal E4 container
 and give a usable cross-check sample for E4 layout.

@@ -3,7 +3,7 @@
 # analysis/
 
 This directory keeps only **publishable factual artifacts**. It contains no
-firmware, keys, decrypted images, or patched images.
+firmware, keys, or decrypted images.
 
 | File | Content |
 | --- | --- |
@@ -22,9 +22,8 @@ The following is **not** part of the public repository and stays in the local
   contains a large amount of patch bytes;
 - firmware ASCII string dumps (`strings_movie.txt`) — contain firmware text and
   may implicate copyright;
-- one-off exploration scripts (`scan_bitrate_*.py`, `dump_*.py`,
-  `search_bitrate.py`, etc.) — they hard-code local paths and have been
-  superseded by conclusions/tools.
+- one-off exploration scripts (`scan_*.py`, `dump_*.py`, etc.) — they hard-code
+  local paths and have been superseded by conclusions/tools.
 
 To reproduce a step, write a minimal script from the documented offsets/hashes;
 do not submit firmware, keys, or third-party patch tables to issues/PRs.

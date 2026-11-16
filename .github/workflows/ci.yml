@@ -20,7 +20,5 @@ jobs:
           python-version: "3.12"
       - name: Host-side tests
         run: python tests/run_tests.py
-      - name: Bitrate patch tests (4 skipped without D750_MODULE)
-        run: python bitrate/test_d750_bitrate_patch.py
       - name: Manifest and checksum integrity
         run: python tools/manifest.py --check

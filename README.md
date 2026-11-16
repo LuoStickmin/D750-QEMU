@@ -6,20 +6,19 @@
 >
 > | 日期 | 进展 |
 > | --- | --- |
+> | 2026-11-10 | **E5/E6 实跑 + v0.2.8**：D850 reset `0x1037CBA8` 确认是 boot-service 桩，虚拟 `0x40000000` boot ROM 只放 `bx lr` 仍缺入口上下文；定位到 E5 镜像内完整 init（`0x1035CE30..0x1035D040`，自建页表并设 TTBR/SCTLR/VBAR）；D780 用 `e6-prep` 修页表后 **0 异常**进入 `0x0426/0x0428` 外设块，A15 下进入 `0x04266000` 定时器块。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) 与 `evidence/m1/tracks/e5-*` |
 > | 2026-11-09 | **三条无输入验证 + 六轮跟进**：静态调用链、12 种 flash 布局、M-core 启动 → TTBR0 验证 → 工作队列槽/veneer 重定位（**0 undefined、1 SVC、0 abort**）→ loader 段表 → Nikon-Patch IDA 真实基址 **`0x90020000`** → **D3300/D850/D780 固件同密钥解密**（E6→E5→E4 版图：D780 头部+branch、D850 reset `0x1037CBA8`/handler `0x4002xxxx`、D750 `0x90020000`），`io-stub` 越过 `0xAE00060C`。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) |
 > | 2026-11-08 | **M1 实跑 + v0.2.0**：桩 → `0x1002CB8C`（Thumb，`args=0/0/2/0/1`，`LR=0x9025D754`），首条 MMIO `wr 0xE000E180 ← 0x00100000`；MPCore 基址修正为 **`0xE000E000`**；发现 a1010 是 M-profile 镜像，M1 记为“到目标未闭合”；Linux x86-64 二进制已作为 [Release v0.2.0](https://github.com/LuoStickmin/D750-QEMU/releases/tag/v0.2.0) 发布。详见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 > | 2026-11-07 | **静态定位**：a1010 基址 `0x10018000`、入口文件偏移 `0x14B8C`、Thumb 位、config 槽 `0x100F48C0/C4/C8`；原始材料在 `update_1107.zip` |
-> | 2026-11-06 | **v0.1.1**：M0 通过、strict/halt 证据修复、LCD dump 管线、64/60 Mbps 改表；见 [CHANGELOG.md](CHANGELOG.md) |
+> | 2026-11-06 | **v0.1.1**：M0 通过、strict/halt 证据修复、LCD dump 管线；见 [CHANGELOG.md](CHANGELOG.md) |
 > | 2026-11-05 | **v0.1.0**：首个公开快照（M0、LCD dump、双语文档） |
 >
 > 完整变更与兼容性说明见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
-> **本仓库有两条工作线**：QEMU 验证原型（本文）与 D750 1080p 高码率修改
-> （5 个 HQ 行 42/35、24/20 → 64/60 Mbps）。合并总览见
-> [SUMMARY.md](SUMMARY.md)，高码率细节见 [bitrate/README.md](bitrate/README.md)，
-> 法律与贡献边界见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+> **本仓库只保留 QEMU 验证原型**。总览见 [SUMMARY.md](SUMMARY.md)，法律与
+> 贡献边界见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 
@@ -37,9 +36,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 
 ## 目录
 
-- [项目总览（两条工作线）](SUMMARY.md)
-- [高码率修改](bitrate/README.md)
-- [菜单可见版 64 Mbps / Stock](bitrate/MENU64.md)
+- [项目总览](SUMMARY.md)
 - [贡献与法律边界](CONTRIBUTING.md)
 - [1. 当前状态](#1-当前状态先读这一节)
 - [2. 快速开始](#2-快速开始)
@@ -67,28 +64,18 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | 板级源码 `nikon-d750-lab.c/.h` | ✅ 已写（QEMU 11.1 API；10.2.4 由 prepare 脚本做文本适配，未实际编译验证） |
 | overlay 安装脚本 `qemu/prepare_source.py` | ✅ 幂等，单测覆盖 11.1 / 10.2 / 拒绝未知版本 |
 | `fwscan` / `run` / `probe` / `build` 工具 | ✅ 已写；`probe` 手工对**已安装的 stock QEMU `-M virt`** 做过真实 RSP 联调（测试套件只覆盖协议编解码） |
-| 主机侧测试 | ✅ `python tests/run_tests.py` → 27 passed |
+| 主机侧测试 | ✅ `python tests/run_tests.py` → 27 个用例（1 个依赖本机 stock QEMU，缺失时会失败） |
 | 板级 C 代码编译 | ✅ 已在 WSL Ubuntu 26.04（gcc 15.2）+ QEMU 11.1.0 上编译通过 |
 | `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.39 s 正常退出 |
 | M1 启动链实跑 | ⚠️ **到目标但未闭合**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；随后在 `0x100240AC` 撞到 M-profile 指令，说明目标模块不属于 A-core。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 | M1 机器选项 | ✅ `boot-mode=stub`、`a1010-base`、`thumb-fix`、`mmu-bringup`、`mpcore-base`；固件文件零修改 |
+| E5（D850）实跑 | ⚠️ **缺 boot ROM 入口上下文**：`0x1037CBA8` 是 boot-service 桩；只放虚拟 `0x40000000` 返回桩仍会 `pop` 到 PC=0。已定位镜像内 init `0x1035CE30..0x1035D040`，下一步走 host-assisted 入口。见 `docs/m1-tracks-2026-11-09.md` 与 `evidence/m1/tracks/e5-*.txt` |
+| E6（D780）实跑 | ✅ **已进入真实外设初始化**：`e6-prep` 修页表后 0 异常跑到 `0x0426/0x0428` 块；`cortex-a15` 下 0 undefined、2 SVC，进入 `0x04266000` 定时器块，当前在 `0x1011C000` 附近循环。见 `docs/m1-tracks-2026-11-09.md` |
+| E5/E6 机器选项 | ✅ `flash-size`、`aux2-base`/`aux2-size`、`virtual-boot-rom`、`e6-prep`、`cortex-a7/a15`；证据在 `evidence/m1/tracks/` |
 | strict 诊断 / halt 校验 | ✅ 第一条未建模访问记 `d750-strict:` 后停止（`run.py` 退出码 7）；halt 记录带 `return_ok=`，异常路径退出码 6 |
 | LCD 扫描输出/dump 管线 | ✅ 可配置帧缓冲 → PPM；测试卡验证通过；固件画面仍无 |
-| 容器重打包 / 改后镜像复现 | ✅ 同作者工具链可逐字节复现（无修改回环 bit-identical；改后镜像 `9c88f3cc…` 可精确重建），见 [docs/hardware-test.md](docs/hardware-test.md) |
-| 实机测试 | ⚠️ **未验证**：更新器接受度、编码器行为、写卡/发热/回放都还没有实机记录 |
 | M2（串口）/ M3（补设备） | ⏳ 未推进：本轮仍无串口输出（`uart=0B`）；GIC 已接上，等待下一条未建模访问 |
 | 完整相机 UI / ISP / CMOS / 存储 | ❌ 不在本原型范围 |
-
-> **另一条工作线（1080p 高码率）**：D750 码率表的 5 个 HQ 行已从
-> `42/35`、`24/20` 提到 `64/60` Mbps；容器级验证通过，且改后镜像可由
-> stock + 改表模块**逐字节复现**（`repack_firmware.py` 无修改回环
-> bit-identical）；QEMU M0 回归与 stock 一致，但**相机实拍未验证**。
-> 摘要见 [SUMMARY.md](SUMMARY.md)，细节见 [bitrate/README.md](bitrate/README.md)，
-> 实机前置条件见 [docs/hardware-test.md](docs/hardware-test.md)。仓库只含改表
-> 工具，不含固件/密钥/改后镜像。Movie quality 新增第三项的可行性以及
-> “64 Mbps / Stock”两项复用工具见
-> [analysis/menu-bitrate-feasibility.md](analysis/menu-bitrate-feasibility.md)
-> 与 [bitrate/MENU64.md](bitrate/MENU64.md)。
 
 **这意味着什么：** 如果你装的是 stock QEMU（例如 Windows 的
 `C:\Program Files\qemu`），它通常只有 `qemu-system-arm` / `qemu-system-aarch64`
@@ -214,9 +201,10 @@ d750-halt: pc=0x00000ff0 r0=0x80002000 r1=0x00000000 sp=0x97ffff00 lr=0x00000ff0
   （`uart=0B`）。所以 M1/M2 的下一步不是“再加设备”，而是**找到这个 init
   函数的调用者或下一阶段入口**；`-machine entry=...` 可以直接试别的假设。
 - 对镜像内 10 个候选入口（`0x25D0D4..0x25D720`、向量表、默认入口）的扫描
-  全部是 `0 MMIO`，`0x9025D700` 则进入无 MMIO 的等待循环。结论：**下一阶段
-  不在 `b1010` 里**，更可能来自 boot ROM 或 `a1010` 之外的 flash 内容。
-  详见 [findings §11.4](docs/findings.md#114-候选入口扫描负结果)。
+  全部是 `0 MMIO`，`0x9025D700` 则进入无 MMIO 的等待循环。**`0x9025D700`
+  的调用者不在 `b1010` 里**；后续布局枚举进一步表明 flash 窗口更像 `b1010`
+  的副本，真正缺的是一级 boot ROM（见 §2.5 与
+  [findings §11.4](docs/findings.md#114-候选入口扫描负结果)）。
 
 ### 2.5 M1 实跑（启动桩 → a1010 目标）
 
@@ -259,13 +247,14 @@ GDB 现场（`-S -gdb tcp::12345` + `tools/probe.py`）应看到
 
 | 项目 | 取值 | 依据强度 |
 | --- | --- | --- |
-| CPU | 1× Cortex-A9（`-smp 2` 可试） | 中：ARMv7 Thumb-2 + VFP/NEON + T-Kernel 字符串 |
+| CPU | 1× Cortex-A9（`-smp 2` 可试）；E6 可切 `cortex-a7`/`cortex-a15` | 中：ARMv7 Thumb-2 + VFP/NEON + T-Kernel 字符串 |
 | 主 RAM | `0x90000000`，默认 128 MiB | 高：`0x90020000` 页表字面量、`0x9027D52C` 等指针 |
-| 主镜像装入 | `b1010_115a.bin` @ `0x90000000` | 高 |
-| 初始 PC | `boot-mode=stub` 时为 `0x9025D700`（内部先经 `0x1000` 垫片）；`boot-mode=entry` 时为 `0x9027D52C` | 运行证据：两模式都实跑过 |
+| 主镜像装入 | E4 D750 `b1010` @ `0x90000000`；E5 D850 @ `0x10000000`；E6 D780 @ `0x10020000` | 高：各机型运行证据 |
+| 初始 PC | D750：`boot-mode=stub` 为 `0x9025D700`，`entry` 为 `0x9027D52C`；E5：`entry=0x1037CBA8`；E6：header 分支 `0x1002BC88` | 运行证据：各机型都实跑过 |
 | 低内存 | `0x0..0xFFFF` RAM；`0xFF0` 是 halt 窗口，`0x1000` 是 M1 MMU 垫片 | 运行证据：入口会向 `0x0` 写向量字 |
 | 辅助启动 | SP=RAM 顶、LR=`0xFF0`、r0=0（entry 模式） | 运行证据：入口 `push`/`pop` 后返回 |
-| Flash 窗口 | `0x10000000`，8 MiB；`-bios` 镜像按 `a1010-base` 装入（默认 `0x10018000`） | 中：a1010 在该基址下 `bx` 目标落在 Thumb 序言；但镜像本身是 M-profile，见 M1 文档 |
+| Flash 窗口 | `0x10000000`，默认 8 MiB；E5 D850 用 `flash-size=0x2000000`（32 MiB）；`-bios` 镜像按 `a1010-base` 装入（默认 `0x10018000`） | 中：a1010 在该基址下 `bx` 目标落在 Thumb 序言；但镜像本身是 M-profile，见 M1 文档 |
+| E5 handler / E6 prep | `aux2-base`/`aux2-size` 把 `0x40000000` 映射为 RAM；`e6-prep` 把 D780 页表补成 identity section 并预置 `0x20022300` | 运行证据：E5 虚拟 boot ROM、E6 0 异常 startup |
 | MMU 垫片 | `mmu-bringup=on`：DRAM 顶部 16 KiB identity 页表 + `DACR/TTBR0/TTBCR` 垫片；config 槽 `0x100F48C0` 填入页表基址 | 运行证据：不启用时 `SCTLR=0x1C05` 后立即 prefetch abort |
 | 串口候选 | `0x80005010..0x80005014` 字节寄存器 | 中：driver 片段 `0x27CC00..0x27D304` |
 | GIC/定时器 | `a9mpcore_priv` @ **`0xE000E000`**（可 `mpcore-base=` 覆盖） | 高：第一条 a1010 MMIO 为 `0xE000E180 ← 0x00100000` |
@@ -349,15 +338,14 @@ python tools/run.py --payload ... --flash ... `
 │   ├── manifest.py             重新生成/校验 SHA256SUMS 与 MANIFEST
 │   └── build.py                下载/解包/overlay/构建/记录
 ├── tests/                      27 个主机侧测试（无需 QEMU 构建）
-├── bitrate/                    D750 1080p 64/60 Mbps 改表工具、测试、说明
 ├── analysis/
 │   ├── d750-0115.json          真实镜像的扫描结果
 │   ├── lcd-testcard.png        LCD 管线测试卡（主机写入）
 │   └── ...                     仓库里已有的其他固件分析产物（见下）
 ├── binary/                     COPYING + 说明（二进制通过 GitHub Release 发布）
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan 运行证据
-├── docs/                       findings / m1-boot-chain / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
-├── SUMMARY.md / SUMMARY.en.md  两条工作线总览
+├── docs/                       findings / m1-boot-chain / architecture / validation / build / gui-cmos（含 .en.md）
+├── SUMMARY.md / SUMMARY.en.md  QEMU 原型总览
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
 ├── PRODUCT.md  MANIFEST.json  SHA256SUMS
@@ -368,8 +356,8 @@ python tools/run.py --payload ... --flash ... `
 ```
 
 `analysis/` 里只有 `d750-0115.json` 和 `lcd-testcard.png` 由本 QEMU 产品生成；
-其余（movie bitrate、TIFF、patch 等）是同一仓库里已有的固件分析产物，随仓库
-保留，但不在 QEMU 产品的验收范围内。
+其余（TIFF、patch 等）是同一仓库里已有的固件分析产物，随仓库保留，但不在
+QEMU 产品的验收范围内。
 
 > **大文件**：`binary/qemu-system-arm` 约 96 MiB，**不进入 Git 历史**，
 > 而是作为 GitHub Release 附件发布：
@@ -394,27 +382,33 @@ python tools/run.py --payload ... --flash ... `
 
 - 这是**辅助验证原型**：入口是主机选定的、SP/LR 是主机给的，不等于自然上电启动。
 - 已在 WSL 上编译并实跑：M0 干净返回；M1 到达 1107 的目标地址并抓到第一条
-  MMIO，但目标镜像是 M-profile，A-core 启动链尚未闭合。MPCore 基址已由运行
-  证据定为 `0xE000E000`；串口寄存器语义、CPU 型号仍是假设。
-- 没有签名、没有重打包、没有升级容器处理；固件文件全程只读。
+  MMIO，但目标镜像是 M-profile，D750 的 A-core 启动链仍未闭合。E5/E6 的跨机型
+  结果来自辅助入口/修页表，同样不是自然上电。MPCore 基址已由运行证据定为
+  `0xE000E000`；串口寄存器语义、CPU 型号仍是假设。
+- 本仓库不提供签名、重打包工具或升级容器处理；容器级复现依赖同作者的
+  外置工具链，固件文件全程只读。
 - 另见 [NOTICE.md](NOTICE.md) 与 [docs/validation.md](docs/validation.md)。
 
 ## 8. 还需要什么（输入需求）
 
-三套目标（E4 D750、E5 D850/D5、E6 D780）都缺同一类输入：**第一级 boot**。
-按优先级：
+三套目标的进度不同：**E6 D780** 已能跑到真实外设初始化（`0x0426/0x0428`），
+下一步是建模该块；**E5 D850/D5** 已定位镜像内 init，但缺 boot ROM 的调用上下文
+（栈/LR/r4）；**E4 D750** 仍缺一级 boot。共同最缺的仍是整片 dump：
 
-1. **整片 SPI flash dump**（D750/D850/D5/D780 任意一台）——最直接，可能包含
-   boot 分区或第一级 loader；可用 CH341A/测试夹读取，或从维修渠道获取。
+1. **整片 SPI flash dump**（D750/D850/D5 任意一台）——最直接，可能包含 boot
+   分区或第一级 loader；可用 CH341A/测试夹读取，或从维修渠道获取。
 2. **Nikon 服务软件/维修固件里的 recovery/boot 镜像**（如 Tornado NKN 等）。
-3. **其他机型整片 dump**（D5100/D7000/D800）——用于理解 Nikon 的 boot 分区结构。
-4. **硬件 UART 启动日志**——确认 boot ROM 之后第一段代码的加载地址与大小。
-5. **Z6/Z7 QEMU 社区关于 `0x40000000` 区域填充者的信息**（可选）。
+3. **E5 的 boot ROM 本体或 `0x40000000` 附近 RAM dump**——虚拟 `bx lr` 桩已
+   证明不足以补出入口契约（见 `evidence/m1/tracks/e5-vbr-run.txt`）。
+4. **其他机型整片 dump**（D5100/D7000/D800）——用于理解 Nikon 的 boot 分区结构。
+5. **硬件 UART 启动日志**——确认 boot ROM 之后第一段代码的加载地址与大小。
 
 已经具备、无需再提供：D750/D850/D5/D780 的解密镜像、E4/E5/E6 机器、
-`io-stub`/`early_control` 等模型，以及各代向量/加载基址结论。
+`io-stub`/`early_control` 等模型、E5 镜像内 init 地址，以及各代向量/加载基址结论。
+`0x40000000` 的 relocation 反查已完成（镜像内没有拷贝循环，见
+`evidence/m1/tracks/e5-40000000-reloc.txt`）。
 
-没有新输入时仍可做：在现有镜像里反查写 `0x40000000` 的 relocation 循环，
-判断 boot 是否其实在镜像内；继续 E5/E6 的寄存器与代码路径建模。
+没有新输入时仍可做：E5 走 host-assisted 入口（`0x1035CE30` 附近的 init）；
+E6 建模 `0x0426/0x0428` 寄存器块；D750 继续找重定位表/SVC 语义。
 
 许可：overlay 与工具为 **GPL-2.0-or-later**；上游 QEMU 保留其自身许可。

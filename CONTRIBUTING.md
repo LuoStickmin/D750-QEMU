@@ -8,9 +8,9 @@
 ## 1. 项目是什么
 
 本仓库是**独立的固件互操作性与验证研究**：一个 Nikon D750 的 QEMU 验证
-原型，以及一份 1080p 码率表修改的分析/工具。它与 Nikon、WonderLantern、
-Magic Lantern 均无隶属或背书关系。Nikon、D750、EXPEED 是其各自权利人的
-商标，仅用于标识研究对象（nominative fair use）。
+原型。它与 Nikon、WonderLantern、Magic Lantern 均无隶属或背书关系。
+Nikon、D750、EXPEED 是其各自权利人的商标，仅用于标识研究对象
+（nominative fair use）。
 
 ## 2. 绝对不要提交的内容（硬性禁止）
 
@@ -28,8 +28,7 @@ Git 历史的形式：
 8. 任何违反当地法律（包括但不限于 DMCA §1201、EU 2009/24/EC、日本
    著作権法）的内容。
 
-> 说明：本仓库的高码率工具只修改**你自己提供的解密模块**，不附带固件、
-> 密钥、解密器或改后镜像。提交相关代码时也不要附带这些输入。
+> 说明：本仓库只保留 QEMU 原型。
 
 ## 3. 可以提交的内容
 
@@ -72,7 +71,6 @@ Git 历史的形式：
 
    ```sh
    python tests/run_tests.py
-   D750_MODULE=/path/to/b1010_115a.bin python bitrate/test_d750_bitrate_patch.py
    ```
 
 3. 提交 PR，说明：改了什么、为什么、如何验证、哪些是假设；
@@ -89,6 +87,5 @@ Git 历史的形式：
 ## 8. 参考
 
 - [NOTICE.md](NOTICE.md) — 独立研究、无固件、许可
-- [SUMMARY.md](SUMMARY.md) — 两条工作线总览
+- [SUMMARY.md](SUMMARY.md) — QEMU 原型总览
 - [README.md](README.md) — QEMU 原型
-- [bitrate/README.md](bitrate/README.md) — 高码率修改

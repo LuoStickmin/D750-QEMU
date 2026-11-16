@@ -13,12 +13,12 @@ absolute paths.
 
 | Item | Value |
 | --- | --- |
-| Generated | 2026-11-06 (Asia/Shanghai) |
+| Generated | 2026-11-06 (Asia/Shanghai); last updated 2026-11-10 |
 | Host | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | Compiler | gcc 15.2.0 |
 | QEMU | 11.1.0 (overlay build) |
 | Binary | GitHub Release v0.2.8 asset (Linux x86-64, 100,785,112 bytes) |
-| Host-side tests | 27 passed (QEMU) + 9 passed (bitrate/menu; needs a local module, 9 skipped without one) |
+| Host-side tests | 27 cases (QEMU; 1 depends on a local stock QEMU and fails when it is absent) |
 
 ## 2. Verified Facts
 
@@ -30,12 +30,17 @@ absolute paths.
 3. **LCD dump pipeline**: configurable framebuffer → PPM; writing a 320×240
    test card into guest RAM via GDB verifies that the pixels are correct, see `analysis/lcd-testcard.png`.
    **This is a host-written test card, not the firmware UI.**
-4. **Boot candidate scan**: all 10 candidate entry points inside the image yield 0 MMIO; the next stage is not inside
-   `b1010` (see `evidence/boot-scan.txt` and `docs/findings.md` §11.4).
+4. **Boot candidate scan**: all 10 candidate entry points inside the image yield 0 MMIO; `0x9025D700`'s caller is
+   not inside `b1010`, and the later layout work points at a missing first-stage boot ROM (see
+   `evidence/boot-scan.txt` and `docs/findings.md` §11.4).
 5. **M1 reached the target but is not closed** (2026-11-08): boot stub `0x9025D700` → `0x1002CB8C` (Thumb, args
    0/0/2/0/1) → first MMIO `0xE000E180←0x00100000` (GIC); execution then hits `MRS/MSR BASEPRI` at `0x100240AC`,
    showing that a1010 is an M-profile image, not the A-core's next stage. Evidence: `evidence/m1/`,
    `docs/m1-boot-chain.en.md`.
+6. **E5/E6 cross-model** (2026-11-10): the D850 in-image init `0x1035CE30..0x1035D040` is located, but the
+   boot-ROM entry context is still missing; the D780 with `e6-prep` runs with 0 exceptions into the
+   `0x0426/0x0428` block. Evidence: `evidence/m1/tracks/e5-*.txt`, `e6-run.log`, and
+   `docs/m1-tracks-2026-11-09.en.md`.
 
 ## 3. Directory
 
@@ -44,7 +49,7 @@ D750-QEMU/
 ├── README.md / README.en.md   Main product documentation (status, quick start, machine model)
 ├── PRODUCT.md / .en.md        This snapshot documentation
 ├── NOTICE.md / .en.md         Independent research / no-firmware / license notice
-├── SUMMARY.md / .en.md        Both workstreams at a glance
+├── SUMMARY.md / .en.md        QEMU prototype overview
 ├── CONTRIBUTING.md / .en.md   Legal and contribution boundaries
 ├── MANIFEST.json              File list, SHA-256, evidence summary
 ├── SHA256SUMS                 sha256sum -c compatible checksum list
@@ -52,9 +57,8 @@ D750-QEMU/
 ├── .github/workflows/ci.yml   Host-side tests + manifest checks
 ├── qemu/                      QEMU overlay: nikon-d750-lab.c/.h + prepare_source.py
 ├── tools/                     fwscan / run / probe / manifest / build
-├── tests/                     23 host-side tests (no QEMU build needed)
-├── bitrate/                   1080p 64/60 Mbps patcher, menu-visible variant, tests, report
-├── docs/                      findings / architecture / validation / build / gui-cmos / hardware-test (+ .en.md)
+├── tests/                     27 host-side tests (no QEMU build needed)
+├── docs/                      findings / m1-boot-chain / m1-tracks / architecture / validation / build / gui-cmos (+ .en.md)
 ├── analysis/
 │   ├── d750-0115.json         Profile verification results for the real image
 │   ├── lcd-testcard.png       LCD pipeline test card (host-written)
@@ -148,20 +152,20 @@ Nikon Hacker's patch database, firmware ASCII string dumps, and one-off scripts
 with local paths **are not published**; they stay in the local
 `.local/private-analysis/`. The reasons (third-party GPL, firmware-text
 copyright, privacy/reproducibility) are in `analysis/README.md`. The repository
-contains no firmware, keys, decrypted images, or patched images.
+contains no firmware, keys, or decrypted images.
 
 ## 7. Not Done / Next Steps
 
 - Firmware GUI: need to observe the real registers and framebuffer of Display/GPU/GDU; currently there is only the host-side
   dump pipeline.
 - CMOS: need the control/data contract for Sensor/I2C/GDMA; currently there is no model.
-- Next boot stage: M1 executed the Nov 7 address hypothesis up to `0x1002CB8C`, but that target is M-profile
-  firmware; the next step needs a full flash image / module offset table to find the A-core's real next stage, or
-  confirmation of the dual-core topology.
-- High-bitrate hardware: the container is now byte-reproducible. Next steps are a static review of the D750 updater
-  (model/version/hidden checks), confirmation of the same-version reflash policy, then a spare-body test following
-  `docs/hardware-test.md` (short clip + playback). Neither updater acceptance nor encoder behaviour has a hardware record yet.
-- See `docs/gui-cmos.md`, `docs/findings.md` §11.4/§11.5, `docs/hardware-test.md`.
+- D750 next boot stage: M1 executed the Nov 7 address hypothesis up to `0x1002CB8C`, but that target is M-profile
+  firmware; the later layout work points at the `b1010` flash copy plus a missing first-stage boot ROM, so the next
+  step needs a full flash image / module offset table or a RAM dump.
+- E5 D850: the in-image init `0x1035CE30..0x1035D040` is located; next is a host-assisted entry plus the boot ROM's
+  stack/LR/r4 context.
+- E6 D780: 0 exceptions into the `0x0426/0x0428` block; next is modelling that register block.
+- See `docs/gui-cmos.md`, `docs/findings.md` §11.4/§11.5.
 
 ## 8. Boundaries
 

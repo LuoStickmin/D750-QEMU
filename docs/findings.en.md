@@ -332,6 +332,11 @@ Full record: [m1-boot-chain.en.md](m1-boot-chain.en.md); conclusion-level summar
   hardware documentation confirming the core topology;
 - the only new hard device fact is the GIC base; the UART still produces 0 bytes.
 
+> **Update 2026-11-09**: the later layout enumeration identifies the host of
+> `0x1002CB8C` as the **b1010 flash copy** (not a1010); what is really missing is
+> a first-stage boot ROM. See §13 and
+> [m1-tracks-2026-11-09.en.md](m1-tracks-2026-11-09.en.md).
+
 ## 13. Three No-Input Checks (2026-11-09)
 
 Full record: [m1-tracks-2026-11-09.en.md](m1-tracks-2026-11-09.en.md). Summary:

@@ -11,12 +11,12 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 生成时间 | 2026-11-06（Asia/Shanghai） |
+| 生成时间 | 2026-11-06（Asia/Shanghai）；最近更新 2026-11-10 |
 | 主机 | Windows + WSL2 Ubuntu 26.04.1 LTS |
 | 编译器 | gcc 15.2.0 |
 | QEMU | 11.1.0（overlay 构建） |
 | 二进制 | GitHub Release v0.2.8 附件（Linux x86-64，100,785,112 字节） |
-| 主机侧测试 | 27 passed（QEMU）+ 9 passed（bitrate/menu，需本地模块；无模块时 9 skipped） |
+| 主机侧测试 | 27 个用例（QEMU；其中 1 个依赖本机 stock QEMU，缺失时会失败） |
 
 ## 2. 已验证的事实
 
@@ -28,12 +28,18 @@
 3. **LCD dump 管线**：可配置帧缓冲 → PPM；用 GDB 往 guest RAM 写 320×240
    测试卡验证像素正确，见 `analysis/lcd-testcard.png`。
    **这是主机写入的测试卡，不是固件 UI。**
-4. **boot 候选扫描**：镜像内 10 个候选入口全部 0 MMIO；下一阶段不在
-   `b1010` 内（详见 `evidence/boot-scan.txt` 与 `docs/findings.md` §11.4）。
+4. **boot 候选扫描**：镜像内 10 个候选入口全部 0 MMIO；`0x9025D700` 的调用者
+   不在 `b1010` 内，后续布局枚举指向缺失的一级 boot ROM（详见
+   `evidence/boot-scan.txt` 与 `docs/findings.md` §11.4）。
 5. **M1 到目标但未闭合**（2026-11-08）：启动桩 `0x9025D700` → `0x1002CB8C`
    （Thumb，参数 0/0/2/0/1）→ 第一条 MMIO `0xE000E180←0x00100000`（GIC）；
    随后在 `0x100240AC` 撞到 `MRS/MSR BASEPRI`，说明 a1010 是 M-profile 镜像，
    不是 A-core 的下一阶段。证据：`evidence/m1/`、`docs/m1-boot-chain.md`。
+6. **E5/E6 跨机型**（2026-11-10）：D850 的镜像内 init
+   `0x1035CE30..0x1035D040` 已定位，但仍缺 boot ROM 入口上下文；D780 用
+   `e6-prep` 修页表后 0 异常进入 `0x0426/0x0428` 外设块。
+   证据：`evidence/m1/tracks/e5-*.txt`、`e6-run.log` 与
+   `docs/m1-tracks-2026-11-09.md`。
 
 ## 3. 目录
 
@@ -42,7 +48,7 @@ D750-QEMU/
 ├── README.md / README.en.md   产品主说明（状态、快速开始、机器模型）
 ├── PRODUCT.md / .en.md        本快照说明
 ├── NOTICE.md / .en.md         独立研究/无固件/许可声明
-├── SUMMARY.md / .en.md        两条工作线总览
+├── SUMMARY.md / .en.md        QEMU 原型总览
 ├── CONTRIBUTING.md / .en.md   法律与贡献边界
 ├── MANIFEST.json             文件清单、SHA-256、证据摘要
 ├── SHA256SUMS                sha256sum -c 兼容的校验清单
@@ -50,9 +56,8 @@ D750-QEMU/
 ├── .github/workflows/ci.yml  主机侧测试 + 清单校验
 ├── qemu/                     QEMU overlay：nikon-d750-lab.c/.h + prepare_source.py
 ├── tools/                    fwscan / run / probe / manifest / build
-├── tests/                    23 个主机侧测试（无需 QEMU 构建）
-├── bitrate/                  1080p 64/60 Mbps 改表工具、菜单可见版、测试、说明
-├── docs/                     findings / architecture / validation / build / gui-cmos / hardware-test（含 .en.md）
+├── tests/                    27 个主机侧测试（无需 QEMU 构建）
+├── docs/                     findings / m1-boot-chain / m1-tracks / architecture / validation / build / gui-cmos（含 .en.md）
 ├── analysis/
 │   ├── d750-0115.json        真实镜像的 profile 核对结果
 │   ├── lcd-testcard.png      LCD 管线测试卡（主机写入）
@@ -138,27 +143,25 @@ Windows 侧 `C:\Program Files\qemu` 的 stock 11.1.0 没有 `nikon-d750` 机器�
 ## 6. 关于 `analysis/`
 
 公共仓库里的 `analysis/` 只保留可公开的事实性产物：
-`d750-0115.json`、`lcd-testcard.png`、`tiff-feasibility.md/.en.md`、
-`tiff_scan.py`。
+`d750-0115.json`、`lcd-testcard.png`、`tiff-feasibility.md/.en.md`、`tiff_scan.py`。
 
 Nikon Hacker 补丁数据库、固件 ASCII 字符串 dump、硬编码本机路径的一次性脚本
 **不进入公共仓库**，保留在本地 `.local/private-analysis/`；原因（第三方 GPL、
 固件文本版权、隐私/可复现性）见 `analysis/README.md`。仓库不含固件、密钥、
-解密镜像或改后镜像。
+解密镜像。
 
 ## 7. 未完成 / 下一步
 
 - 固件 GUI：需要观测到 Display/GPU/GDU 的真实寄存器与帧缓冲；当前只有主机侧
   dump 管线。
 - CMOS：需要 Sensor/I2C/GDMA 的控制/数据契约；当前没有模型。
-- boot 下一阶段：M1 已把 1107 的地址假说实跑到 `0x1002CB8C`，但该目标是
-  M-profile 固件；下一步需要整片 flash/模块偏移表来定位 A-core 真正的下一阶段，
-  或确认双核拓扑。
-- 高码率实机：容器已可逐字节复现；下一步是静态检查 D750 更新器（型号/版本/
-  隐藏校验）、确认同版本重刷策略，然后在备用机上按 `docs/hardware-test.md`
-  的流程做短录与回放验证。更新器接受度与编码器行为目前**都没有实机记录**。
-- 详见 `docs/gui-cmos.md`、`docs/findings.md` §11.4/§11.5、
-  `docs/hardware-test.md`。
+- D750 boot 下一阶段：M1 已把 1107 的地址假说实跑到 `0x1002CB8C`，但该目标是
+  M-profile 固件；后续布局枚举指向 `b1010` flash 副本 + 缺失的一级 boot ROM，
+  下一步需要整片 flash/模块偏移表或 RAM dump。
+- E5 D850：镜像内 init `0x1035CE30..0x1035D040` 已定位，下一步是 host-assisted
+  入口并补 boot ROM 的栈/LR/r4 上下文。
+- E6 D780：已 0 异常跑到 `0x0426/0x0428` 块，下一步建模该寄存器块。
+- 详见 `docs/gui-cmos.md`、`docs/findings.md` §11.4/§11.5。
 
 ## 8. 边界
 

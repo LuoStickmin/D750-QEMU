@@ -9,11 +9,10 @@
 ## 1. What this project is
 
 This repository is **independent firmware interoperability and validation
-research**: a Nikon D750 QEMU validation prototype plus an analysis/tool for a
-1080p bitrate-table modification. It is not affiliated with or endorsed by
-Nikon, WonderLantern, or Magic Lantern. Nikon, D750, and EXPEED are trademarks
-of their respective owners and are used only to identify the research target
-(nominative fair use).
+research**: a Nikon D750 QEMU validation prototype. It is not affiliated with or
+endorsed by Nikon, WonderLantern, or Magic Lantern. Nikon, D750, and EXPEED are
+trademarks of their respective owners and are used only to identify the research
+target (nominative fair use).
 
 ## 2. Never submit (hard prohibitions)
 
@@ -37,9 +36,7 @@ fixtures, issue pastes, or Git history:
 8. anything that violates local law, including but not limited to DMCA §1201,
    EU Directive 2009/24/EC, or Japanese copyright law.
 
-> Note: the high-bitrate tool patches only a **decrypted module you supply
-> yourself**. It ships no firmware, keys, decryptor, or patched image. Do not
-> attach those inputs when contributing related code.
+> Note: this repository keeps the QEMU prototype only.
 
 ## 3. What is welcome
 
@@ -95,7 +92,6 @@ fixtures, issue pastes, or Git history:
 
    ```sh
    python tests/run_tests.py
-   D750_MODULE=/path/to/b1010_115a.bin python bitrate/test_d750_bitrate_patch.py
    ```
 
 3. Open a PR explaining what changed, why, how it was verified, and which
@@ -117,6 +113,5 @@ fixtures, issue pastes, or Git history:
 ## 8. See also
 
 - [NOTICE.md](NOTICE.md) — independent research, no firmware, licensing
-- [SUMMARY.md](SUMMARY.md) — both workstreams at a glance
-- [README.md](README.md) — the QEMU prototype
-- [bitrate/README.md](bitrate/README.md) — high-bitrate modification
+- [SUMMARY.md](SUMMARY.en.md) — QEMU prototype overview
+- [README.md](README.en.md) — the QEMU prototype

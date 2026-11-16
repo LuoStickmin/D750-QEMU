@@ -20,7 +20,7 @@ Do not attach firmware or its derived data in issues, PRs, releases, or shared b
 
 ## Risks
 
-Flashing, repacking, and bypassing signatures are outside the scope of this project. Any modification to the camera may cause bricking,
+Flashing and bypassing signatures are outside the scope of this project. Any modification to the camera may cause bricking,
 data loss, or the need for paid repair; this project provides no recovery procedure and accepts no responsibility for the consequences.
 
 ## Legal and compliance
@@ -50,7 +50,7 @@ data loss, or the need for paid repair; this project provides no recovery proced
 
 ## License
 
-- The overlay under `qemu/`, `tools/`, `tests/`, `docs/`, `bitrate/`:
+- The overlay under `qemu/`, `tools/`, `tests/`, `docs/`:
   **GPL-2.0-or-later**.
 - Upstream QEMU retains its per-file licenses; QEMU as a whole is GPLv2.
 
