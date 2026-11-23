@@ -108,10 +108,10 @@ typedef struct NikonD750MachineState {
     uint64_t veneer_slot;       /* payload offset of one veneer to patch   */
     bool loader_copies;         /* apply the descriptor-table copy records */
     bool mmu_bringup;           /* emulate the missing boot-ROM MMU setup  */
-    bool io_stub;               /* map A2/AD/AE/A340 register-block stubs  */
+    bool io_stub;               /* map A2/A120/A161/A300/AD/AE/A340 stubs */
     bool e6_prep;               /* patch the D780 page table + map stacks  */
     bool vbr_on;                /* virtual 0x40000000 boot-ROM stubs       */
-    struct D750IoStub *io_blocks[4];
+    struct D750IoStub *io_blocks[7];
     uint64_t mpcore_base;       /* GIC/timers/watchdog block address       */
     bool strict;
     uint32_t uart_status;
@@ -274,6 +274,34 @@ static uint64_t d750_io_stub_read(void *opaque, hwaddr addr, unsigned size)
 
     if (s->base + addr == D750_IO_AE_READY) {
         return 1;
+    }
+    if (s->base + addr == D750_IO_A2_READY) {
+        /* The real reset path polls bit31 here after the A2 block setup. */
+        return s->regs[addr >> 2] | 0x80000000u;
+    }
+    if (s->base == D750_IO_A2_BASE && addr >= 0x20 && addr <= 0x2c) {
+        /* Four A2 channel status words share the same bit31 ready shape. */
+        return s->regs[addr >> 2] | 0x80000000u;
+    }
+    if (s->base == D750_IO_A2_BASE && addr == 0xfc) {
+        /* Fifth status word in the same reset sequence. */
+        return s->regs[addr >> 2] | 0x80000000u;
+    }
+    if (s->base == D750_IO_A2_BASE && addr == 0x1c) {
+        /* Channel-state word polled after the AE00060C handshake. */
+        return s->regs[addr >> 2] | 0x80000000u;
+    }
+    if (s->base == D750_IO_A120_BASE && addr == 0xf8) {
+        /* A120 status: reset path waits for bit4 before returning. */
+        return s->regs[addr >> 2] | 0x10u;
+    }
+    if (s->base == D750_IO_A161_BASE && addr == 0x28) {
+        /* A161 channel status: next-stage init waits for bit0. */
+        return s->regs[addr >> 2] | 1u;
+    }
+    if (s->base == D750_IO_A300_BASE && addr == 0x1018) {
+        /* A300 channel-ready bits 4/5; diagnostic ready value. */
+        return s->regs[addr >> 2] | 0x30u;
     }
     if (addr + size > s->size) {
         return 0;
@@ -1065,10 +1093,10 @@ static void d750_apply_vector_fix(uint8_t *data, gsize size)
     static const uint32_t handlers[8] = {
         0xEAFFFFFE,             /* reset:        b .                    */
         0xEAFFFFFE,             /* undefined:    b .                    */
-        0xE14F1000,             /* SVC:          mrs r1, spsr           */
-        0xE3811020,             /*               orr r1, r1, #0x20      */
-        0xE16FF001,             /*               msr spsr_cxsf, r1      */
-        0xE1B0F00E,             /*               movs pc, lr            */
+        0xE1B0F00E,             /* SVC:          movs pc, lr            */
+        0xE1A00000,             /*               nop                    */
+        0xE1A00000,             /*               nop                    */
+        0xE1A00000,             /*               nop                    */
         0xE25EF004,             /* IRQ:          subs pc, lr, #4        */
         0xE25EF004,             /* FIQ:          subs pc, lr, #4        */
     };
@@ -1531,21 +1559,24 @@ static void nikon_d750_init(MachineState *machine)
         rom_add_blob_fixed("d750.e6-ready2", ready, sizeof(ready), 0x20070008);
     }
 
-    /* EXPEED 4 register-block stubs: A2/AD/AE/A340. */
+    /* EXPEED 4 register-block stubs: A2/A120/A161/A300/AD/AE/A340. */
     if (s->io_stub) {
         static const struct {
             uint64_t base;
             uint32_t size;
             const char *name;
-        } blocks[4] = {
+        } blocks[7] = {
             { D750_IO_A2_BASE, D750_IO_A2_SIZE, "a2" },
+            { D750_IO_A120_BASE, D750_IO_A120_SIZE, "a120" },
+            { D750_IO_A161_BASE, D750_IO_A161_SIZE, "a161" },
+            { D750_IO_A300_BASE, D750_IO_A300_SIZE, "a300" },
             { D750_IO_AD_BASE, D750_IO_AD_SIZE, "ad" },
             { D750_IO_AE_BASE, D750_IO_AE_SIZE, "ae" },
             { D750_IO_A340_BASE, D750_IO_A340_SIZE, "a340" },
         };
         int b;
 
-        for (b = 0; b < 4; b++) {
+        for (b = 0; b < 7; b++) {
             struct D750IoStub *st = g_new0(struct D750IoStub, 1);
 
             st->base = blocks[b].base;
@@ -1875,7 +1906,7 @@ static void nikon_d750_class_init(ObjectClass *oc, const void *data)
                                    nikon_d750_get_io_stub,
                                    nikon_d750_set_io_stub);
     object_class_property_set_description(oc, "io-stub",
-        "Map the A2/AD/AE/A340 register blocks as a register file and report "
+        "Map the A2/A120/A161/A300/AD/AE/A340 register blocks as a register file and report "
         "0xAE00060C as ready (diagnostic)");
     object_class_property_add_bool(oc, "e6-prep",
                                    nikon_d750_get_e6_prep,

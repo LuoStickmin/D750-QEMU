@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, host tools, evidence",
-  "generated": "2026-11-23T22:06:12+08:00",
+  "generated": "2026-11-24T07:08:48+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -174,8 +174,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 16815,
-      "sha256": "38089c8b18dc2e3ba702352a436ed4bd2c2774e2904ee852a50c68e0469fcf3a"
+      "size": 17476,
+      "sha256": "b9b7960d2346d4a2a2a09eea21f74a43bf3c0eb24bb2dd85160e4021bc9dd645"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -186,6 +186,16 @@
       "path": "CONTRIBUTING.md",
       "size": 4640,
       "sha256": "d0d9fe8f3141c450fc2d7cbd472db86255d7680416b4709ae5d96280b789c0e1"
+    },
+    {
+      "path": "docs/acore-boot.en.md",
+      "size": 3943,
+      "sha256": "f300a0cba370dd22c50c8451b9ec5518ef236d8d8b20460406ebe8a1bd935df1"
+    },
+    {
+      "path": "docs/acore-boot.md",
+      "size": 3942,
+      "sha256": "86cb4710ff0423204344b4d9a6ec3fa7234716a12cef516135e44e91b2e4d6ba"
     },
     {
       "path": "docs/architecture.en.md",
@@ -266,6 +276,26 @@
       "path": "docs/validation.md",
       "size": 8981,
       "sha256": "d44b34c41db041d97645913e2d9918cb490275f2ca275390eb5bf4bb2c5a2aab"
+    },
+    {
+      "path": "evidence/acore/command.json",
+      "size": 659,
+      "sha256": "300338f309aadeacf41d25775b047f8aa5f66aa975896d0015f2d8070a2a7986"
+    },
+    {
+      "path": "evidence/acore/qemu.log",
+      "size": 2932,
+      "sha256": "374e60401404c0b2d8b5023d41aac30c6fe6377e9bd7c250028fd9961aa35793"
+    },
+    {
+      "path": "evidence/acore/session.json",
+      "size": 773,
+      "sha256": "40ba8924b5effd97cad6ba029cb66b0d2fc4410a75adad687f93f0135d268f24"
+    },
+    {
+      "path": "evidence/acore/uart.log",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "evidence/boot-scan.txt",
@@ -529,13 +559,13 @@
     },
     {
       "path": "evidence/README.en.md",
-      "size": 4515,
-      "sha256": "5e161f16a69d38b06403634c6aee4401dd359a7ffd2d227ec74a2cf9efcba82c"
+      "size": 4718,
+      "sha256": "7d3862f2d647d836f8cd8956a9c85fbd481859b00151c138f10ec4c5c14d42b8"
     },
     {
       "path": "evidence/README.md",
-      "size": 4159,
-      "sha256": "9cbaa5073fbb2d58866655ce57de5557a049bb769435b906aed57a36850dbc5d"
+      "size": 4368,
+      "sha256": "fc30976ec52f92f7abc27956b26f4d0536c5b033a9750f085e05985fb3679e8e"
     },
     {
       "path": "LICENSE",
@@ -564,13 +594,13 @@
     },
     {
       "path": "qemu/nikon-d750-lab.c",
-      "size": 86637,
-      "sha256": "2b7a8061f70dbb36e0bd7efe5798a233cc4bb621fc3c8027bd3b6a693002e8fd"
+      "size": 88099,
+      "sha256": "d7fac751d6b491dff467ff7d703d1013bad0321f5a275099e93b748e0421a620"
     },
     {
       "path": "qemu/nikon-d750-lab.h",
-      "size": 6349,
-      "sha256": "a70642093a1245943750995fb431913c4d1a14ffdccfc7bb6fd2446e39823951"
+      "size": 6801,
+      "sha256": "0c84224dac68e5af244562598f1194e0a42777407a2082bd018afb8c29e2195b"
     },
     {
       "path": "qemu/prepare_source.py",
@@ -579,13 +609,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 25855,
-      "sha256": "f2fcd2d5df5245e72b1d640e35c1943022f73c9624ef9c59d9c894ccef3fdf8a"
+      "size": 26460,
+      "sha256": "34fd01c9f78f67e27a4473488ed44a18c11539981af1125a2a7f8ca8ad15583b"
     },
     {
       "path": "README.md",
-      "size": 24346,
-      "sha256": "4777091f32557993a1c171fc9c1ff9a0f88aea4d149dcbe1ee0c8f5eaf8a0101"
+      "size": 24936,
+      "sha256": "de3074c82e6771843ee3e3de57ec2fae26bf15fe3b4a48f077d9657286d6115c"
     },
     {
       "path": "Run-D750.ps1",
@@ -631,6 +661,11 @@
       "path": "tests/tmputil.py",
       "size": 761,
       "sha256": "0a0daa3876947f86ffd3f3b527bfd9a8d64d7dfdde0885734323ad7ad0fd0baf"
+    },
+    {
+      "path": "tools/acore_boot.py",
+      "size": 4583,
+      "sha256": "1ef85e18a2cb01bda934a66d416d2f74131fed9a76c56d471920bf960380bbdd"
     },
     {
       "path": "tools/build.py",

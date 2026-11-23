@@ -1,0 +1,31 @@
+{
+  "argv": [
+    "<build>/src/qemu-11.1.0/build/qemu-system-arm",
+    "-M",
+    "nikon-d750,boot-mode=entry,entry=0x9027d524,payload-base=0x90020000,aux2-base=0xB8000000,aux2-size=0x40000,io-stub=on,vector-fix=on",
+    "-cpu",
+    "cortex-a9",
+    "-m",
+    "128M",
+    "-display",
+    "none",
+    "-monitor",
+    "none",
+    "-serial",
+    "file:runs/acore-boot/uart.log",
+    "-S",
+    "-gdb",
+    "tcp::1234",
+    "-D",
+    "runs/acore-boot/qemu.log",
+    "-d",
+    "guest_errors",
+    "-no-reboot",
+    "-nic",
+    "none",
+    "-kernel",
+    "<firmware>/D750_0115.dec.modules/b1010_115a.bin"
+  ],
+  "wait_pc": "0x1000e24c",
+  "flag_addr": "0x100a6704"
+}

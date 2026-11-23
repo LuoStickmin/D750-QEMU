@@ -1,8 +1,21 @@
 # Changelog
 
-## Unreleased — 2026-11-23
+## Unreleased — 2026-11-24
 
-M-core（`a1010` Firmware A）独立机器与首次实跑；没有发布新二进制。
+### A-core 启动链（host-assisted）
+
+- 修正布局：payload base `0x90020000`，真实 reset `0x9027D524`；旧
+  `0x9025D700` 实际是 `0x9027D700`；
+- 新增 `tools/acore_boot.py`：`0xB8000000` IRAM、A2/A120/A161/A300 诊断块、
+  `vector-fix` SVC 返回、清零 `0x100A6704` 共享 boot flag；
+- 实跑：reset → MMU 页表 @`0xB801FC00` → next-stage `0x1000E200` →
+  `svc #5` → A300 服务轮询；3–4 s 停在 `0x10025474`，0 未处理异常、0 UART；
+- 文档 `docs/acore-boot.md` / `.en.md`，证据 `evidence/acore/`；
+- **仍未完成整机 boot**：T-Kernel SVC/调度、console、boot ROM 上下文缺失。
+
+### M-core（`a1010` Firmware A）
+
+M-core 独立机器与首次实跑；没有发布新二进制。
 
 ### 新机器
 

@@ -6,6 +6,7 @@
 >
 > | Date | Progress |
 > | --- | --- |
+> | 2026-11-24 | **A-core boot-chain progress**: fixed the layout to `0x90020000`/reset `0x9027D524`, added the `0xB8000000` IRAM and A2/A120/A161/A300 stubs; real reset → MMU tables → `0x1000E200` next-stage image → `svc #5`/A300 service loop. Still no console/GUI; see [docs/acore-boot.en.md](docs/acore-boot.en.md) |
 > | 2026-11-23 | **M-core run + v0.2.9 prep**: added `nikon-d750-mcore` (Cortex-M4); confirmed a1010 is BE8 Firmware A; from reset `0xC20D` it reaches the `0x440CE000` pin/clock block, writes `STIR=0x8F`, then idles at `0xC04A` — **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
 > | 2026-11-10 | **E5/E6 runs + v0.2.8**: D850 reset `0x1037CBA8` confirmed as a boot-service stub; a virtual `0x40000000` boot ROM with only `bx lr` stubs still lacks the entry context; located the E5 in-image init (`0x1035CE30..0x1035D040`, builds page tables and sets TTBR/SCTLR/VBAR); D780 with `e6-prep` runs with **0 exceptions** into the `0x0426/0x0428` peripheral block, and under A15 into the `0x04266000` timer block. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) and `evidence/m1/tracks/e5-*` |
 > | 2026-11-09 | **Three no-input checks + six follow-ups**: static call chain, 12 flash layouts, M-core boot → TTBR0 check → work-queue slot / veneer relocation (**0 undefined, 1 SVC, 0 aborts**) → loader segment table → the Nikon-Patch IDA base **`0x90020000`** → **D3300/D850/D780 firmware decrypted with the same keys** (E6→E5→E4 map: D780 header+branch, D850 reset `0x1037CBA8`/handlers `0x4002xxxx`, D750 `0x90020000`), with `io-stub` passing the `0xAE00060C` poll. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) |
@@ -72,6 +73,7 @@ Currently **completed and verified**:
 | M1 boot-chain run | ⚠️ **Reached the target, not closed**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; then hits an M-profile instruction at `0x100240AC`, so the target module is not A-core code. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 | M1 machine options | ✅ `boot-mode=stub`, `a1010-base`, `thumb-fix`, `mmu-bringup`, `mpcore-base`; firmware files untouched |
 | M-core (`a1010` Firmware A) | ✅ **New `nikon-d750-mcore`**: BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` pin/clock → `STIR=0x8F` → idle `0xC04A`; 3 s **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
+| A-core boot chain (host-assisted) | ⚠️ **Reaches next-stage image / T-Kernel service loop**: reset `0x9027D524` → MMU tables @`0xB8000000` → image `0x1000E200` → `svc #5`/A300 polling; no console/GUI. See [docs/acore-boot.en.md](docs/acore-boot.en.md) |
 | E5 (D850) run | ⚠️ **Boot-ROM entry context missing**: `0x1037CBA8` is a boot-service stub; a virtual `0x40000000` with only return stubs still `pop`s to PC=0. The in-image init `0x1035CE30..0x1035D040` is located; next is a host-assisted entry. See `docs/m1-tracks-2026-11-09.en.md` and `evidence/m1/tracks/e5-*.txt` |
 | E6 (D780) run | ✅ **Reached real peripheral init**: after the `e6-prep` page-table fix, 0 exceptions to the `0x0426/0x0428` block; under `cortex-a15`, 0 undefined and 2 SVCs, entering the `0x04266000` timer block and looping near `0x1011C000`. See `docs/m1-tracks-2026-11-09.en.md` |
 | E5/E6 machine options | ✅ `flash-size`, `aux2-base`/`aux2-size`, `virtual-boot-rom`, `e6-prep`, `cortex-a7/a15`; evidence in `evidence/m1/tracks/` |
@@ -327,7 +329,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 │   └── ...                     Other firmware analysis artifacts already in repo (see below)
 ├── binary/                     COPYING + notes (binary published via GitHub Release)
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan run evidence
-├── docs/                       findings / m1-boot-chain / mcore / architecture / validation / build / gui-cmos (+ .en.md)
+├── docs/                       findings / m1-boot-chain / mcore / acore-boot / architecture / validation / build / gui-cmos (+ .en.md)
 ├── SUMMARY.md / SUMMARY.en.md  QEMU prototype overview
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original

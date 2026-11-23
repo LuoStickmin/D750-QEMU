@@ -6,6 +6,7 @@
 >
 > | 日期 | 进展 |
 > | --- | --- |
+> | 2026-11-24 | **A-core 启动链推进**：修正布局为 `0x90020000`/reset `0x9027D524`，补 `0xB8000000` IRAM 与 A2/A120/A161/A300 stubs；真实 reset → MMU 页表 → `0x1000E200` 下一阶段镜像 → `svc #5`/A300 服务循环。仍无 console/GUI，详见 [docs/acore-boot.md](docs/acore-boot.md) |
 > | 2026-11-23 | **M-core 实跑 + v0.2.9 准备**：新增 `nikon-d750-mcore`（Cortex-M4），确认 a1010 是 BE8 Firmware A；从 reset `0xC20D` 跑到 `0x440CE000` 引脚/时钟块，`STIR=0x8F` 后停在 `0xC04A` 的 idle，**0 异常、0 UART**。见 [docs/mcore.md](docs/mcore.md) |
 > | 2026-11-10 | **E5/E6 实跑 + v0.2.8**：D850 reset `0x1037CBA8` 确认是 boot-service 桩，虚拟 `0x40000000` boot ROM 只放 `bx lr` 仍缺入口上下文；定位到 E5 镜像内完整 init（`0x1035CE30..0x1035D040`，自建页表并设 TTBR/SCTLR/VBAR）；D780 用 `e6-prep` 修页表后 **0 异常**进入 `0x0426/0x0428` 外设块，A15 下进入 `0x04266000` 定时器块。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) 与 `evidence/m1/tracks/e5-*` |
 > | 2026-11-09 | **三条无输入验证 + 六轮跟进**：静态调用链、12 种 flash 布局、M-core 启动 → TTBR0 验证 → 工作队列槽/veneer 重定位（**0 undefined、1 SVC、0 abort**）→ loader 段表 → Nikon-Patch IDA 真实基址 **`0x90020000`** → **D3300/D850/D780 固件同密钥解密**（E6→E5→E4 版图：D780 头部+branch、D850 reset `0x1037CBA8`/handler `0x4002xxxx`、D750 `0x90020000`），`io-stub` 越过 `0xAE00060C`。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) |
@@ -72,6 +73,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | M1 启动链实跑 | ⚠️ **到目标但未闭合**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；随后在 `0x100240AC` 撞到 M-profile 指令，说明目标模块不属于 A-core。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 | M1 机器选项 | ✅ `boot-mode=stub`、`a1010-base`、`thumb-fix`、`mmu-bringup`、`mpcore-base`；固件文件零修改 |
 | M-core（`a1010` Firmware A） | ✅ **新增 `nikon-d750-mcore`**：BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` 引脚/时钟 → `STIR=0x8F` → idle `0xC04A`；3 s **0 异常、0 UART**。见 [docs/mcore.md](docs/mcore.md) |
+| A-core 启动链（host-assisted） | ⚠️ **到下一阶段镜像/T-Kernel 服务循环**：reset `0x9027D524` → MMU 页表 @`0xB8000000` → 镜像 `0x1000E200` → `svc #5`/A300 轮询；无 console/GUI。见 [docs/acore-boot.md](docs/acore-boot.md) |
 | E5（D850）实跑 | ⚠️ **缺 boot ROM 入口上下文**：`0x1037CBA8` 是 boot-service 桩；只放虚拟 `0x40000000` 返回桩仍会 `pop` 到 PC=0。已定位镜像内 init `0x1035CE30..0x1035D040`，下一步走 host-assisted 入口。见 `docs/m1-tracks-2026-11-09.md` 与 `evidence/m1/tracks/e5-*.txt` |
 | E6（D780）实跑 | ✅ **已进入真实外设初始化**：`e6-prep` 修页表后 0 异常跑到 `0x0426/0x0428` 块；`cortex-a15` 下 0 undefined、2 SVC，进入 `0x04266000` 定时器块，当前在 `0x1011C000` 附近循环。见 `docs/m1-tracks-2026-11-09.md` |
 | E5/E6 机器选项 | ✅ `flash-size`、`aux2-base`/`aux2-size`、`virtual-boot-rom`、`e6-prep`、`cortex-a7/a15`；证据在 `evidence/m1/tracks/` |
@@ -366,7 +368,7 @@ GUI 已经启动，也不能替代 A-core 的 boot ROM 问题。
 │   └── ...                     仓库里已有的其他固件分析产物（见下）
 ├── binary/                     COPYING + 说明（二进制通过 GitHub Release 发布）
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan 运行证据
-├── docs/                       findings / m1-boot-chain / mcore / architecture / validation / build / gui-cmos（含 .en.md）
+├── docs/                       findings / m1-boot-chain / mcore / acore-boot / architecture / validation / build / gui-cmos（含 .en.md）
 ├── SUMMARY.md / SUMMARY.en.md  QEMU 原型总览
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
