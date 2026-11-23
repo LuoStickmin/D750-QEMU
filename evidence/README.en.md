@@ -11,6 +11,7 @@ This directory holds the evidence left by **actual runs**, not hand-written docu
 | `lcd/` | Same as above + `lcd.ppm` | 8×8 ARGB8888 dumped from `0x92000000`; demonstrates the scan/dump chain |
 | `m1/` | `command.json`, `session.json`, `qemu.log`, `uart.log` + `gdb-entry.json` | M1: stub → `0x1002CB8C` (Thumb, args 0/0/2/0/1); first MMIO `0xe000e180←0x00100000`; then hits an M-profile instruction at `0x100240AC` |
 | `m1/tracks/` | `layout-matrix.md`, `b1010-flash-svc.log`, `ttbr0-run.log`, `veneer-reloc-run.log`, `veneer-scan.txt`, `loader-segments.txt`, `ida-layout.txt`, `ida-layout-run.log`, `cross-model-d3300.txt`, `e6-e5-e4-layout.txt`, `e5-run.log`, `e5-loader-candidates.txt`, `d5-modules.txt`, `e3-boot-lessons.txt`, `e5-40000000-reloc.txt`, `e5-vbr-run.txt`, `e5-init-found.txt`, `e6-run.log`, `expeed-io-run.log`, `m0-entry-fullflash.log`, `mcore-boot.log`/`.md` | 12-layout comparison; TTBR0 check; after `veneer-slot`: 0 undefined, 1 SVC, 0 aborts; loader segment table; Nikon-Patch IDA layout; D3300 cross-model; E6/E5/E4 map; E5 entry candidates; D5 (E5) module table; E3 boot reference (`0xE0000` RAM dumps, `0x8008xxxx` copies, BFT tables); after the page-table fix the E6 D780 runs with 0 exceptions to the `0x0426/0x0428` block; an E5 virtual boot ROM with only `bx lr` stubs is insufficient; E5 in-image init `0x1035CE30..0x1035D040` located; `io-stub` passes the `0xAE00060C` poll |
+| `mcore/` | `session.json`, `boot.qemu.log`, `strict.qemu.log`, `session.boot.*` | M-core `a1010`: BE8 reset `0xC20D` → `0x440CE000` pin/clock → `STIR=0x8F` → idle `0xC04A`; 3 s, 0 exceptions, 0 UART; strict first access `pc=0xFF3A rd 0x440CE000` |
 | `boot-scan.txt` | Scan output for 10 candidate entry points | All 0 MMIO; `0x9025d700` did not return within 2 s; its caller is not inside `b1010`, and the later layout work points at a missing first-stage boot ROM |
 
 ## How to Read
@@ -18,9 +19,13 @@ This directory holds the evidence left by **actual runs**, not hand-written docu
 - The `halt` field of `session.json` is the register snapshot when the entry point returns; the `lcd` field is the size/format/path of the last
   dump; `mmio.by_address` is the aggregate of unmodeled accesses.
 - `qemu.log` is the raw log of `-d guest_errors`; `d750-halt:` / `d750-lcd:` /
-  `d750-probe:` / `d750-a1010-io:` are prefixes written by the machine itself.
-  The last one counts only unmodelled accesses originating inside the a1010
-  range (`session.json.mmio.first_a1010`).
+  `d750-probe:` / `d750-a1010-io:` / `d750-mcore-probe:` are prefixes written by
+  the machine itself. The last one counts only unmodelled accesses originating
+  inside the a1010 range (`session.json.mmio.first_a1010`).
+- `mcore/session.json` also records `idle` (`pc=0xC04A`, `lr=0xC04B`), `mmio`
+  (8 accesses at `0x440CE000`) and `strict.first`; the `0x400F` accesses in
+  `boot.qemu.log` are served by the diagnostic register files, so they do not
+  appear in the probe log.
 - Paths in `command.json` / `session.json` are replaced with `<repo>`,
   `<firmware>`, `<build>` placeholders (privacy handling for the public
   repository); re-run with your own paths after moving the checkout.
@@ -41,3 +46,6 @@ This directory holds the evidence left by **actual runs**, not hand-written docu
   the undefined instruction at `0x100240AC` was reproduced with `-d int`
   (see `docs/m1-boot-chain.en.md`).
 - There is still no serial output, and M1 cannot be called a closed boot chain.
+- `mcore/` only proves the M-core reaches idle; it does not prove RTOS/console/
+  GUI start, and the `0x400F` register files are diagnostic fixtures, not a
+  hardware model.

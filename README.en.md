@@ -6,6 +6,7 @@
 >
 > | Date | Progress |
 > | --- | --- |
+> | 2026-11-23 | **M-core run + v0.2.9 prep**: added `nikon-d750-mcore` (Cortex-M4); confirmed a1010 is BE8 Firmware A; from reset `0xC20D` it reaches the `0x440CE000` pin/clock block, writes `STIR=0x8F`, then idles at `0xC04A` — **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
 > | 2026-11-10 | **E5/E6 runs + v0.2.8**: D850 reset `0x1037CBA8` confirmed as a boot-service stub; a virtual `0x40000000` boot ROM with only `bx lr` stubs still lacks the entry context; located the E5 in-image init (`0x1035CE30..0x1035D040`, builds page tables and sets TTBR/SCTLR/VBAR); D780 with `e6-prep` runs with **0 exceptions** into the `0x0426/0x0428` peripheral block, and under A15 into the `0x04266000` timer block. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) and `evidence/m1/tracks/e5-*` |
 > | 2026-11-09 | **Three no-input checks + six follow-ups**: static call chain, 12 flash layouts, M-core boot → TTBR0 check → work-queue slot / veneer relocation (**0 undefined, 1 SVC, 0 aborts**) → loader segment table → the Nikon-Patch IDA base **`0x90020000`** → **D3300/D850/D780 firmware decrypted with the same keys** (E6→E5→E4 map: D780 header+branch, D850 reset `0x1037CBA8`/handlers `0x4002xxxx`, D750 `0x90020000`), with `io-stub` passing the `0xAE00060C` poll. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) |
 > | 2026-11-08 | **M1 run + v0.2.0**: stub → `0x1002CB8C` (Thumb, `args=0/0/2/0/1`, `LR=0x9025D754`), first MMIO `wr 0xE000E180 ← 0x00100000`; MPCore base corrected to **`0xE000E000`**; a1010 found to be M-profile firmware, so M1 is recorded as "reached target, not closed"; the Linux x86-64 binary is published as [Release v0.2.0](https://github.com/LuoStickmin/D750-QEMU/releases/tag/v0.2.0). Details: [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
@@ -47,6 +48,7 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
   - [2.5 M1 Run (Boot Stub → a1010 Target)](#25-m1-run-boot-stub--a1010-target)
 - [3. Machine Model (One-Liner Version)](#3-machine-model-one-liner-version)
   - [3.1 GUI & CMOS Status](#31-gui--cmos-status)
+  - [3.2 M-core (a1010 Firmware A)](#32-m-core-a1010-firmware-a)
 - [4. Static Evidence Collected (Real Bytes)](#4-static-evidence-collected-real-bytes)
 - [5. Directory Structure & Dependencies](#5-directory-structure--dependencies)
 - [6. Relationship with z7-qemu / z9-qemu](#6-relationship-with-z7-qemu--z9-qemu)
@@ -69,6 +71,7 @@ Currently **completed and verified**:
 | `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.39s |
 | M1 boot-chain run | ⚠️ **Reached the target, not closed**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; then hits an M-profile instruction at `0x100240AC`, so the target module is not A-core code. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 | M1 machine options | ✅ `boot-mode=stub`, `a1010-base`, `thumb-fix`, `mmu-bringup`, `mpcore-base`; firmware files untouched |
+| M-core (`a1010` Firmware A) | ✅ **New `nikon-d750-mcore`**: BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` pin/clock → `STIR=0x8F` → idle `0xC04A`; 3 s **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
 | E5 (D850) run | ⚠️ **Boot-ROM entry context missing**: `0x1037CBA8` is a boot-service stub; a virtual `0x40000000` with only return stubs still `pop`s to PC=0. The in-image init `0x1035CE30..0x1035D040` is located; next is a host-assisted entry. See `docs/m1-tracks-2026-11-09.en.md` and `evidence/m1/tracks/e5-*.txt` |
 | E6 (D780) run | ✅ **Reached real peripheral init**: after the `e6-prep` page-table fix, 0 exceptions to the `0x0426/0x0428` block; under `cortex-a15`, 0 undefined and 2 SVCs, entering the `0x04266000` timer block and looping near `0x1011C000`. See `docs/m1-tracks-2026-11-09.en.md` |
 | E5/E6 machine options | ✅ `flash-size`, `aux2-base`/`aux2-size`, `virtual-boot-rom`, `e6-prep`, `cortex-a7/a15`; evidence in `evidence/m1/tracks/` |
@@ -256,6 +259,28 @@ python tools/run.py --payload ... --flash ... `
 
 **CMOS: Not yet.** Current fragment `mmio_events=0`, never accessed Sensor/I2C/GDMA; image has Sensor/ImageProcess/GDMA/I2C driver names, but no control/data contract observed. Route and acceptance see [gui-cmos.md](docs/gui-cmos.md). In short: **CMOS blocked on "finding next boot stage + observing DMA descriptors"**; won't guess registers before real access sequence, nor fake sensor with "putting an image in RAM".
 
+### 3.2 M-core (`a1010` Firmware A)
+
+The M-core is no longer "a1010 dropped into the A-core flash window"; it is a
+separate machine, `nikon-d750-mcore`:
+
+- CPU `cortex-m4`, 1 MiB flash @0, 256 KiB SRAM @`0x20000000`;
+- a1010 is BE8: the first 16 vector entries are **big-endian**; MSP `0x2000F8C0`,
+  reset `0x0000C20D`;
+- QEMU fetches vectors little-endian, so the machine only word-swaps the first
+  `0x40` bytes in its flash copy; SP/PC still come from the original BE bytes;
+- a 0x100-byte big-endian SCB window at `0xE000ED00` fixes VTOR/CPACR;
+- `0x400F2000` / `0x400F3000` use "return the last written value" diagnostic
+  register files to pass the boot mailbox; that is a fixture, not a hardware
+  model;
+- after eight `0x440CE000` pin/clock accesses it writes `STIR=0x8F` and idles in
+  the `bx lr` at `0xC04A`; in 3 s: **0 exceptions, 0 UART**.
+
+Disassembly, UART-candidate scan and evidence links are in
+[docs/mcore.en.md](docs/mcore.en.md); raw logs in `evidence/mcore/`.
+**Boundary**: this proves the M-core reaches idle, not that RTOS/console/GUI
+have started, and it does not replace the A-core boot-ROM problem.
+
 ---
 
 ## 4. Static Evidence Collected (Real Bytes)
@@ -302,7 +327,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 │   └── ...                     Other firmware analysis artifacts already in repo (see below)
 ├── binary/                     COPYING + notes (binary published via GitHub Release)
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan run evidence
-├── docs/                       findings / m1-boot-chain / architecture / validation / build / gui-cmos (+ .en.md)
+├── docs/                       findings / m1-boot-chain / mcore / architecture / validation / build / gui-cmos (+ .en.md)
 ├── SUMMARY.md / SUMMARY.en.md  QEMU prototype overview
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original

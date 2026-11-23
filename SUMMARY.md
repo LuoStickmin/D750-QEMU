@@ -19,6 +19,9 @@ source overlay：
 - 跨机型（2026-11-10）：E5 D850 的镜像内 init 已定位
   （`0x1035CE30..0x1035D040`），但仍缺 boot ROM 调用上下文；E6 D780 修页表后
   0 异常进入 `0x0426/0x0428` 外设块；
+- M-core（2026-11-23）：新增 `nikon-d750-mcore`；a1010 是 BE8 Firmware A，
+  从 reset `0xC20D` 跑到 `0x440CE000` 引脚/时钟块，`STIR=0x8F` 后 idle，
+  3 s 内 0 异常、0 UART；见 [docs/mcore.md](docs/mcore.md)；
 - LCD dump 管线已实现（可配置帧缓冲 → PPM），测试卡验证通过；
   固件 GUI 与 CMOS 仍无模型。
 

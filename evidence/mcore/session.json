@@ -1,0 +1,100 @@
+{
+  "machine": "nikon-d750-mcore",
+  "image": {
+    "name": "a1010_011100.bin",
+    "size": 786432,
+    "sha256": "690b7d1c7683cda36c72b5911cdd474ad5bc78f9467b369f3f86dc7316600213"
+  },
+  "reset": {
+    "sp": "0x2000F8C0",
+    "pc": "0x0000C20D",
+    "source": "big-endian vector words at file offset 0",
+    "cpsr_e": true
+  },
+  "run": {
+    "seconds": 3,
+    "exceptions": 0,
+    "uart_bytes": 0,
+    "qemu_exit": 0,
+    "status": "idle-loop"
+  },
+  "registers": {
+    "pc": "0xc04a",
+    "lr": "0xc04b",
+    "sp": "0x2000f8b8",
+    "r1": "0xe000ef00",
+    "r2": "0x4",
+    "r9": "0x2000fc00",
+    "xpsr": "0x61000000"
+  },
+  "idle": {
+    "pc": "0xc04a",
+    "lr": "0xc04b",
+    "instruction": "bx lr at 0xC04A; LR=0xC04B, so BX clears bit0 and returns to 0xC04A"
+  },
+  "mmio": [
+    {
+      "pc": "0x0000ff3a",
+      "dir": "rd",
+      "addr": "0x440ce000",
+      "size": 4,
+      "value": null
+    },
+    {
+      "pc": "0x0000ff40",
+      "dir": "wr",
+      "addr": "0x440ce000",
+      "size": 4,
+      "value": "0x80000000"
+    },
+    {
+      "pc": "0x0000ffb4",
+      "dir": "rd",
+      "addr": "0x440ce004",
+      "size": 4,
+      "value": null
+    },
+    {
+      "pc": "0x0000ffc2",
+      "dir": "wr",
+      "addr": "0x440ce004",
+      "size": 4,
+      "value": "0x40000000"
+    },
+    {
+      "pc": "0x0000ffe4",
+      "dir": "rd",
+      "addr": "0x440ce008",
+      "size": 4,
+      "value": null
+    },
+    {
+      "pc": "0x0000ffec",
+      "dir": "wr",
+      "addr": "0x440ce008",
+      "size": 4,
+      "value": "0x00000000"
+    },
+    {
+      "pc": "0x0000ffcc",
+      "dir": "rd",
+      "addr": "0x440ce004",
+      "size": 4,
+      "value": null
+    },
+    {
+      "pc": "0x0000ffda",
+      "dir": "wr",
+      "addr": "0x440ce004",
+      "size": 4,
+      "value": "0x03000000"
+    }
+  ],
+  "strict": {
+    "first": [
+      "d750-mcore-strict: pc=0x0000ff3a rd addr=0x440ce000 size=4 (first unmodelled access, stopping)",
+      "d750-mcore-strict: pc=0x0000ff40 wr addr=0x440ce000 size=4 value=0x80000000 (first unmodelled access, stopping)"
+    ],
+    "note": "0x440CE000 is the first unmodelled block after the 0x400F2/3 stubs"
+  }
+}

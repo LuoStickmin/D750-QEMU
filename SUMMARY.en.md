@@ -23,6 +23,10 @@ Following the architecture of WonderLantern's z7-qemu / z9-qemu, this is a QEMU
   (`0x1035CE30..0x1035D040`) but still lacks the boot-ROM call context; E6 D780
   with the `e6-prep` page-table fix runs with 0 exceptions into the
   `0x0426/0x0428` peripheral block;
+- M-core (2026-11-23): added `nikon-d750-mcore`; a1010 is BE8 Firmware A, runs
+  from reset `0xC20D` to the `0x440CE000` pin/clock block, writes `STIR=0x8F`,
+  then idles; 0 exceptions and 0 UART in 3 s; see
+  [docs/mcore.en.md](docs/mcore.en.md);
 - the LCD dump pipeline is implemented (configurable framebuffer → PPM) and the
   test card passes; firmware GUI and CMOS still have no model.
 

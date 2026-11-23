@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased — 2026-11-23
+
+M-core（`a1010` Firmware A）独立机器与首次实跑；没有发布新二进制。
+
+### 新机器
+
+- `nikon-d750-mcore`：Cortex-M4、1 MiB flash @0、256 KiB SRAM
+  @`0x20000000`、BE8 向量表 word-swap、`0xE000ED00` 大端 SCB 窗口、
+  4 GiB catch-all probe、strict 模式。
+- `0x400F2000` / `0x400F3000` 诊断寄存器堆（读回最后写入值），只用于
+  越过启动 mailbox；不是硬件模型。
+
+### 实跑
+
+- `a1010_011100.bin`（786,432 B，SHA-256 `690b7d1c…`）身份为
+  `D750   Firmware A Copyright Nikon Corp.` @`0x1F08`；
+- BE8 向量表：MSP `0x2000F8C0`、reset `0x0000C20D`（与 D850 a1330 相同）；
+- 从 reset 跑到 `0x440CE000` 引脚/时钟块，写 `STIR=0x8F`，停在
+  `0xC04A` 的 `bx lr` idle；3 s 内 **0 异常、0 UART**；
+- 8 次 MMIO 都在 `0x440CE000`；strict 第一条为 `pc=0xFF3A rd 0x440CE000`。
+
+### 文档与证据
+
+- 新增 `docs/mcore.md` / `docs/mcore.en.md`；
+- `evidence/mcore/`：`session.json`、`boot.qemu.log`、`strict.qemu.log`；
+- README 状态表与机器模型增加 M-core 小节。
+
+### 边界
+
+- 只证明 M-core 到 idle，不代表 RTOS/console/GUI 已启动；
+- `0x440C4xxx` 的 62 处静态引用是 UART 候选，但启动路径没有访问，UART 仍为 0 B。
+
 ## v0.2.8 — 2026-11-10
 
 E6（D780）A15 路径与默认运行修复；发布新二进制。
