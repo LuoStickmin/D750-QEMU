@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, host tools, evidence",
-  "generated": "2026-11-24T07:08:48+08:00",
+  "generated": "2026-11-24T11:23:53+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -174,8 +174,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 17476,
-      "sha256": "b9b7960d2346d4a2a2a09eea21f74a43bf3c0eb24bb2dd85160e4021bc9dd645"
+      "size": 17889,
+      "sha256": "ffade3de36a530d8058ad02fa32ea1ea75b89966266357bc6f0327bf8b4efaae"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -609,13 +609,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 26460,
-      "sha256": "34fd01c9f78f67e27a4473488ed44a18c11539981af1125a2a7f8ca8ad15583b"
+      "size": 27940,
+      "sha256": "399a7fe7e31f059aa4a2591b651aa402ad94ef1a6f3a43613d4407900bfd51ac"
     },
     {
       "path": "README.md",
-      "size": 24936,
-      "sha256": "de3074c82e6771843ee3e3de57ec2fae26bf15fe3b4a48f077d9657286d6115c"
+      "size": 26297,
+      "sha256": "33dbfd3edc475c9c4df6c6ecdf688136844090558abf8aa02d47666a35cdd964"
     },
     {
       "path": "Run-D750.ps1",

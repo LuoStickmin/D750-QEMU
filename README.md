@@ -47,6 +47,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
   - [2.3 只做静态核对](#23-只做静态核对)
   - [2.4 第一次实跑（M0 已通过）](#24-第一次实跑m0-已通过)
   - [2.5 M1 实跑（启动桩 → a1010 目标）](#25-m1-实跑启动桩--a1010-目标)
+  - [2.6 A-core host-assisted 启动](#26-a-core-host-assisted-启动)
 - [3. 机器模型（一句话版）](#3-机器模型一句话版)
   - [3.1 GUI 与 CMOS 现在到哪一步](#31-gui-与-cmos-现在到哪一步)
   - [3.2 M-core（a1010 Firmware A）](#32-mcorea1010-firmware-a)
@@ -61,6 +62,11 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 
 当前**已经完成并验证**的部分：
 
+> **最新（2026-11-24）**：M-core `a1010` 已能跑到 idle；A-core host-assisted
+> 从真实 reset `0x9027D524` 跑到 `0x1000E200` 下一阶段镜像和 `svc #5`/A300
+> 服务循环。**仍未完成整机 boot**；细节见 [docs/acore-boot.md](docs/acore-boot.md)
+> 与 [docs/mcore.md](docs/mcore.md)。
+
 | 项目 | 状态 |
 | --- | --- |
 | 静态证据：向量表、入口、页表、flash/RAM 窗口、串口候选 | ✅ 在真实 `D750_0115` 模块上跑通，见 [docs/findings.md](docs/findings.md) |
@@ -69,8 +75,8 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | `fwscan` / `run` / `probe` / `build` 工具 | ✅ 已写；`probe` 手工对**已安装的 stock QEMU `-M virt`** 做过真实 RSP 联调（测试套件只覆盖协议编解码） |
 | 主机侧测试 | ✅ `python tests/run_tests.py` → 27 个用例（1 个依赖本机 stock QEMU，缺失时会失败） |
 | 板级 C 代码编译 | ✅ 已在 WSL Ubuntu 26.04（gcc 15.2）+ QEMU 11.1.0 上编译通过 |
-| `nikon-d750` 机器实跑 | ✅ **M0 通过**：装入 `0x90000000`、入口 `0x9027D52C` 执行并正常返回，0.39 s 正常退出 |
-| M1 启动链实跑 | ⚠️ **到目标但未闭合**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；随后在 `0x100240AC` 撞到 M-profile 指令，说明目标模块不属于 A-core。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
+| `nikon-d750` 机器实跑 | ✅ **M0（历史）**：早期在 `0x90000000`/入口 `0x9027D52C` 验证函数可执行并返回；后续确认正确布局是 `0x90020000`/reset `0x9027D524` |
+| M1 启动链实跑 | ⚠️ **历史实验**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；`0x1002CB8C` 已确认属于 a1010（M-core），不是 A-core 下一阶段。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 | M1 机器选项 | ✅ `boot-mode=stub`、`a1010-base`、`thumb-fix`、`mmu-bringup`、`mpcore-base`；固件文件零修改 |
 | M-core（`a1010` Firmware A） | ✅ **新增 `nikon-d750-mcore`**：BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` 引脚/时钟 → `STIR=0x8F` → idle `0xC04A`；3 s **0 异常、0 UART**。见 [docs/mcore.md](docs/mcore.md) |
 | A-core 启动链（host-assisted） | ⚠️ **到下一阶段镜像/T-Kernel 服务循环**：reset `0x9027D524` → MMU 页表 @`0xB8000000` → 镜像 `0x1000E200` → `svc #5`/A300 轮询；无 console/GUI。见 [docs/acore-boot.md](docs/acore-boot.md) |
@@ -79,7 +85,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | E5/E6 机器选项 | ✅ `flash-size`、`aux2-base`/`aux2-size`、`virtual-boot-rom`、`e6-prep`、`cortex-a7/a15`；证据在 `evidence/m1/tracks/` |
 | strict 诊断 / halt 校验 | ✅ 第一条未建模访问记 `d750-strict:` 后停止（`run.py` 退出码 7）；halt 记录带 `return_ok=`，异常路径退出码 6 |
 | LCD 扫描输出/dump 管线 | ✅ 可配置帧缓冲 → PPM；测试卡验证通过；固件画面仍无 |
-| M2（串口）/ M3（补设备） | ⏳ 未推进：本轮仍无串口输出（`uart=0B`）；GIC 已接上，等待下一条未建模访问 |
+| M2（串口）/ M3（补设备） | ⏳ UART 仍为 0 B；A-core host-assisted 也未访问 `0x80005010..14`/`0x440C4xxx`；下一步用 plugin/watchpoint 抓访问和 flag 写者 |
 | 完整相机 UI / ISP / CMOS / 存储 | ❌ 不在本原型范围 |
 
 **这意味着什么：** 如果你装的是 stock QEMU（例如 Windows 的
@@ -242,9 +248,25 @@ GDB 现场（`-S -gdb tcp::12345` + `tools/probe.py`）应看到
 `pc=0x1002cb8c cpsr=0x600001f3`（T=1、SVC）、`lr=0x9025d754`、
 `r0..r4=0,0,2,0,1`。
 
-> **不要把它读成“M1 完成”**：`0x100240AC` 处是 `MRS/MSR BASEPRI`（ARMv7-M
-> 专有），继续执行必然 undefined；a1010 的头部也是大端 Cortex-M 向量表。
-> A-core 的下一阶段模块还没有拿到。
+> **不要把它读成“A-core 的下一阶段”**：`0x1002CB8C` 属于 a1010（M-core，
+> `0x100240AC` 的 `MRS/MSR BASEPRI` 是 M-profile 指令），不是 A-core 的
+> 下一阶段。A-core 的正确路径见 §2.6 和 [docs/acore-boot.md](docs/acore-boot.md)。
+
+### 2.6 A-core host-assisted 启动
+
+2026-11-24 新增。真实布局是 `payload-base=0x90020000`、reset `0x9027D524`；
+`tools/acore_boot.py` 会在 `0x1000E24C` 断下、清零共享 boot flag
+`0x100A6704`，再继续执行：
+
+```sh
+python3 tools/acore_boot.py \
+  --qemu ~/d750-build/src/qemu-11.1.0/build/qemu-system-arm \
+  --payload "$FW/b1010_115a.bin" \
+  --out runs/acore-boot --seconds 5
+```
+
+预期：`PC≈0x10025474`（A300 状态轮询/SVC 服务循环）、`uart=0 B`。
+这是**诊断夹具**，不是自然上电；细节和边界见 [docs/acore-boot.md](docs/acore-boot.md)。
 
 ---
 
@@ -406,9 +428,10 @@ QEMU 产品的验收范围内。
 
 - 这是**辅助验证原型**：入口是主机选定的、SP/LR 是主机给的，不等于自然上电启动。
 - 已在 WSL 上编译并实跑：M0 干净返回；M1 到达 1107 的目标地址并抓到第一条
-  MMIO，但目标镜像是 M-profile，D750 的 A-core 启动链仍未闭合。E5/E6 的跨机型
-  结果来自辅助入口/修页表，同样不是自然上电。MPCore 基址已由运行证据定为
-  `0xE000E000`；串口寄存器语义、CPU 型号仍是假设。
+  MMIO，但目标镜像是 M-profile；A-core host-assisted 已从真实 reset 跑到
+  `0x1000E200` 的 SVC/A300 服务循环，但**不是自然上电、没有 T-Kernel 服务/
+  console**。E5/E6 的跨机型结果来自辅助入口/修页表，同样不是自然上电。
+  MPCore 基址已由运行证据定为 `0xE000E000`；串口寄存器语义、CPU 型号仍是假设。
 - 本仓库不提供签名、重打包工具或升级容器处理；容器级复现依赖同作者的
   外置工具链，固件文件全程只读。
 - 另见 [NOTICE.md](NOTICE.md) 与 [docs/validation.md](docs/validation.md)。
@@ -417,7 +440,8 @@ QEMU 产品的验收范围内。
 
 三套目标的进度不同：**E6 D780** 已能跑到真实外设初始化（`0x0426/0x0428`），
 下一步是建模该块；**E5 D850/D5** 已定位镜像内 init，但缺 boot ROM 的调用上下文
-（栈/LR/r4）；**E4 D750** 仍缺一级 boot。共同最缺的仍是整片 dump：
+（栈/LR/r4）；**E4 D750** 的 A-core 已由 host-assisted 路径到 SVC/A300 服务
+循环，但仍缺一级 boot ROM/T-Kernel 服务。共同最缺的仍是整片 dump：
 
 1. **整片 SPI flash dump**（D750/D850/D5 任意一台）——最直接，可能包含 boot
    分区或第一级 loader；可用 CH341A/测试夹读取，或从维修渠道获取。
@@ -433,6 +457,7 @@ QEMU 产品的验收范围内。
 `evidence/m1/tracks/e5-40000000-reloc.txt`）。
 
 没有新输入时仍可做：E5 走 host-assisted 入口（`0x1035CE30` 附近的 init）；
-E6 建模 `0x0426/0x0428` 寄存器块；D750 继续找重定位表/SVC 语义。
+E6 建模 `0x0426/0x0428` 寄存器块；A-core 继续补 T-Kernel SVC 语义/抓
+`0x100A6704` 写者，M-core 继续找 console/UART 路径。
 
 许可：overlay 与工具为 **GPL-2.0-or-later**；上游 QEMU 保留其自身许可。

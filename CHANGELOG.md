@@ -2,6 +2,15 @@
 
 ## Unreleased — 2026-11-24
 
+### 仓库状态
+
+- `main`：`00162e2`（A-core host-assisted + M-core 两次提交已推送）；
+- 主机侧测试：`27 passed`；
+- `MANIFEST.json` / `SHA256SUMS`：121 个文件，`--check` 通过；
+- 本轮**没有发布新二进制**；Release 里的 `qemu-system-arm` 仍是上一版；
+- 下一步自动化：22:00 用 TCG plugin/watchpoint 抓 `0x100A6704` 写者、
+  SVC 服务表和页表访问。
+
 ### A-core 启动链（host-assisted）
 
 - 修正布局：payload base `0x90020000`，真实 reset `0x9027D524`；旧

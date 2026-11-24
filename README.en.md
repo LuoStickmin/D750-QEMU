@@ -47,6 +47,7 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
   - [2.3 Static Verification Only](#23-static-verification-only)
   - [2.4 First Actual Run (M0 Passed)](#24-first-actual-run-m0-passed)
   - [2.5 M1 Run (Boot Stub → a1010 Target)](#25-m1-run-boot-stub--a1010-target)
+  - [2.6 Host-assisted A-core Boot](#26-host-assisted-a-core-boot)
 - [3. Machine Model (One-Liner Version)](#3-machine-model-one-liner-version)
   - [3.1 GUI & CMOS Status](#31-gui--cmos-status)
   - [3.2 M-core (a1010 Firmware A)](#32-m-core-a1010-firmware-a)
@@ -61,6 +62,12 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
 
 Currently **completed and verified**:
 
+> **Latest (2026-11-24)**: the M-core `a1010` reaches idle; the host-assisted
+> A-core path runs from the real reset `0x9027D524` to the `0x1000E200`
+> next-stage image and its `svc #5`/A300 service loop. **A complete camera boot
+> is still not done**; see [docs/acore-boot.en.md](docs/acore-boot.en.md) and
+> [docs/mcore.en.md](docs/mcore.en.md).
+
 | Item | Status |
 | --- | --- |
 | Static evidence: vector table, entry, page tables, flash/RAM windows, UART candidates | ✅ Ran on real `D750_0115` modules, see [docs/findings.md](docs/findings.md) |
@@ -69,8 +76,8 @@ Currently **completed and verified**:
 | `fwscan` / `run` / `probe` / `build` tools | ✅ Written; `probe` tested with real RSP against stock QEMU `-M virt` |
 | Host-side tests | ✅ `python3 tests/run_tests.py` → 27 cases (1 depends on a local stock QEMU and fails when absent) |
 | Board C code compilation | ✅ Compiled on WSL Ubuntu 26.04 (gcc 15.2) + QEMU 11.1.0 |
-| `nikon-d750` machine actual run | ✅ **M0 passed**: loaded at `0x90000000`, executed from entry `0x9027D52C`, returned normally, exited cleanly in 0.39s |
-| M1 boot-chain run | ⚠️ **Reached the target, not closed**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; then hits an M-profile instruction at `0x100240AC`, so the target module is not A-core code. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
+| `nikon-d750` machine actual run | ✅ **M0 (historical)**: early run loaded at `0x90000000`, entry `0x9027D52C`, returned normally; later work corrected the layout to `0x90020000` / reset `0x9027D524` |
+| M1 boot-chain run | ⚠️ **Historical experiment**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; `0x1002CB8C` is now known to belong to a1010 (M-core), not A-core. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 | M1 machine options | ✅ `boot-mode=stub`, `a1010-base`, `thumb-fix`, `mmu-bringup`, `mpcore-base`; firmware files untouched |
 | M-core (`a1010` Firmware A) | ✅ **New `nikon-d750-mcore`**: BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` pin/clock → `STIR=0x8F` → idle `0xC04A`; 3 s **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
 | A-core boot chain (host-assisted) | ⚠️ **Reaches next-stage image / T-Kernel service loop**: reset `0x9027D524` → MMU tables @`0xB8000000` → image `0x1000E200` → `svc #5`/A300 polling; no console/GUI. See [docs/acore-boot.en.md](docs/acore-boot.en.md) |
@@ -78,7 +85,7 @@ Currently **completed and verified**:
 | E6 (D780) run | ✅ **Reached real peripheral init**: after the `e6-prep` page-table fix, 0 exceptions to the `0x0426/0x0428` block; under `cortex-a15`, 0 undefined and 2 SVCs, entering the `0x04266000` timer block and looping near `0x1011C000`. See `docs/m1-tracks-2026-11-09.en.md` |
 | E5/E6 machine options | ✅ `flash-size`, `aux2-base`/`aux2-size`, `virtual-boot-rom`, `e6-prep`, `cortex-a7/a15`; evidence in `evidence/m1/tracks/` |
 | LCD scanout/dump pipeline | ✅ Configurable framebuffer → PPM; test card verified; firmware image still absent |
-| M2 (UART) / M3 (Devices) | ⏳ Not started: still no serial output (`uart=0B`); the GIC is now connected and the next unmodelled access is the open lead |
+| M2 (UART) / M3 (Devices) | ⏳ UART is still 0 B; the host-assisted A-core path also does not access `0x80005010..14`/`0x440C4xxx`; next: plugin/watchpoint to capture accesses and the flag writer |
 | Full camera UI / ISP / CMOS / Storage | ❌ Out of scope |
 
 ### ⚠️ Warning Regarding Stock QEMU
@@ -218,10 +225,26 @@ Under GDB (`-S -gdb tcp::12345` + `tools/probe.py`) the entry state is
 `pc=0x1002cb8c cpsr=0x600001f3` (T=1, SVC), `lr=0x9025d754`,
 `r0..r4=0,0,2,0,1`.
 
-> **Do not read this as "M1 complete"**: `0x100240AC` is `MRS/MSR BASEPRI`
-> (ARMv7-M only), so execution must take an undefined exception; a1010's header
-> is also a big-endian Cortex-M vector table. The A-core's next-stage module is
-> still missing.
+> **Do not read this as the A-core next stage**: `0x1002CB8C` belongs to
+> a1010 (M-core; the `MRS/MSR BASEPRI` at `0x100240AC` is M-profile). The real
+> A-core path is in §2.6 and [docs/acore-boot.en.md](docs/acore-boot.en.md).
+
+### 2.6 Host-assisted A-core Boot
+
+Added 2026-11-24. The real layout is `payload-base=0x90020000`, reset
+`0x9027D524`; `tools/acore_boot.py` breaks at `0x1000E24C`, clears the shared
+boot flag `0x100A6704`, then continues:
+
+```sh
+python3 tools/acore_boot.py \
+  --qemu ~/d750-build/src/qemu-11.1.0/build/qemu-system-arm \
+  --payload "$FW/b1010_115a.bin" \
+  --out runs/acore-boot --seconds 5
+```
+
+Expected: `PC≈0x10025474` (A300 status/SVC service loop), `uart=0 B`.
+This is a **diagnostic fixture**, not natural power-on; see
+[docs/acore-boot.en.md](docs/acore-boot.en.md) for the boundaries.
 
 ---
 
@@ -361,22 +384,26 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 
 - This is an **assisted verification prototype**: entry chosen by host, SP/LR given by host, not equal to natural power-on boot.
 - Compiled and ran on WSL: M0 is clean, M1 reaches the 1107 target and the first
-  MMIO but does not close the D750 A-core chain (the target image is M-profile).
-  The E5/E6 cross-model results also use assisted entry/page-table fixes, not a
-  natural power-on. The MPCore base is now measured (`0xE000E000`); UART
-  register semantics and the exact CPU model are still assumptions.
+  MMIO but its target is M-profile (M-core) code. The host-assisted A-core path
+  now runs from the real reset to the `0x1000E200` image's SVC/A300 service loop,
+  but is not natural power-on and has no T-Kernel services/console. The E5/E6
+  cross-model results also use assisted entry/page-table fixes. The MPCore base
+  is measured (`0xE000E000`); UART register semantics and the exact CPU model are
+  still assumptions.
 - This repository provides no signing, repacking tool, or update-container
   processing; container-level reproduction uses the author's external toolchain.
   Firmware files are strictly read-only.
 
 **Roadmap (M1-M3)**:
-- **[M1] MMIO Capture**: The 1107 target now runs and the first MMIO is captured
-  (`0xE000E180`, GIC). Still open: the target module is M-profile firmware; the
-  later layout work indicates the flash window is a copy of `b1010` and what is
-  missing is a first-stage boot ROM. Cross-model: E5's in-image init is located,
-  E6 runs into real peripherals.
+- **[M1] MMIO Capture / boot chain**: M1's 1107 target and first MMIO are
+  historical (target is M-core). The host-assisted A-core path now reaches the
+  next-stage image and SVC/A300 loop; still open: T-Kernel service semantics,
+  the `0x100A6704` writer, and the missing first-stage boot ROM. Cross-model:
+  E5's in-image init is located, E6 runs into real peripherals.
 - **[M2] UART Output**: Confirm `0x80005010` is FIFO data register. Once confirmed, implement device model to see T-Kernel boot strings in `uart.log`.
 - **[M3] Missing Device Enumeration**: When M1 hits unknown device access, machine halts. By iteratively running and observing `qemu.log`, add minimal "dummy devices" one by one to push firmware further.
+- **[Next] Runtime memory capture**: use a filtered TCG plugin/watchpoint to
+  find the flag writer and SVC service table (planned automation).
 
 See [NOTICE.md](NOTICE.md) and [docs/validation.md](docs/validation.md).
 
@@ -385,8 +412,9 @@ See [NOTICE.md](NOTICE.md) and [docs/validation.md](docs/validation.md).
 The three targets are at different stages: **E6 D780** now reaches real
 peripheral init (`0x0426/0x0428`), so the next step is modelling that block;
 **E5 D850/D5** has its in-image init located but lacks the boot ROM's entry
-context (stack/LR/r4); **E4 D750** still lacks a first-stage boot. The shared
-missing input is still a full dump:
+context (stack/LR/r4); **E4 D750** has a host-assisted A-core path to the
+SVC/A300 service loop but still lacks a first-stage boot ROM/T-Kernel services.
+The shared missing input is still a full dump:
 
 1. **A full SPI flash dump** from any D750/D850/D5 — the most direct source; it
    may contain the boot partition or first-stage loader. Read it with a
@@ -407,7 +435,8 @@ reverse-check is also done (no copy loop in the image; see
 `evidence/m1/tracks/e5-40000000-reloc.txt`).
 
 What can still be done without new inputs: enter E5's init at `0x1035CE30`
-via a host-assisted path; model the E6 `0x0426/0x0428` block; keep looking for
-the D750 relocation table / SVC semantics.
+via a host-assisted path; model the E6 `0x0426/0x0428` block; for D750, add
+T-Kernel SVC semantics and trace the `0x100A6704` writer, and keep looking for
+the M-core console/UART path.
 
 License: overlay and tools are **GPL-2.0-or-later**; upstream QEMU retains its own license.
