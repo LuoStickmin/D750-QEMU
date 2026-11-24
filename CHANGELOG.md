@@ -4,12 +4,12 @@
 
 ### 仓库状态
 
-- `main`：`00162e2`（A-core host-assisted + M-core 两次提交已推送）；
+- `main`：`00162e2` + 本次 plugin/文档提交（本地，未推送）；
 - 主机侧测试：`27 passed`；
-- `MANIFEST.json` / `SHA256SUMS`：121 个文件，`--check` 通过；
+- `MANIFEST.json` / `SHA256SUMS`：130 个文件，`--check` 通过；
 - 本轮**没有发布新二进制**；Release 里的 `qemu-system-arm` 仍是上一版；
-- 下一步自动化：22:00 用 TCG plugin/watchpoint 抓 `0x100A6704` 写者、
-  SVC 服务表和页表访问。
+- 22:00 自动化已完成：TCG plugin 抓到 `0x100A6704` 写者/页表/SVC 验证，
+  见下方“运行时 plugin”。
 
 ### A-core 启动链（host-assisted）
 
@@ -21,6 +21,21 @@
   `svc #5` → A300 服务轮询；3–4 s 停在 `0x10025474`，0 未处理异常、0 UART；
 - 文档 `docs/acore-boot.md` / `.en.md`，证据 `evidence/acore/`；
 - **仍未完成整机 boot**：T-Kernel SVC/调度、console、boot ROM 上下文缺失。
+
+### 运行时 plugin
+
+- 新增 `tools/memtrace.c`：过滤式 TCG plugin，覆盖 flag/页表/镜像/向量/栈/
+  UART 候选；`gcc -shared` 编译为 `tools/memtrace.so`（不提交二进制）。
+- canonical 运行 6000 条事件，抓到 `0x100A6704` 的三个关键访问：
+  - `0x9027D854` 写 0（BSS/数据清零）；
+  - `0x1000E240` 写 2（A-core 门铃）；
+  - `0x1000E24C` 读 0（主机清零后通过）。
+  镜像内没有第三个写者，说明它等的是 **M-core/boot ROM 的跨核清零**。
+- plugin 未看到 `0x80005010`/`0x440C4xxx` 访问，UART 仍为 0。
+- 发现并修复 `vector-fix` 的偏移 bug：它原来固定写 `payload+0x20000`，
+  在 `payload-base=0x90020000` 时改错地址；改成 `payload+0`。默认关闭
+  vector-fix（走真实 SVC handler）；`--vector-fix` 运行时 SVC 向量读消失，
+  最终停在 `0x10000874` 的 `b .`。
 
 ### M-core（`a1010` Firmware A）
 

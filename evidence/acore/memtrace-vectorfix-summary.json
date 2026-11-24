@@ -1,0 +1,113 @@
+{
+  "events": 4549,
+  "ranges": {
+    "vec": 2,
+    "pt": 37,
+    "img": 4096,
+    "flag": 64,
+    "stack": 350
+  },
+  "rw": {
+    "r": 2,
+    "w": 4547
+  },
+  "flag_100a6704": [
+    {
+      "vcpu": 0,
+      "pc": "0x9027d854",
+      "addr": "0x100a6704",
+      "size": 4,
+      "rw": "w",
+      "value": "0x00000000",
+      "range": "flag"
+    }
+  ],
+  "uart": [],
+  "vec_pcs": [
+    [
+      "0x90020098",
+      1
+    ],
+    [
+      "0x900200a4",
+      1
+    ]
+  ],
+  "pt_events": 37,
+  "img_pcs": [
+    [
+      "0x9027d854",
+      4096
+    ]
+  ],
+  "stack_pcs": [
+    [
+      "0x10013168",
+      105
+    ],
+    [
+      "0x100130b4",
+      52
+    ],
+    [
+      "0x10011a28",
+      14
+    ],
+    [
+      "0x10021b88",
+      12
+    ],
+    [
+      "0x10013454",
+      12
+    ],
+    [
+      "0x10024b60",
+      12
+    ],
+    [
+      "0x100007a0",
+      9
+    ],
+    [
+      "0x10003044",
+      8
+    ]
+  ],
+  "session": {
+    "kind": "host-assisted-acore-boot",
+    "payload": "<firmware>/b1010_stock.bin",
+    "machine": "nikon-d750",
+    "entry": "0x9027d524",
+    "payload_base": "0x90020000",
+    "fixtures": {
+      "iram": "0xB8000000/256K",
+      "io_stub": [
+        "A2",
+        "A120",
+        "A161",
+        "A300",
+        "AD",
+        "AE",
+        "A340"
+      ],
+      "vector_fix": "SVC returns via movs pc,lr at payload+0",
+      "flag_zero": "0x100a6704"
+    },
+    "wait": {
+      "pc": "0x1000e24c",
+      "reached": false,
+      "flag_before": "00000000",
+      "flag_after": "00000000"
+    },
+    "final": {
+      "pc": "0x10000874",
+      "lr": "0x1002afe4",
+      "sp": "0x10600450",
+      "cpsr": "0x200000d3",
+      "bytes": "feffffea10019fe53c0900eb08408de508108de2410f8fe2d10000eb000050e3"
+    },
+    "uart_bytes": 0,
+    "status": "running"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, host tools, evidence",
-  "generated": "2026-11-24T11:23:53+08:00",
+  "generated": "2026-11-24T22:06:57+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -114,8 +114,8 @@
     },
     {
       "path": ".gitignore",
-      "size": 284,
-      "sha256": "703d0a3845bab11284a5abeae8a5ebfb305ec0d18d1f4ab8b5ffc98e89816263"
+      "size": 302,
+      "sha256": "15a36055baaaa5eb86aa02dbf6d953ba80bd571eec0cd3bddc5da25da620ab39"
     },
     {
       "path": "analysis/d750-0115.json",
@@ -174,8 +174,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 17889,
-      "sha256": "ffade3de36a530d8058ad02fa32ea1ea75b89966266357bc6f0327bf8b4efaae"
+      "size": 18788,
+      "sha256": "764590c5e72f12f910abe38c113b9002ce61df3ce50d96780b65b46ce91a16ab"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -189,13 +189,13 @@
     },
     {
       "path": "docs/acore-boot.en.md",
-      "size": 3943,
-      "sha256": "f300a0cba370dd22c50c8451b9ec5518ef236d8d8b20460406ebe8a1bd935df1"
+      "size": 5749,
+      "sha256": "945dea0d98084775d565fd85875461863f0ec54f8b03f00e63cd135137008a91"
     },
     {
       "path": "docs/acore-boot.md",
-      "size": 3942,
-      "sha256": "86cb4710ff0423204344b4d9a6ec3fa7234716a12cef516135e44e91b2e4d6ba"
+      "size": 5666,
+      "sha256": "a0eefee4fdb1c61c89085e76de7ba84e4eaf416e2d93a3fab1d798d9eb74486e"
     },
     {
       "path": "docs/architecture.en.md",
@@ -281,6 +281,41 @@
       "path": "evidence/acore/command.json",
       "size": 659,
       "sha256": "300338f309aadeacf41d25775b047f8aa5f66aa975896d0015f2d8070a2a7986"
+    },
+    {
+      "path": "evidence/acore/memtrace-summary.json",
+      "size": 2186,
+      "sha256": "8a48053fd285c46d712f304be8b3fbe01dd02bed74170f78bccac99ca6ea8bbc"
+    },
+    {
+      "path": "evidence/acore/memtrace-vectorfix-summary.json",
+      "size": 1777,
+      "sha256": "e739bf201e95aa3bac280994922b7506282b253393c190dc0d8319563580f2c6"
+    },
+    {
+      "path": "evidence/acore/memtrace-vectorfix.qemu.log",
+      "size": 506041,
+      "sha256": "33e7f0a7b26e54d7ffd407832239ff553c1903c3dab53fbb2e04e166aedc3396"
+    },
+    {
+      "path": "evidence/acore/memtrace-vectorfix.session.json",
+      "size": 787,
+      "sha256": "1014f0bd4ef79827e5404f415d19283135150fa731d81589126592a580478a07"
+    },
+    {
+      "path": "evidence/acore/memtrace.command.json",
+      "size": 688,
+      "sha256": "6489b420ca4f206a2c4fcb95c2e5cbad7e0a011f4400c15f8cb650d8e7b92438"
+    },
+    {
+      "path": "evidence/acore/memtrace.qemu.log",
+      "size": 671313,
+      "sha256": "92d976e9d0632ae45f07e7433ff5bfe407e15e04856c929b8c6bc6e53e4f0a49"
+    },
+    {
+      "path": "evidence/acore/memtrace.session.json",
+      "size": 765,
+      "sha256": "dd946285e563b90b1a1629aa4651b2b6dcdf427eb736db33f20ab19d8d2d51ee"
     },
     {
       "path": "evidence/acore/qemu.log",
@@ -594,8 +629,8 @@
     },
     {
       "path": "qemu/nikon-d750-lab.c",
-      "size": 88099,
-      "sha256": "d7fac751d6b491dff467ff7d703d1013bad0321f5a275099e93b748e0421a620"
+      "size": 88228,
+      "sha256": "db480401449c37bfa68742517e00d8e9ec10f317c20c9c64f66cf15e3aab2ff9"
     },
     {
       "path": "qemu/nikon-d750-lab.h",
@@ -609,13 +644,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 27940,
-      "sha256": "399a7fe7e31f059aa4a2591b651aa402ad94ef1a6f3a43613d4407900bfd51ac"
+      "size": 28191,
+      "sha256": "219cd4499124dcbd4cd9d9d59bf964f8d25df442a606960fb904e2d48eebf4f5"
     },
     {
       "path": "README.md",
-      "size": 26297,
-      "sha256": "33dbfd3edc475c9c4df6c6ecdf688136844090558abf8aa02d47666a35cdd964"
+      "size": 26547,
+      "sha256": "b30967afc4642321cc5b110926d3d17a15b14e4958348281eb6fe97e7a10ca36"
     },
     {
       "path": "Run-D750.ps1",
@@ -664,8 +699,8 @@
     },
     {
       "path": "tools/acore_boot.py",
-      "size": 4583,
-      "sha256": "1ef85e18a2cb01bda934a66d416d2f74131fed9a76c56d471920bf960380bbdd"
+      "size": 5341,
+      "sha256": "c0983251f50954a25b627af69c545a6a0cd8f7b14876347546c7f2cfdd3ce557"
     },
     {
       "path": "tools/build.py",
@@ -686,6 +721,16 @@
       "path": "tools/manifest.py",
       "size": 5213,
       "sha256": "1af4ae63a1f95083522b6c5a0df1e8ed33e3cafacc7ce48e051664478e5db2b3"
+    },
+    {
+      "path": "tools/memtrace.c",
+      "size": 4028,
+      "sha256": "dc652962a4468b59d9838385bd8a43ed5f384ef66e1dafa8b9e03cb949b57666"
+    },
+    {
+      "path": "tools/memtrace.so",
+      "size": 16736,
+      "sha256": "ec4875a80a271911c83088845e71d766d86635ec5821ac0d91e1f4e3aa647d9c"
     },
     {
       "path": "tools/probe.py",

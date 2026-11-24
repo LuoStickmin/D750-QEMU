@@ -79,7 +79,7 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 | M1 启动链实跑 | ⚠️ **历史实验**：桩 → `0x1002CB8C`（Thumb）→ 第一条 MMIO `0xE000E180`；`0x1002CB8C` 已确认属于 a1010（M-core），不是 A-core 下一阶段。见 [docs/m1-boot-chain.md](docs/m1-boot-chain.md) |
 | M1 机器选项 | ✅ `boot-mode=stub`、`a1010-base`、`thumb-fix`、`mmu-bringup`、`mpcore-base`；固件文件零修改 |
 | M-core（`a1010` Firmware A） | ✅ **新增 `nikon-d750-mcore`**：BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` 引脚/时钟 → `STIR=0x8F` → idle `0xC04A`；3 s **0 异常、0 UART**。见 [docs/mcore.md](docs/mcore.md) |
-| A-core 启动链（host-assisted） | ⚠️ **到下一阶段镜像/T-Kernel 服务循环**：reset `0x9027D524` → MMU 页表 @`0xB8000000` → 镜像 `0x1000E200` → `svc #5`/A300 轮询；无 console/GUI。见 [docs/acore-boot.md](docs/acore-boot.md) |
+| A-core 启动链（host-assisted） | ⚠️ **到下一阶段镜像/T-Kernel 服务循环**：reset `0x9027D524` → MMU 页表 @`0xB8000000` → 镜像 `0x1000E200` → `svc #5`/A300 轮询；plugin 已抓到 flag 写者 `0x1000E240=2`（跨核清零仍未观测）；无 console/GUI。见 [docs/acore-boot.md](docs/acore-boot.md) |
 | E5（D850）实跑 | ⚠️ **缺 boot ROM 入口上下文**：`0x1037CBA8` 是 boot-service 桩；只放虚拟 `0x40000000` 返回桩仍会 `pop` 到 PC=0。已定位镜像内 init `0x1035CE30..0x1035D040`，下一步走 host-assisted 入口。见 `docs/m1-tracks-2026-11-09.md` 与 `evidence/m1/tracks/e5-*.txt` |
 | E6（D780）实跑 | ✅ **已进入真实外设初始化**：`e6-prep` 修页表后 0 异常跑到 `0x0426/0x0428` 块；`cortex-a15` 下 0 undefined、2 SVC，进入 `0x04266000` 定时器块，当前在 `0x1011C000` 附近循环。见 `docs/m1-tracks-2026-11-09.md` |
 | E5/E6 机器选项 | ✅ `flash-size`、`aux2-base`/`aux2-size`、`virtual-boot-rom`、`e6-prep`、`cortex-a7/a15`；证据在 `evidence/m1/tracks/` |
@@ -379,6 +379,8 @@ GUI 已经启动，也不能替代 A-core 的 boot ROM 问题。
 │   ├── fwscan.py               静态核对 profile，生成 manifest
 │   ├── run.py                  启动、超时、证据收集（M0/M1 两套参数）
 │   ├── probe.py                最小 GDB RSP 客户端
+│   ├── acore_boot.py           host-assisted A-core 启动 + flag/watchpoint
+│   ├── memtrace.c              过滤式 TCG plugin（运行时内存访问）
 │   ├── stub_trace.py           启动桩单步模拟器（1107 更新工具，零依赖）
 │   ├── m1_analyze.py           M1 静态分析四件套（1107 更新工具，disasm 需 capstone）
 │   ├── manifest.py             重新生成/校验 SHA256SUMS 与 MANIFEST

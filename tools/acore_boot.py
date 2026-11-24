@@ -51,6 +51,10 @@ def main() -> int:
     ap.add_argument("--out", default="runs/acore-boot")
     ap.add_argument("--seconds", type=float, default=5.0)
     ap.add_argument("--gdb-port", type=int, default=1234)
+    ap.add_argument("--plugin", help="optional QEMU TCG plugin (.so)")
+    ap.add_argument("--vector-fix", action="store_true",
+                    help="install the minimal SVC-return vector table "
+                         "(experimental; changes the observed path)")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -61,19 +65,25 @@ def main() -> int:
         if p.exists():
             p.unlink()
 
+    machine = ("nikon-d750,boot-mode=entry,entry=0x9027d524,"
+               "payload-base=0x90020000,aux2-base=0xB8000000,"
+               "aux2-size=0x40000,io-stub=on")
+    if args.vector_fix:
+        machine += ",vector-fix=on"
     cmd = [
         args.qemu,
-        "-M", "nikon-d750,boot-mode=entry,entry=0x9027d524,"
-              "payload-base=0x90020000,aux2-base=0xB8000000,"
-              "aux2-size=0x40000,io-stub=on,vector-fix=on",
+        "-M", machine,
         "-cpu", "cortex-a9", "-m", "128M",
         "-display", "none", "-monitor", "none",
         "-serial", f"file:{ulog}",
         "-S", "-gdb", f"tcp::{args.gdb_port}",
-        "-D", str(qlog), "-d", "guest_errors",
+        "-D", str(qlog), "-d", "guest_errors,plugin" if args.plugin
+        else "guest_errors",
         "-no-reboot", "-nic", "none",
         "-kernel", args.payload,
     ]
+    if args.plugin:
+        cmd += ["-plugin", str(Path(args.plugin).resolve())]
     (out / "command.json").write_text(
         json.dumps({"argv": cmd, "wait_pc": hex(WAIT_PC),
                     "flag_addr": hex(FLAG_ADDR)}, indent=2) + "\n",
@@ -86,15 +96,19 @@ def main() -> int:
         c.set_breakpoint(WAIT_PC)
         stop = c.continue_(10)
         regs = c.read_registers()
-        if regs["pc"] != WAIT_PC:
-            raise RuntimeError(
-                f"did not reach 0x{WAIT_PC:08x}: pc=0x{regs['pc']:08x} "
-                f"stop={stop.kind}/{stop.signal}")
-        flag_before = c.read_memory(FLAG_ADDR, 4).hex()
-        c.write_memory(FLAG_ADDR, b"\x00\x00\x00\x00")
-        flag_after = c.read_memory(FLAG_ADDR, 4).hex()
-        c.clear_breakpoint(WAIT_PC)
-        stop = c.continue_(args.seconds)
+        reached_wait = regs["pc"] == WAIT_PC
+        if reached_wait:
+            flag_before = c.read_memory(FLAG_ADDR, 4).hex()
+            c.write_memory(FLAG_ADDR, b"\x00\x00\x00\x00")
+            flag_after = c.read_memory(FLAG_ADDR, 4).hex()
+            c.clear_breakpoint(WAIT_PC)
+            stop = c.continue_(args.seconds)
+        else:
+            flag_before = c.read_memory(FLAG_ADDR, 4).hex()
+            flag_after = flag_before
+            c.clear_breakpoint(WAIT_PC)
+            print(f"wait 0x{WAIT_PC:08x} not reached: "
+                  f"pc=0x{regs['pc']:08x} stop={stop.kind}/{stop.signal}")
         regs = c.read_registers()
         pc = regs["pc"]
         mem = c.read_memory(pc, 32).hex()
@@ -108,11 +122,12 @@ def main() -> int:
             "fixtures": {
                 "iram": "0xB8000000/256K",
                 "io_stub": ["A2", "A120", "A161", "A300", "AD", "AE", "A340"],
-                "vector_fix": "SVC returns via movs pc,lr",
+                "vector_fix": ("payload+0 SVC-return table"
+                               if args.vector_fix else "off (real handler)"),
                 "flag_zero": hex(FLAG_ADDR),
             },
-            "wait": {"pc": hex(WAIT_PC), "flag_before": flag_before,
-                     "flag_after": flag_after},
+            "wait": {"pc": hex(WAIT_PC), "reached": reached_wait,
+                     "flag_before": flag_before, "flag_after": flag_after},
             "final": {
                 "pc": hex(pc),
                 "lr": hex(regs["lr"]),

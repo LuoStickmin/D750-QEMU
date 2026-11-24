@@ -1,0 +1,36 @@
+{
+  "kind": "host-assisted-acore-boot",
+  "payload": "<firmware>/b1010_stock.bin",
+  "machine": "nikon-d750",
+  "entry": "0x9027d524",
+  "payload_base": "0x90020000",
+  "fixtures": {
+    "iram": "0xB8000000/256K",
+    "io_stub": [
+      "A2",
+      "A120",
+      "A161",
+      "A300",
+      "AD",
+      "AE",
+      "A340"
+    ],
+    "vector_fix": "SVC returns via movs pc,lr at payload+0",
+    "flag_zero": "0x100a6704"
+  },
+  "wait": {
+    "pc": "0x1000e24c",
+    "reached": false,
+    "flag_before": "00000000",
+    "flag_after": "00000000"
+  },
+  "final": {
+    "pc": "0x10000874",
+    "lr": "0x1002afe4",
+    "sp": "0x10600450",
+    "cpsr": "0x200000d3",
+    "bytes": "feffffea10019fe53c0900eb08408de508108de2410f8fe2d10000eb000050e3"
+  },
+  "uart_bytes": 0,
+  "status": "running"
+}

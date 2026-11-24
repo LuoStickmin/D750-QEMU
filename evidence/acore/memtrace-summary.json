@@ -1,0 +1,139 @@
+{
+  "events": 6000,
+  "ranges": {
+    "vec": 512,
+    "pt": 37,
+    "img": 4096,
+    "flag": 331,
+    "stack": 1024
+  },
+  "rw": {
+    "r": 684,
+    "w": 5316
+  },
+  "flag_100a6704": [
+    {
+      "vcpu": 0,
+      "pc": "0x9027d854",
+      "addr": "0x100a6704",
+      "size": 4,
+      "rw": "w",
+      "value": "0x00000000",
+      "range": "flag"
+    },
+    {
+      "vcpu": 0,
+      "pc": "0x1000e240",
+      "addr": "0x100a6704",
+      "size": 4,
+      "rw": "w",
+      "value": "0x00000002",
+      "range": "flag"
+    },
+    {
+      "vcpu": 0,
+      "pc": "0x1000e24c",
+      "addr": "0x100a6704",
+      "size": 4,
+      "rw": "r",
+      "value": "0x00000000",
+      "range": "flag"
+    }
+  ],
+  "uart": [],
+  "vec_pcs": [
+    [
+      "0x90020008",
+      509
+    ],
+    [
+      "0x90020098",
+      1
+    ],
+    [
+      "0x900200a4",
+      1
+    ],
+    [
+      "0x90020010",
+      1
+    ]
+  ],
+  "pt_events": 37,
+  "img_pcs": [
+    [
+      "0x9027d854",
+      4096
+    ]
+  ],
+  "stack_pcs": [
+    [
+      "0x902a22bc",
+      136
+    ],
+    [
+      "0x10013168",
+      105
+    ],
+    [
+      "0x10003044",
+      96
+    ],
+    [
+      "0x100130b4",
+      52
+    ],
+    [
+      "0x100030a4",
+      48
+    ],
+    [
+      "0x100031bc",
+      42
+    ],
+    [
+      "0x90291d30",
+      39
+    ],
+    [
+      "0x90291d38",
+      26
+    ]
+  ],
+  "session": {
+    "kind": "host-assisted-acore-boot",
+    "payload": "<firmware>/b1010_stock.bin",
+    "machine": "nikon-d750",
+    "entry": "0x9027d524",
+    "payload_base": "0x90020000",
+    "fixtures": {
+      "iram": "0xB8000000/256K",
+      "io_stub": [
+        "A2",
+        "A120",
+        "A161",
+        "A300",
+        "AD",
+        "AE",
+        "A340"
+      ],
+      "vector_fix": "off (real handler)",
+      "flag_zero": "0x100a6704"
+    },
+    "wait": {
+      "pc": "0x1000e24c",
+      "reached": true,
+      "flag_before": "02000000",
+      "flag_after": "00000000"
+    },
+    "final": {
+      "pc": "0x10025474",
+      "lr": "0x10012938",
+      "sp": "0x10600bd8",
+      "cpsr": "0x20000093",
+      "bytes": "a102c0e11eff2fe1480090e52c1090e5011081e32c1080e51eff2fe1480090e5"
+    },
+    "uart_bytes": 0,
+    "status": "running"
+  }
+}

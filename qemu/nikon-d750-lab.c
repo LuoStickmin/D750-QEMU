@@ -1088,7 +1088,8 @@ static void nikon_d750_set_lcd_out(Object *obj, const char *value,
  * table: SVC returns, IRQ/FIQ return, all faults spin.  This is diagnostic
  * scaffolding, not a reconstruction of the firmware's handlers.
  */
-static void d750_apply_vector_fix(uint8_t *data, gsize size)
+static void d750_apply_vector_fix(uint8_t *data, gsize size,
+                                  uint64_t vector_off)
 {
     static const uint32_t handlers[8] = {
         0xEAFFFFFE,             /* reset:        b .                    */
@@ -1102,18 +1103,18 @@ static void d750_apply_vector_fix(uint8_t *data, gsize size)
     };
     int i;
 
-    if (size < D750_VECTOR_OFF + D750_VECTOR_LEN) {
+    if (size < vector_off + D750_VECTOR_LEN) {
         warn_report("nikon-d750: payload is too small for the vector fix");
         return;
     }
     for (i = 0; i < 8; i++) {
         /* every vector is `b +0x38`: vector + 8 + 0x38 == vector + 0x40 */
-        stl_le_p(data + D750_VECTOR_OFF + i * 4, 0xEA00000E);
-        stl_le_p(data + D750_VECTOR_OFF + 0x40 + i * 4, handlers[i]);
+        stl_le_p(data + vector_off + i * 4, 0xEA00000E);
+        stl_le_p(data + vector_off + 0x40 + i * 4, handlers[i]);
     }
-    memset(data + D750_VECTOR_OFF + 0x20, 0, 0x20);
-    info_report("nikon-d750: minimal ARM vector table at 0x%08" PRIx64,
-                (uint64_t)(D750_RAM_BASE + D750_VECTOR_OFF));
+    memset(data + vector_off + 0x20, 0, 0x20);
+    info_report("nikon-d750: minimal ARM vector table at payload+0x%"
+                PRIx64, vector_off);
 }
 
 /*
@@ -1289,7 +1290,9 @@ static void d750_load_payload(NikonD750MachineState *s, const char *path,
         d750_apply_veneer_slot(s, (uint8_t *)data, size);
     }
     if (s->vector_fix) {
-        d750_apply_vector_fix((uint8_t *)data, size);
+        uint64_t vec_off = (s->payload_base == D750_RAM_BASE)
+                           ? D750_VECTOR_OFF : 0;
+        d750_apply_vector_fix((uint8_t *)data, size, vec_off);
     }
 
     rom_add_blob_fixed(path, data, size, addr);

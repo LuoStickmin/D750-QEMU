@@ -80,7 +80,7 @@ Currently **completed and verified**:
 | M1 boot-chain run | ⚠️ **Historical experiment**: stub → `0x1002CB8C` (Thumb) → first MMIO `0xE000E180`; `0x1002CB8C` is now known to belong to a1010 (M-core), not A-core. See [docs/m1-boot-chain.en.md](docs/m1-boot-chain.en.md) |
 | M1 machine options | ✅ `boot-mode=stub`, `a1010-base`, `thumb-fix`, `mmu-bringup`, `mpcore-base`; firmware files untouched |
 | M-core (`a1010` Firmware A) | ✅ **New `nikon-d750-mcore`**: BE8 reset `0xC20D` → `0x400F` mailbox → `0x440CE000` pin/clock → `STIR=0x8F` → idle `0xC04A`; 3 s **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
-| A-core boot chain (host-assisted) | ⚠️ **Reaches next-stage image / T-Kernel service loop**: reset `0x9027D524` → MMU tables @`0xB8000000` → image `0x1000E200` → `svc #5`/A300 polling; no console/GUI. See [docs/acore-boot.en.md](docs/acore-boot.en.md) |
+| A-core boot chain (host-assisted) | ⚠️ **Reaches next-stage image / T-Kernel service loop**: reset `0x9027D524` → MMU tables @`0xB8000000` → image `0x1000E200` → `svc #5`/A300 polling; the plugin found the flag writer `0x1000E240=2` (cross-core clear still unseen); no console/GUI. See [docs/acore-boot.en.md](docs/acore-boot.en.md) |
 | E5 (D850) run | ⚠️ **Boot-ROM entry context missing**: `0x1037CBA8` is a boot-service stub; a virtual `0x40000000` with only return stubs still `pop`s to PC=0. The in-image init `0x1035CE30..0x1035D040` is located; next is a host-assisted entry. See `docs/m1-tracks-2026-11-09.en.md` and `evidence/m1/tracks/e5-*.txt` |
 | E6 (D780) run | ✅ **Reached real peripheral init**: after the `e6-prep` page-table fix, 0 exceptions to the `0x0426/0x0428` block; under `cortex-a15`, 0 undefined and 2 SVCs, entering the `0x04266000` timer block and looping near `0x1011C000`. See `docs/m1-tracks-2026-11-09.en.md` |
 | E5/E6 machine options | ✅ `flash-size`, `aux2-base`/`aux2-size`, `virtual-boot-rom`, `e6-prep`, `cortex-a7/a15`; evidence in `evidence/m1/tracks/` |
@@ -341,6 +341,8 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 │   ├── fwscan.py               Static verification profile, generates manifest
 │   ├── run.py                  Launch, timeout, evidence collection (M0/M1 profiles)
 │   ├── probe.py                Minimal GDB RSP client
+│   ├── acore_boot.py           Host-assisted A-core boot + flag/watchpoint
+│   ├── memtrace.c              Filtered TCG plugin (runtime memory accesses)
 │   ├── stub_trace.py           Boot-stub single-step simulator (Nov 7 tool, no deps)
 │   ├── m1_analyze.py           M1 static-analysis quartet (Nov 7 tool; disasm needs capstone)
 │   ├── manifest.py             Regenerate/verify SHA256SUMS and MANIFEST.json

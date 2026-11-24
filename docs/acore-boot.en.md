@@ -28,7 +28,7 @@ executes the **real reset path** rather than a shifted fragment.
 | --- | --- | --- |
 | `aux2-base=0xB8000000` / `aux2-size=0x40000` | A-core IRAM: stack at `0xB801FFxx`, page tables at `0xB801FC00` | required to run; not a guessed RAM base |
 | `io-stub=on`: A2/A120/A161/A300/AD/AE/A340 | lets ready-polling in the boot path pass | diagnostic register files, not a hardware model |
-| `vector-fix=on` (SVC changed to `movs pc,lr`) | preserve SPSR's ARM/Thumb bit on SVC return | diagnostic; real SVC is handled by T-Kernel |
+| `--vector-fix` (optional; SVC changed to `movs pc,lr`) | preserve SPSR's ARM/Thumb bit on SVC return | diagnostic bypass; off by default, uses the real SVC handler |
 | zero `0x100A6704` | pass the next-stage image's shared boot flag (initial value 2) | host GDB write; the firmware file is untouched |
 
 > `0x400F2000/0x400F3000` belong to the M-core. The A-core path uses
@@ -73,11 +73,49 @@ Not proven:
 
 - this is not a complete A-core boot: no T-Kernel services, scheduler,
   console, filesystem, or GUI;
-- SVC is currently returned by vector-fix; real service semantics are unknown;
-- the writer/protocol of `0x100A6704` is unknown; zeroing it is a host fixture;
+- SVC uses the real handler by default; `--vector-fix` is only a diagnostic
+  bypass, and real service semantics are unknown;
+- the writer of `0x100A6704` is now known: `0x1000E240` writes 2; no in-image
+  clearer exists, so zeroing it is a host fixture (see §5);
 - A300/A161/A120 ready bits are diagnostic values, not hardware semantics.
 
-## 5. Reproduce
+## 5. Plugin capture (2026-11-24 22:00)
+
+`tools/memtrace.c` is a filtered TCG plugin covering flag/page tables/next-stage
+image/vectors/stack/UART candidates. Build:
+
+```sh
+gcc -shared -fPIC -O2 $(pkg-config --cflags glib-2.0) \
+  -I$QEMU/include/plugins -o tools/memtrace.so tools/memtrace.c
+python3 tools/acore_boot.py ... --plugin tools/memtrace.so
+```
+
+The canonical run (real SVC handler, 6000 events) captured `0x100A6704`:
+
+> The `b1010` used here was reconstructed from local
+> `nov7/b1010_mmuoff.bin` and `nov7/b1010_reloc1.bin` (they differ by only
+> 2 bytes; the result hashes to `faada7fe…f82937fd`). The original module
+> directory is gone; the run itself does not modify firmware.
+
+```text
+0x9027D854  w  0x100A6704 = 0   ; BSS/data clear
+0x1000E240  w  0x100A6704 = 2   ; A-core doorbell
+0x1000E24C  r  0x100A6704 = 0   ; passes after the host clears it
+```
+
+There is no third writer in the image, so this is a **cross-core handshake**:
+A-core writes 2, then waits for the M-core/boot ROM to clear it. The plugin saw
+no `0x80005010`/`0x440C4xxx` accesses; UART is still 0. The `0x1C200` value on
+the stack is not by itself proof of a baud rate.
+
+It also exposed a fixture bug: `vector-fix` always wrote `payload+0x20000`, so
+with `payload-base=0x90020000` it actually patched `0x90040000`; SVC still used
+the original vector (509 reads of `pc=0x90020008` / `0x90020028`). After fixing
+it to `payload+0`, `--vector-fix` produced 4549 events with no SVC-vector reads,
+but ended at the `b .` self-loop `0x10000874`; the default (no vector-fix) still
+reaches the real-handler service loop at `0x10025474`.
+
+## 6. Reproduce
 
 ```sh
 python3 tools/acore_boot.py \
@@ -88,14 +126,15 @@ python3 tools/acore_boot.py \
 
 The script sets a hardware breakpoint at `0x1000E24C`, zeroes `0x100A6704`,
 continues, then saves `session.json`/`qemu.log`/`uart.log`. Raw evidence:
-[`evidence/acore/`](../evidence/acore/).
+[`evidence/acore/`](../evidence/acore/) (`memtrace*.qemu.log`,
+`memtrace-summary.json`).
 
-## 6. Next steps
+## 7. Next steps
 
-1. replace the "return immediately" SVC with a minimal T-Kernel service table
-   (at least the `svc #5` return contract);
-2. find the writer of `0x100A6704` and verify whether it is an M-core/loader
-   handshake;
+1. reconstruct the real SVC handler (`0x90291D30`) service table/return contract
+   instead of relying on `--vector-fix`;
+2. use the plugin to trace the **cross-core clearer** of `0x100A6704`
+   (M-core/boot ROM side);
 3. model A300/A161 status bits and see whether a real task loop starts;
 4. a complete A-core boot still needs the boot ROM/flash dump context.
 
