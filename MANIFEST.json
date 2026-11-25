@@ -1,7 +1,7 @@
 {
   "product": "D750-QEMU",
   "description": "Nikon D750 research: QEMU 11.1.0 validation prototype, host tools, evidence",
-  "generated": "2026-11-25T20:09:31+08:00",
+  "generated": "2026-11-25T22:27:47+08:00",
   "qemu_version": "11.1.0",
   "binary": {
     "path": "binary/qemu-system-arm",
@@ -174,8 +174,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 19312,
-      "sha256": "03a9bc1a79c778fd69822eff0717b95b192f5764ad02d6e2e82b5dae44c05813"
+      "size": 19618,
+      "sha256": "452ac8815916dc81c084b8246f83c75436ef3191f4b70a9d119d86c86b0b4ae8"
     },
     {
       "path": "CONTRIBUTING.en.md",
@@ -239,13 +239,13 @@
     },
     {
       "path": "docs/gui-context.en.md",
-      "size": 4639,
-      "sha256": "ddc8a426d533f76a3c5290ecf9cd0f7bd296ac02f666964865a9e97b61768555"
+      "size": 6000,
+      "sha256": "84268d64383811ac69127c0ddde2b55eaedffb5c0258389b001910f01d5974bf"
     },
     {
       "path": "docs/gui-context.md",
-      "size": 4557,
-      "sha256": "803291c5d57fa8a5f222a05b182656f5e1bc8365401a4ae27d257b703518a76d"
+      "size": 5949,
+      "sha256": "521ec163bec168ec87947ebefbf6551df9f13f36ae524ecf9cf99f1190dbdc90"
     },
     {
       "path": "docs/m1-boot-chain.en.md",
@@ -346,6 +346,56 @@
       "path": "evidence/boot-scan.txt",
       "size": 910,
       "sha256": "f185551c8e3b95c73eecf50697296230fc50ca3bca75a6b3dca9f64b4c0f63bc"
+    },
+    {
+      "path": "evidence/gui-context/0x900253a3.qemu.log",
+      "size": 174,
+      "sha256": "de2177cfae75d18c0b3fa44738a30f114925b5f363f5402fa75e4d227c68cda8"
+    },
+    {
+      "path": "evidence/gui-context/0x900253a3.session.json",
+      "size": 1828,
+      "sha256": "770c7b06aab9a3e5bc78da9e0507da153a89aba8223cc400d06dab5e46739bbc"
+    },
+    {
+      "path": "evidence/gui-context/0x9003dca9.qemu.log",
+      "size": 174,
+      "sha256": "2e0ccc2375091537bed8fa9b3625577e913645fadcd3091896431b37cd2fc519"
+    },
+    {
+      "path": "evidence/gui-context/0x9003dca9.session.json",
+      "size": 1828,
+      "sha256": "b8639a3f8820b1321025540ab554d67d3e5832d2195f5b6216ae359c58ad5d58"
+    },
+    {
+      "path": "evidence/gui-context/0x9012cd75.qemu.log",
+      "size": 174,
+      "sha256": "1a210e42ae2f32bf3218b1897aa88580b5144cfe5638761f12df6873d6f3292f"
+    },
+    {
+      "path": "evidence/gui-context/0x9012cd75.session.json",
+      "size": 1828,
+      "sha256": "ba64d6be07bceb3023cedc58c9b458db8be6199084e8acba78464996328cc76a"
+    },
+    {
+      "path": "evidence/gui-context/flash.sha256",
+      "size": 88,
+      "sha256": "7523ae386495b5cd91fb5a842d43273bd3b03bd7d48ff7e5b043c3514810b76d"
+    },
+    {
+      "path": "evidence/gui-context/summary.json",
+      "size": 1851,
+      "sha256": "03e2a69edd141d43819bbd02809b018112ef8fa1868edb275e49c423fe433b7e"
+    },
+    {
+      "path": "evidence/gui-context/tftserv.qemu.log",
+      "size": 151,
+      "sha256": "6d5e40219cdd2e46751aded982ea9f60f4f32c7b3cf09ef5c328f957e0e3b2bf"
+    },
+    {
+      "path": "evidence/gui-context/tftserv.session.json",
+      "size": 1811,
+      "sha256": "54e6924ec702acd8b09b36350fc053c99ddd05eaca46cf006b831cb0ab3c975b"
     },
     {
       "path": "evidence/lcd/command.json",
@@ -639,8 +689,8 @@
     },
     {
       "path": "qemu/nikon-d750-lab.c",
-      "size": 88228,
-      "sha256": "db480401449c37bfa68742517e00d8e9ec10f317c20c9c64f66cf15e3aab2ff9"
+      "size": 88353,
+      "sha256": "0650f7c3adaca4cc1d08d6e39cc9b875a33865121977130dbc5897112fd511a5"
     },
     {
       "path": "qemu/nikon-d750-lab.h",
@@ -654,13 +704,13 @@
     },
     {
       "path": "README.en.md",
-      "size": 29552,
-      "sha256": "7562c4908b3159bd2377a7768907ac56a1394fa11b161ae93e9382d151291523"
+      "size": 29676,
+      "sha256": "9650c34bc8b0f1e424d73a141c073ee9a9e7db863fafc4d5e7c2d1cca8652198"
     },
     {
       "path": "README.md",
-      "size": 27886,
-      "sha256": "9cd097122d9a98321e2ba0783eea25f415e326c3250fc5fe669ac55764751528"
+      "size": 28021,
+      "sha256": "182d22e7d1cfd3260572b7929b0b0422ccb79a123c82de0bc811b73121916e84"
     },
     {
       "path": "Run-D750.ps1",

@@ -110,3 +110,35 @@ Generate it manually/static first; fill it with plugin/GDB later.
 - SVC service table is no longer the current main line;
 - M-core remains independent and does not block the GUI direction;
 - existing `tools/memtrace.c`/GDB scripts are used to find GUI access context.
+
+## 8. First experiment (2026-11-25)
+
+Candidate **task-name table** entries in b1010 (name followed by a Thumb entry):
+
+| Task name | Name address | Entry (bit0=Thumb) |
+| --- | --- | --- |
+| `TFTSERV` | `0x900234FC` | `0x900231AD` |
+| `TFTBACK` | `0x9003DFB8` | `0x9003DCA9` |
+| `HDMSERV` | `0x90025628` | `0x900253A3` |
+| `HDMIVD` | `0x90025634` | `0x9002521D` |
+| `POSTSERV` | `0x901DDD20` | `0x901DD60B` |
+| `APPMENU` (name in code pool) | `0x9012CDA0` | candidate `0x9012CD75` |
+
+The host-assisted A-core run to `0x10025474` was used to `pmemsave` an 8 MiB
+`0x10000000` flash context (SHA-256 `76261fb2…3bac91a5`); it was then passed as
+`--flash` while calling the entries:
+
+| Entry | Result |
+| --- | --- |
+| `0x900231AD` TFTSERV | clean return, `SP=0x97FFFF00`, 0 MMIO, 0 UART |
+| `0x9003DCA9` TFTBACK | halt-suspicious, `SP=0` |
+| `0x9012CD75` APPMENU | halt-suspicious, `SP=0` |
+| `0x900253A3` HDMSERV | halt-suspicious, `SP=0` |
+
+Conclusion: these are **T-Kernel task mains**, not standalone drawing functions.
+A flash context is not enough — TFTSERV returns after service calls, while TFTBACK/
+APPMENU/HDMSERV lose SP in the task/service context. The next "context" is
+**T-Kernel task/global state and service return values**, not more Display MMIO
+guesses.
+
+Evidence: [`evidence/gui-context/summary.json`](../evidence/gui-context/summary.json).

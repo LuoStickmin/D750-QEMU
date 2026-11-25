@@ -9,6 +9,10 @@
 - 新增 `docs/gui-context.md` / `.en.md`：目标、上下文内容、checkpoint 表、
   工作顺序、验收与风险；
 - 现有 A-core/M-core 结果保留为上下文来源；SVC 服务表不再是当前主线；
+- 首轮实验：从任务名表找到 `TFTSERV/TFTBACK/HDMSERV/APPMENU` 入口；dump
+  8 MiB `0x10000000` flash 上下文后直接调用——`TFTSERV` 干净返回，
+  `TFTBACK/APPMENU/HDMSERV` 丢 SP、无 MMIO；下一步需要 T-Kernel 任务/全局
+  上下文，而不是继续猜 Display MMIO；
 - 下一步：静态定位 `@APPMENU`/Display/GPU 函数，做最小 checkpoint 调用。
 
 ## Unreleased — 2026-11-24

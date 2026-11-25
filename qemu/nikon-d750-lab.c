@@ -1729,7 +1729,9 @@ static void nikon_d750_init(MachineState *machine)
             cpu->env.regs[13] = D750_RAM_BASE + machine->ram_size - 0x100;
             cpu->env.regs[14] = D750_HALT_TRAMPOLINE;
             cpu->env.regs[0] = 0;
-            cpu_set_pc(cs, entry);
+            /* Accept a Thumb function pointer in --entry (bit0 set). */
+            cpu->env.thumb = !!(entry & 1);
+            cpu_set_pc(cs, entry & ~1ULL);
         }
     }
 

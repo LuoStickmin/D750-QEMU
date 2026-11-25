@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-25",
+  "direction": "assisted GUI context (z30-qemu reference)",
+  "firmware": {
+    "name": "b1010_stock.bin",
+    "sha256": "faada7fe2bcc90fef8877fae37965ee836f867b08f5736c67c5266b1f82937fd"
+  },
+  "flash_context": {
+    "source": "host-assisted A-core run to 0x10025474, pmemsave 0x10000000",
+    "size": 8388608,
+    "sha256": "76261fb27d4f6d6bab1ddeeaf9214a43493279b971fd419d7daf59ed3bac91a5",
+    "committed_binary": false
+  },
+  "task_table_candidates": [
+    {"name": "TFTSERV", "name_vaddr": "0x900234fc", "entry": "0x900231ad"},
+    {"name": "TFTBACK", "name_vaddr": "0x9003dfb8", "entry": "0x9003dca9"},
+    {"name": "HDMSERV", "name_vaddr": "0x90025628", "entry": "0x900253a3"},
+    {"name": "HDMIVD", "name_vaddr": "0x90025634", "entry": "0x9002521d"},
+    {"name": "POSTSERV", "name_vaddr": "0x901ddd20", "entry": "0x901dd60b"},
+    {"name": "APPMENU", "name_vaddr": "0x9012cda0", "entry_hypothesis": "0x9012cd75"}
+  ],
+  "calls": [
+    {"entry": "0x900231ad", "result": "clean return to halt", "return_ok": true,
+     "sp": "0x97ffff00", "uart": 0, "mmio": 0},
+    {"entry": "0x9003dca9", "result": "halt-suspicious", "return_ok": false,
+     "sp": "0x00000000", "uart": 0, "mmio": 0},
+    {"entry": "0x9012cd75", "result": "halt-suspicious", "return_ok": false,
+     "sp": "0x00000000", "uart": 0, "mmio": 0},
+    {"entry": "0x900253a3", "result": "halt-suspicious", "return_ok": false,
+     "sp": "0x00000000", "uart": 0, "mmio": 0}
+  ],
+  "conclusion": "The GUI task entries are T-Kernel task mains, not standalone drawing functions. Populating the 0x10000000 flash context is not enough: TFTSERV returns after service calls; TFTBACK/APPMENU/HDMSERV lose SP and reach the halt trampoline. The next required context is the T-Kernel task/global state (and service return values), not more display MMIO guesses."
+}

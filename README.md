@@ -6,7 +6,7 @@
 >
 > | 日期 | 进展 |
 > | --- | --- |
-> | 2026-11-25 | **方向调整：参考 z30-qemu，暂停自然启动，转向“提供上下文启动 GUI”**：先找 D750 GUI/Display 函数与 checkpoint，由宿主补栈/全局/任务/Display 上下文并直接调用原厂绘制；见 [docs/gui-context.md](docs/gui-context.md) |
+> | 2026-11-25 | **方向调整：参考 z30-qemu，暂停自然启动，转向“提供上下文启动 GUI”**：找到 TFTSERV/TFTBACK/HDMSERV/APPMENU 任务入口，并 dump 8 MiB flash 上下文；直接调用显示 TFTSERV 干净返回、TFTBACK/APPMENU/HDMSERV 丢 SP——说明下一步需要 T-Kernel 任务/全局上下文，而不是更多 Display MMIO 猜测。见 [docs/gui-context.md](docs/gui-context.md) |
 > | 2026-11-24 | **A-core 启动链推进**：修正布局为 `0x90020000`/reset `0x9027D524`，补 `0xB8000000` IRAM 与 A2/A120/A161/A300 stubs；真实 reset → MMU 页表 → `0x1000E200` 下一阶段镜像 → `svc #5`/A300 服务循环。仍无 console/GUI，详见 [docs/acore-boot.md](docs/acore-boot.md) |
 > | 2026-11-23 | **M-core 实跑 + v0.2.9 准备**：新增 `nikon-d750-mcore`（Cortex-M4），确认 a1010 是 BE8 Firmware A；从 reset `0xC20D` 跑到 `0x440CE000` 引脚/时钟块，`STIR=0x8F` 后停在 `0xC04A` 的 idle，**0 异常、0 UART**。见 [docs/mcore.md](docs/mcore.md) |
 > | 2026-11-10 | **E5/E6 实跑 + v0.2.8**：D850 reset `0x1037CBA8` 确认是 boot-service 桩，虚拟 `0x40000000` boot ROM 只放 `bx lr` 仍缺入口上下文；定位到 E5 镜像内完整 init（`0x1035CE30..0x1035D040`，自建页表并设 TTBR/SCTLR/VBAR）；D780 用 `e6-prep` 修页表后 **0 异常**进入 `0x0426/0x0428` 外设块，A15 下进入 `0x04266000` 定时器块。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) 与 `evidence/m1/tracks/e5-*` |

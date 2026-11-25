@@ -1,0 +1,63 @@
+{
+  "argv": [
+    "<build>/src/qemu-11.1.0/build/qemu-system-arm",
+    "-M",
+    "nikon-d750,boot-mode=entry,entry=0x900253a3,a1010-base=0x10018000,payload-base=0x90020000,thumb-fix=off,flash-size=0x1000000,vector-fix=on",
+    "-cpu",
+    "cortex-a9",
+    "-m",
+    "128M",
+    "-display",
+    "none",
+    "-monitor",
+    "none",
+    "-serial",
+    "file:runs/gui-ctx-0x900253a3/uart.log",
+    "-D",
+    "runs/gui-ctx-0x900253a3/qemu.log",
+    "-d",
+    "guest_errors",
+    "-no-reboot",
+    "-nic",
+    "none",
+    "-kernel",
+    "<firmware>/b1010_stock.bin",
+    "-bios",
+    "<repo>/runs/gui-context/flash-0x10000000.bin"
+  ],
+  "entry": "0x900253a3",
+  "payload": "<firmware>/b1010_stock.bin",
+  "payload_sha256": "faada7fe2bcc90fef8877fae37965ee836f867b08f5736c67c5266b1f82937fd",
+  "payload_size": 20324448,
+  "flash": "<repo>/runs/gui-context/flash-0x10000000.bin",
+  "flash_sha256": "76261fb27d4f6d6bab1ddeeaf9214a43493279b971fd419d7daf59ed3bac91a5",
+  "flash_size": 8388608,
+  "started": "2026-11-25T22:27:12",
+  "exit": 0,
+  "timed_out": false,
+  "wall_seconds": 0.205,
+  "qemu_output_tail": "qemu-system-arm: info: nikon-d750: minimal ARM vector table at payload+0x0\nqemu-system-arm: info: nikon-d750: boot=entry, payload=<firmware>/b1010_stock.bin @ 0x90020000, a1010=<repo>/runs/gui-context/flash-0x10000000.bin @ 0x10018000, start=0x900253a3, ram=128 MiB, cpus=1, vector-fix, custom-flash\n",
+  "uart": {
+    "bytes": 0,
+    "tail": ""
+  },
+  "mmio": {
+    "events": 0,
+    "a1010_events": 0,
+    "first_a1010": null,
+    "by_address": []
+  },
+  "halt": {
+    "pc": "0x00000ff0",
+    "r0": "0x00000000",
+    "r1": "0x00000000",
+    "sp": "0x00000000",
+    "lr": "0x900253a6",
+    "return_ok": false,
+    "mode": "0x17",
+    "suspicious": true
+  },
+  "lcd": null,
+  "strict": null,
+  "status": "halt-suspicious"
+}

@@ -101,3 +101,34 @@ checkpoint name | firmware addr | call convention | required context | evidence
 - 不再以 SVC 服务表为当前主线；
 - M-core 继续作为独立研究，不阻塞 GUI 方向；
 - 现有 `tools/memtrace.c`/GDB 脚本用于找 GUI 函数的访问上下文。
+
+## 8. 第一轮实验（2026-11-25）
+
+从 b1010 的**任务名表**找到候选（名字后面紧跟 Thumb 入口指针）：
+
+| 任务名 | 名字地址 | 入口（bit0=Thumb） |
+| --- | --- | --- |
+| `TFTSERV` | `0x900234FC` | `0x900231AD` |
+| `TFTBACK` | `0x9003DFB8` | `0x9003DCA9` |
+| `HDMSERV` | `0x90025628` | `0x900253A3` |
+| `HDMIVD` | `0x90025634` | `0x9002521D` |
+| `POSTSERV` | `0x901DDD20` | `0x901DD60B` |
+| `APPMENU`（名字在代码池） | `0x9012CDA0` | 候选函数 `0x9012CD75` |
+
+用 host-assisted A-core 跑到 `0x10025474`，`pmemsave` 出 8 MiB 的
+`0x10000000` flash 上下文（SHA-256
+`76261fb2…3bac91a5`），再把它作为 `--flash` 直接调用这些入口：
+
+| 入口 | 结果 |
+| --- | --- |
+| `0x900231AD` TFTSERV | 干净返回，`SP=0x97FFFF00`，0 MMIO、0 UART |
+| `0x9003DCA9` TFTBACK | halt-suspicious，`SP=0` |
+| `0x9012CD75` APPMENU | halt-suspicious，`SP=0` |
+| `0x900253A3` HDMSERV | halt-suspicious，`SP=0` |
+
+结论：这些入口是 **T-Kernel 任务 main**，不是独立绘制函数。补 flash 上下文
+还不够——`TFTSERV` 调完服务就返回，`TFTBACK/APPMENU/HDMSERV` 在服务/任务
+上下文处丢失 SP。下一步的“上下文”应是 **T-Kernel 任务/全局状态和服务返回值**，
+而不是继续猜 Display MMIO。
+
+证据：[`evidence/gui-context/summary.json`](../evidence/gui-context/summary.json)。
