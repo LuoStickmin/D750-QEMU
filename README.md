@@ -6,6 +6,7 @@
 >
 > | 日期 | 进展 |
 > | --- | --- |
+> | 2026-11-25 | **方向调整：参考 z30-qemu，暂停自然启动，转向“提供上下文启动 GUI”**：先找 D750 GUI/Display 函数与 checkpoint，由宿主补栈/全局/任务/Display 上下文并直接调用原厂绘制；见 [docs/gui-context.md](docs/gui-context.md) |
 > | 2026-11-24 | **A-core 启动链推进**：修正布局为 `0x90020000`/reset `0x9027D524`，补 `0xB8000000` IRAM 与 A2/A120/A161/A300 stubs；真实 reset → MMU 页表 → `0x1000E200` 下一阶段镜像 → `svc #5`/A300 服务循环。仍无 console/GUI，详见 [docs/acore-boot.md](docs/acore-boot.md) |
 > | 2026-11-23 | **M-core 实跑 + v0.2.9 准备**：新增 `nikon-d750-mcore`（Cortex-M4），确认 a1010 是 BE8 Firmware A；从 reset `0xC20D` 跑到 `0x440CE000` 引脚/时钟块，`STIR=0x8F` 后停在 `0xC04A` 的 idle，**0 异常、0 UART**。见 [docs/mcore.md](docs/mcore.md) |
 > | 2026-11-10 | **E5/E6 实跑 + v0.2.8**：D850 reset `0x1037CBA8` 确认是 boot-service 桩，虚拟 `0x40000000` boot ROM 只放 `bx lr` 仍缺入口上下文；定位到 E5 镜像内完整 init（`0x1035CE30..0x1035D040`，自建页表并设 TTBR/SCTLR/VBAR）；D780 用 `e6-prep` 修页表后 **0 异常**进入 `0x0426/0x0428` 外设块，A15 下进入 `0x04266000` 定时器块。详见 [docs/m1-tracks-2026-11-09.md](docs/m1-tracks-2026-11-09.md) 与 `evidence/m1/tracks/e5-*` |
@@ -62,10 +63,10 @@ Nikon D750（EXPEED 4，`D750_0115`）写的最小验证原型：**一个 QEMU �
 
 当前**已经完成并验证**的部分：
 
-> **最新（2026-11-24）**：M-core `a1010` 已能跑到 idle；A-core host-assisted
-> 从真实 reset `0x9027D524` 跑到 `0x1000E200` 下一阶段镜像和 `svc #5`/A300
-> 服务循环。**仍未完成整机 boot**；细节见 [docs/acore-boot.md](docs/acore-boot.md)
-> 与 [docs/mcore.md](docs/mcore.md)。
+> **最新（2026-11-25）**：方向调整为 **host-assisted GUI 上下文启动**，暂停自然启动主线；
+> 参考 z30-qemu，先定位 GUI/Display 函数并由宿主提供上下文，再调用原厂绘制。
+> 计划见 [docs/gui-context.md](docs/gui-context.md)；此前的 A-core/M-core 结果保留为
+> 上下文来源：A-core 到 `0x1000E200`/SVC 循环，M-core 到 idle。
 
 | 项目 | 状态 |
 | --- | --- |
@@ -336,6 +337,19 @@ M-core 不再是“把 a1010 塞进 A-core 的 flash 窗口”，而是独立机
 `evidence/mcore/`。**边界**：这只证明 M-core 能走到 idle，不代表 RTOS/console/
 GUI 已经启动，也不能替代 A-core 的 boot ROM 问题。
 
+### 3.3 GUI 上下文方向（2026-11-25 起）
+
+参考 z30-qemu 的 assisted 模式，**暂停自然启动主线**：
+
+1. 先找 D750 的 GUI/Display/GPU 函数或任务 checkpoint；
+2. 由宿主提供栈、全局状态、任务/队列、Display/GPU MMIO 和帧缓冲上下文；
+3. 直接调用原厂函数，让原厂 GPU 命令/像素出现；
+4. 用现有 PPM dump 验收，后续再接浏览器。
+
+这不等同于自然 boot，也不承诺 CMOS/ISP；它只是把“看到原厂 GUI”从
+RTOS 启动链里解耦出来。设计、验收和风险见 [docs/gui-context.md](docs/gui-context.md)。
+现有的 A-core/M-core 结果保留为上下文来源，SVC 服务表不再是当前主线。
+
 ---
 
 ## 4. 已经拿到的静态证据（真实字节）
@@ -392,7 +406,7 @@ GUI 已经启动，也不能替代 A-core 的 boot ROM 问题。
 │   └── ...                     仓库里已有的其他固件分析产物（见下）
 ├── binary/                     COPYING + 说明（二进制通过 GitHub Release 发布）
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan 运行证据
-├── docs/                       findings / m1-boot-chain / mcore / acore-boot / architecture / validation / build / gui-cmos（含 .en.md）
+├── docs/                       findings / m1-boot-chain / mcore / acore-boot / gui-context / architecture / validation / build / gui-cmos（含 .en.md）
 ├── SUMMARY.md / SUMMARY.en.md  QEMU 原型总览
 ├── CONTRIBUTING.md / .en.md    法律与贡献边界
 ├── README.md / README.en.md    本文与英文版
@@ -436,6 +450,9 @@ QEMU 产品的验收范围内。
   MPCore 基址已由运行证据定为 `0xE000E000`；串口寄存器语义、CPU 型号仍是假设。
 - 本仓库不提供签名、重打包工具或升级容器处理；容器级复现依赖同作者的
   外置工具链，固件文件全程只读。
+- **自 2026-11-25 起，D750 主线改为 GUI 上下文启动**（参考 z30-qemu）：
+  自然启动暂缓，改为宿主提供上下文并调用原厂 GUI/Display 函数；设计见
+  [docs/gui-context.md](docs/gui-context.md)。
 - 另见 [NOTICE.md](NOTICE.md) 与 [docs/validation.md](docs/validation.md)。
 
 ## 8. 还需要什么（输入需求）
@@ -459,7 +476,7 @@ QEMU 产品的验收范围内。
 `evidence/m1/tracks/e5-40000000-reloc.txt`）。
 
 没有新输入时仍可做：E5 走 host-assisted 入口（`0x1035CE30` 附近的 init）；
-E6 建模 `0x0426/0x0428` 寄存器块；A-core 继续补 T-Kernel SVC 语义/抓
-`0x100A6704` 写者，M-core 继续找 console/UART 路径。
+E6 建模 `0x0426/0x0428` 寄存器块；D750 转向 GUI 上下文——静态定位
+`@APPMENU`/Display/GPU 函数，做最小 checkpoint 调用并抓原厂帧缓冲。
 
 许可：overlay 与工具为 **GPL-2.0-or-later**；上游 QEMU 保留其自身许可。

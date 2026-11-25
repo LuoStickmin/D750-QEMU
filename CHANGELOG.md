@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — 2026-11-25
+
+### 方向调整
+
+- 参考 z30-qemu 的 assisted 模式：**暂停自然启动主线**，转为“宿主提供上下文 →
+  调用原厂 GUI/Display 函数 → 抓原厂画面”；
+- 新增 `docs/gui-context.md` / `.en.md`：目标、上下文内容、checkpoint 表、
+  工作顺序、验收与风险；
+- 现有 A-core/M-core 结果保留为上下文来源；SVC 服务表不再是当前主线；
+- 下一步：静态定位 `@APPMENU`/Display/GPU 函数，做最小 checkpoint 调用。
+
 ## Unreleased — 2026-11-24
 
 ### 仓库状态

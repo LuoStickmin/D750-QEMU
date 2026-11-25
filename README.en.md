@@ -6,6 +6,7 @@
 >
 > | Date | Progress |
 > | --- | --- |
+> | 2026-11-25 | **Direction change: reference z30-qemu; pause natural boot and switch to context-provided GUI startup**: locate D750 GUI/Display functions/checkpoints, have the host supply stack/globals/task/Display context and call original rendering; see [docs/gui-context.en.md](docs/gui-context.en.md) |
 > | 2026-11-24 | **A-core boot-chain progress**: fixed the layout to `0x90020000`/reset `0x9027D524`, added the `0xB8000000` IRAM and A2/A120/A161/A300 stubs; real reset → MMU tables → `0x1000E200` next-stage image → `svc #5`/A300 service loop. Still no console/GUI; see [docs/acore-boot.en.md](docs/acore-boot.en.md) |
 > | 2026-11-23 | **M-core run + v0.2.9 prep**: added `nikon-d750-mcore` (Cortex-M4); confirmed a1010 is BE8 Firmware A; from reset `0xC20D` it reaches the `0x440CE000` pin/clock block, writes `STIR=0x8F`, then idles at `0xC04A` — **0 exceptions, 0 UART**. See [docs/mcore.en.md](docs/mcore.en.md) |
 > | 2026-11-10 | **E5/E6 runs + v0.2.8**: D850 reset `0x1037CBA8` confirmed as a boot-service stub; a virtual `0x40000000` boot ROM with only `bx lr` stubs still lacks the entry context; located the E5 in-image init (`0x1035CE30..0x1035D040`, builds page tables and sets TTBR/SCTLR/VBAR); D780 with `e6-prep` runs with **0 exceptions** into the `0x0426/0x0428` peripheral block, and under A15 into the `0x04266000` timer block. Details: [docs/m1-tracks-2026-11-09.en.md](docs/m1-tracks-2026-11-09.en.md) and `evidence/m1/tracks/e5-*` |
@@ -62,11 +63,11 @@ The goal is not to simulate the entire camera, but to answer four questions sequ
 
 Currently **completed and verified**:
 
-> **Latest (2026-11-24)**: the M-core `a1010` reaches idle; the host-assisted
-> A-core path runs from the real reset `0x9027D524` to the `0x1000E200`
-> next-stage image and its `svc #5`/A300 service loop. **A complete camera boot
-> is still not done**; see [docs/acore-boot.en.md](docs/acore-boot.en.md) and
-> [docs/mcore.en.md](docs/mcore.en.md).
+> **Latest (2026-11-25)**: direction changed to **host-assisted GUI context
+> startup**; natural boot is paused. Following z30-qemu, locate GUI/Display
+> functions, supply context from the host, then call original rendering. See
+> [docs/gui-context.en.md](docs/gui-context.en.md); earlier A-core/M-core results
+> remain context sources (A-core to `0x1000E200`/SVC loop, M-core to idle).
 
 | Item | Status |
 | --- | --- |
@@ -306,6 +307,21 @@ Disassembly, UART-candidate scan and evidence links are in
 **Boundary**: this proves the M-core reaches idle, not that RTOS/console/GUI
 have started, and it does not replace the A-core boot-ROM problem.
 
+### 3.3 GUI Context Direction (from 2026-11-25)
+
+Following z30-qemu's assisted model, **natural boot is paused**:
+
+1. locate D750 GUI/Display/GPU functions or task checkpoints;
+2. have the host supply stack, globals, task/queue, Display/GPU MMIO and
+   framebuffer context;
+3. call original functions directly so original GPU commands/pixels appear;
+4. accept with the existing PPM dump; browser integration comes later.
+
+This is not natural boot and does not promise CMOS/ISP; it decouples "see the
+original GUI" from the RTOS boot chain. Design, acceptance and risks:
+[docs/gui-context.en.md](docs/gui-context.en.md). Existing A-core/M-core results
+are context sources; the SVC service table is no longer the main line.
+
 ---
 
 ## 4. Static Evidence Collected (Real Bytes)
@@ -354,7 +370,7 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 │   └── ...                     Other firmware analysis artifacts already in repo (see below)
 ├── binary/                     COPYING + notes (binary published via GitHub Release)
 ├── evidence/                   M0 / M1 / GDB / LCD / boot-scan run evidence
-├── docs/                       findings / m1-boot-chain / mcore / acore-boot / architecture / validation / build / gui-cmos (+ .en.md)
+├── docs/                       findings / m1-boot-chain / mcore / acore-boot / gui-context / architecture / validation / build / gui-cmos (+ .en.md)
 ├── SUMMARY.md / SUMMARY.en.md  QEMU prototype overview
 ├── CONTRIBUTING.md / .en.md    Legal and contribution boundaries
 ├── README.md / README.en.md    This document and its Chinese original
@@ -395,6 +411,10 @@ At module file `0x25D7FC`, literal `0x90020000` (MMU page table target), near `0
 - This repository provides no signing, repacking tool, or update-container
   processing; container-level reproduction uses the author's external toolchain.
   Firmware files are strictly read-only.
+- **From 2026-11-25 the D750 main line is GUI context startup** (reference
+  z30-qemu): natural boot is paused; the host will supply context and call
+  original GUI/Display functions. See
+  [docs/gui-context.en.md](docs/gui-context.en.md).
 
 **Roadmap (M1-M3)**:
 - **[M1] MMIO Capture / boot chain**: M1's 1107 target and first MMIO are
@@ -437,8 +457,8 @@ reverse-check is also done (no copy loop in the image; see
 `evidence/m1/tracks/e5-40000000-reloc.txt`).
 
 What can still be done without new inputs: enter E5's init at `0x1035CE30`
-via a host-assisted path; model the E6 `0x0426/0x0428` block; for D750, add
-T-Kernel SVC semantics and trace the `0x100A6704` writer, and keep looking for
-the M-core console/UART path.
+via a host-assisted path; model the E6 `0x0426/0x0428` block; for D750 switch to
+GUI context — statically locate `@APPMENU`/Display/GPU functions, make a minimal
+checkpoint call and capture original framebuffer pixels.
 
 License: overlay and tools are **GPL-2.0-or-later**; upstream QEMU retains its own license.
